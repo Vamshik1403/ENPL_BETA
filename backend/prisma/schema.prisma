@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AddressBook {
+  id            Int     @id @default(autoincrement())
+  addressType   String
+  addressBookID String  @default(uuid())
+  customerName  String
+  regdAddress   String
+  city          String?
+  state         String?
+  pinCode       String?
+  gstNo         String
+
+  contacts AddressBookContact[]
+  sites    Site[]
+  tasks    Task[]
+}
+
+model AddressBookContact {
+  id            Int    @id @default(autoincrement())
+  addressBookId Int
+  contactPerson String
+  designation   String
+  contactNumber String
+  emailAddress  String
+
+  addressBook AddressBook @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+}
+
+model Site {
+  id            Int     @id @default(autoincrement())
+  addressBookId Int
+  siteID        String  @default(uuid())
+  siteName      String
+  siteAddress   String
+  city          String?
+  state         String?
+  pinCode       String?
+  gstNo         String
+
+  addressBook AddressBook   @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+  contacts    SiteContact[]
+  tasks       Task[]
+}
+
+model SiteContact {
+  id            Int    @id @default(autoincrement())
+  siteId        Int
+  contactPerson String
+  designation   String
+  contactNumber String
+  emailAddress  String
+  site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+}
+
+model ProductType {
+  id                        Int                        @id @default(autoincrement())
+  productTypeName           String
+  serviceContractsInventory ServiceContractInventory[]
+}
+
+model ServiceWorkCategory {
+  id                      Int    @id @default(autoincrement())
+  serviceWorkCategoryName String
+}
+
+model ContractWorkCategory {
+  id                       Int                       @id @default(autoincrement())
+  contractWorkCategoryName String
+  serviceContractServices  ServiceContractServices[]
+}
+
+model WorkscopeCategory {
+  id                    Int                      @id @default(autoincrement())
+  workscopeCategoryName String
+  taskWorkscopeCategory TasksWorkscopeCategory[]
+}
+
+model ServiceContract {
+  id                Int                        @id @default(autoincrement())
+  serviceContractID String                     @default(uuid())
+  customerId        Int
+  branchId          Int
+  salesManagerName  String
+  periods           ServiceContractPeriod[]
+  terms             ServiceContractTerms[]
+  services          ServiceContractServices[]
+  inventories       ServiceContractInventory[]
+  histories         ServiceContractHistory[]
+}
+
+model ServiceContractPeriod {
+  id                  Int             @id @default(autoincrement())
+  serviceContractId   Int
+  startDate           String
+  endDate             String
+  nextPMVisitDate     String?
+  contractDescription String?
+  serviceContract     ServiceContract @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+}
+
+model ServiceContractTerms {
+  id                            Int             @id @default(autoincrement())
+  serviceContractId             Int
+  maxOnSiteVisits               String
+  maxPreventiveMaintenanceVisit String
+  inclusiveInOnSiteVisitCounts  Boolean
+  preventiveMaintenanceCycle    String
+  serviceContract               ServiceContract @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+}
+
+model ServiceContractServices {
+  id                     Int                  @id @default(autoincrement())
+  serviceContractId      Int
+  contractWorkCategoryId Int
+  serviceContract        ServiceContract      @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+  contractWorkCategory   ContractWorkCategory @relation(fields: [contractWorkCategoryId], references: [id], onDelete: Cascade)
+}
+
+model ServiceContractInventory {
+  id                 Int             @id @default(autoincrement())
+  serviceContractId  Int
+  productTypeId      Int
+  makeModel          String
+  snMac              String
+  description        String
+  purchaseDate       DateTime
+  warrantyPeriod     String
+  warrantyStatus     String // Active / Expired (computed in app)
+  thirdPartyPurchase Boolean
+  serviceContract    ServiceContract @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+  productType        ProductType     @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+}
+
+model ServiceContractHistory {
+  id                Int             @id @default(autoincrement())
+  serviceContractId Int
+  taskId            String
+  serviceType       String // On-Site Visit / PM Visit / Remote Support
+  serviceDate       DateTime
+  startTime         String
+  endTime           String
+  serviceDetails    String
+  serviceContract   ServiceContract @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+}
+
+model Department {
+  id             Int    @id @default(autoincrement())
+  departmentName String
+  tasks          Task[]
+}
+
+model Task {
+  id               Int                      @id @default(autoincrement())
+  taskID           String                   @default(uuid())
+  departmentId     Int
+  addressBookId    Int
+  siteId           Int
+  createdBy        String
+  createdAt        DateTime                 @default(now())
+  department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  addressBook      AddressBook              @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+  site             Site                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  contacts         TasksContacts[]
+  workscopeCat     TasksWorkscopeCategory[]
+  workscopeDetails TasksWorkscopeDetails[]
+  schedule         TasksSchedule[]
+  remarks          TasksRemarks[]
+}
+
+model TasksContacts {
+  id            Int    @id @default(autoincrement())
+  taskId        Int
+  contactName   String
+  contactNumber String
+  contactEmail  String
+  task          Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TasksWorkscopeCategory {
+  id                  Int               @id @default(autoincrement())
+  taskId              Int
+  workscopeCategoryId Int
+  task                Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workscopeCategory   WorkscopeCategory @relation(fields: [workscopeCategoryId], references: [id], onDelete: Cascade)
+}
+
+model TasksWorkscopeDetails {
+  id               Int     @id @default(autoincrement())
+  taskId           Int
+  workscopeDetails String
+  extraNote        String?
+  task             Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TasksSchedule {
+  id               Int      @id @default(autoincrement())
+  taskId           Int
+  proposedDateTime DateTime
+  priority         String // High / Medium / Low
+  task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TasksRemarks {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  remark    String
+  createdBy String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
