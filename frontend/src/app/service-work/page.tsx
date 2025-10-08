@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ServiceWorkCategory {
   id?: number;
@@ -11,25 +11,80 @@ export default function ServiceWorkPage() {
   const [serviceWorkCategories, setServiceWorkCategories] = useState<ServiceWorkCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<ServiceWorkCategory>({
     serviceWorkCategoryName: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId) {
-      setServiceWorkCategories(serviceWorkCategories.map(item => 
-        item.id === editingId ? { ...formData, id: editingId } : item
-      ));
-    } else {
-      const newId = Math.max(...serviceWorkCategories.map(s => s.id || 0), 0) + 1;
-      setServiceWorkCategories([...serviceWorkCategories, { ...formData, id: newId }]);
+  // Fetch service work categories from backend API
+  const fetchServiceWorkCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/serviceworkcategory');
+      if (response.ok) {
+        const data = await response.json();
+        setServiceWorkCategories(data);
+      } else {
+        console.error('Failed to fetch service work categories');
+      }
+    } catch (error) {
+      console.error('Error fetching service work categories:', error);
+    } finally {
+      setLoading(false);
     }
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({
-      serviceWorkCategoryName: '',
-    });
+  };
+
+  // Load service work categories on component mount
+  useEffect(() => {
+    fetchServiceWorkCategories();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      if (editingId) {
+        // Update existing service work category
+        const response = await fetch(`http://localhost:8000/serviceworkcategory/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+        
+        if (response.ok) {
+          await fetchServiceWorkCategories(); // Refresh the list
+          setShowForm(false);
+          setEditingId(null);
+          setFormData({ serviceWorkCategoryName: '' });
+        } else {
+          console.error('Failed to update service work category');
+        }
+      } else {
+        // Create new service work category
+        const response = await fetch('http://localhost:8000/serviceworkcategory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+        
+        if (response.ok) {
+          await fetchServiceWorkCategories(); // Refresh the list
+          setShowForm(false);
+          setFormData({ serviceWorkCategoryName: '' });
+        } else {
+          console.error('Failed to create service work category');
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (id: number) => {
@@ -41,8 +96,25 @@ export default function ServiceWorkPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setServiceWorkCategories(serviceWorkCategories.filter(s => s.id !== id));
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this service work category?')) {
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:8000/serviceworkcategory/${id}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          await fetchServiceWorkCategories(); // Refresh the list
+        } else {
+          console.error('Failed to delete service work category');
+        }
+      } catch (error) {
+        console.error('Error deleting service work category:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -75,16 +147,17 @@ export default function ServiceWorkPage() {
                 type="text"
                 value={formData.serviceWorkCategoryName}
                 onChange={(e) => setFormData({ ...formData, serviceWorkCategoryName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={loading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingId ? 'Update' : 'Add'} Service Work Category
+                {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Service Work Category
               </button>
               <button
                 type="button"
@@ -95,7 +168,8 @@ export default function ServiceWorkPage() {
                     serviceWorkCategoryName: '',
                   });
                 }}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                disabled={loading}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -124,30 +198,46 @@ export default function ServiceWorkPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {serviceWorkCategories.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.serviceWorkCategoryName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item.id!)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id!)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                    Loading service work categories...
                   </td>
                 </tr>
-              ))}
+              ) : serviceWorkCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                    No service work categories found. Add one to get started.
+                  </td>
+                </tr>
+              ) : (
+                serviceWorkCategories.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.serviceWorkCategoryName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(item.id!)}
+                        disabled={loading}
+                        className="text-blue-600 hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id!)}
+                        disabled={loading}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

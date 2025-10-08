@@ -54,4 +54,36 @@ export class SitesService {
   remove(id: number): Promise<Site> {
     return this.prisma.site.delete({ where: { id } });
   }
+
+  // SiteContact management methods
+  async addContact(siteId: number, data: { contactPerson: string; designation: string; contactNumber: string; emailAddress: string }): Promise<any> {
+    return this.prisma.siteContact.create({
+      data: { ...data, siteId },
+    });
+  }
+
+  async updateContact(contactId: number, data: Partial<{ contactPerson: string; designation: string; contactNumber: string; emailAddress: string }>): Promise<any> {
+    return this.prisma.siteContact.update({
+      where: { id: contactId },
+      data,
+    });
+  }
+
+  async removeContact(contactId: number): Promise<any> {
+    return this.prisma.siteContact.delete({
+      where: { id: contactId },
+    });
+  }
+
+  async findContacts(siteId: number): Promise<any[]> {
+    return this.prisma.siteContact.findMany({
+      where: { siteId },
+    });
+  }
+
+  async findOneContact(contactId: number): Promise<any | null> {
+    return this.prisma.siteContact.findUnique({
+      where: { id: contactId },
+    });
+  }
 }

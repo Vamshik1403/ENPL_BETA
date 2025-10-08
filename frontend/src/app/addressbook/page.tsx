@@ -184,13 +184,27 @@ export default function AddressBookPage() {
     setFormContacts([]);
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = async (id: number) => {
     const item = addressBooks.find(a => a.id === id);
     if (item) {
       setFormData(item);
       setGeneratedId(item.addressBookID);
       setEditingId(id);
       setShowForm(true);
+      
+      // Fetch existing contacts for this address book
+      try {
+        const response = await fetch(`http://localhost:8000/address-book/${id}/contacts`);
+        if (response.ok) {
+          const contactsData = await response.json();
+          setFormContacts(contactsData);
+        } else {
+          setFormContacts([]);
+        }
+      } catch (error) {
+        console.error('Error fetching contacts:', error);
+        setFormContacts([]);
+      }
     }
   };
 
@@ -239,7 +253,7 @@ export default function AddressBookPage() {
               <select
                 value={formData.addressType}
                 onChange={(e) => handleAddressTypeChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
                 <option value="">Select Address Type</option>
@@ -267,7 +281,7 @@ export default function AddressBookPage() {
                 type="text"
                 value={formData.customerName}
                 onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -278,7 +292,7 @@ export default function AddressBookPage() {
               <textarea
                 value={formData.regdAddress}
                 onChange={(e) => setFormData({ ...formData, regdAddress: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 required
               />
@@ -291,7 +305,7 @@ export default function AddressBookPage() {
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -302,7 +316,7 @@ export default function AddressBookPage() {
                 type="text"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -313,7 +327,7 @@ export default function AddressBookPage() {
                 type="text"
                 value={formData.pinCode}
                 onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -324,7 +338,7 @@ export default function AddressBookPage() {
                 type="text"
                 value={formData.gstNo}
                 onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -364,7 +378,7 @@ export default function AddressBookPage() {
                         type="text"
                         value={contact.contactPerson}
                         onChange={(e) => updateContact(index, 'contactPerson', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -376,7 +390,7 @@ export default function AddressBookPage() {
                         type="text"
                         value={contact.designation}
                         onChange={(e) => updateContact(index, 'designation', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -388,7 +402,7 @@ export default function AddressBookPage() {
                         type="text"
                         value={contact.contactNumber}
                         onChange={(e) => updateContact(index, 'contactNumber', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -400,7 +414,7 @@ export default function AddressBookPage() {
                         type="email"
                         value={contact.emailAddress}
                         onChange={(e) => updateContact(index, 'emailAddress', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>

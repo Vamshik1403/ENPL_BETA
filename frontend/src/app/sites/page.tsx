@@ -45,6 +45,7 @@ export default function SitesPage() {
   const [addressBookSearch, setAddressBookSearch] = useState('');
   const [showAddressBookDropdown, setShowAddressBookDropdown] = useState(false);
   const [isLoadingAddressBooks, setIsLoadingAddressBooks] = useState(true);
+  const [formContacts, setFormContacts] = useState<SiteContact[]>([]);
   const [formData, setFormData] = useState<Site>({
     addressBookId: 0,
     siteName: '',
@@ -158,6 +159,28 @@ export default function SitesPage() {
     setShowAddressBookDropdown(false);
   };
 
+  // Site Contact management functions
+  const addContact = () => {
+    const newContact: SiteContact = {
+      siteId: 0, // Will be set when site is created
+      contactPerson: '',
+      designation: '',
+      contactNumber: '',
+      emailAddress: '',
+    };
+    setFormContacts([...formContacts, newContact]);
+  };
+
+  const removeContact = (index: number) => {
+    setFormContacts(formContacts.filter((_, i) => i !== index));
+  };
+
+  const updateContact = (index: number, field: keyof SiteContact, value: string) => {
+    const updatedContacts = [...formContacts];
+    updatedContacts[index] = { ...updatedContacts[index], [field]: value };
+    setFormContacts(updatedContacts);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -194,6 +217,22 @@ export default function SitesPage() {
         if (response.ok) {
           const newSite = await response.json();
           setSites([...sites, newSite]);
+          
+          // Create site contacts
+          for (const contact of formContacts) {
+            if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
+              await fetch(`http://localhost:8000/sites/${newSite.id}/contacts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contactPerson: contact.contactPerson,
+                  designation: contact.designation,
+                  contactNumber: contact.contactNumber,
+                  emailAddress: contact.emailAddress,
+                }),
+              });
+            }
+          }
         } else {
           console.error('Failed to create site:', response.statusText);
         }
@@ -212,6 +251,7 @@ export default function SitesPage() {
       });
       setAddressBookSearch('');
       setShowAddressBookDropdown(false);
+      setFormContacts([]);
     } catch (error) {
       console.error('Error submitting site:', error);
     } finally {
@@ -219,7 +259,7 @@ export default function SitesPage() {
     }
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = async (id: number) => {
     const item = sites.find(s => s.id === id);
     if (item) {
       setFormData(item);
@@ -230,6 +270,20 @@ export default function SitesPage() {
       const addressBook = addressBooks.find(ab => ab.id === item.addressBookId);
       if (addressBook) {
         setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName} (${addressBook.addressType})`);
+      }
+      
+      // Fetch existing site contacts
+      try {
+        const response = await fetch(`http://localhost:8000/sites/${id}/contacts`);
+        if (response.ok) {
+          const contactsData = await response.json();
+          setFormContacts(contactsData);
+        } else {
+          setFormContacts([]);
+        }
+      } catch (error) {
+        console.error('Error fetching site contacts:', error);
+        setFormContacts([]);
       }
     }
   };
@@ -304,7 +358,7 @@ export default function SitesPage() {
                     }
                   }}
                   placeholder="Search customer or vendor..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 {showAddressBookDropdown && (
@@ -365,7 +419,7 @@ export default function SitesPage() {
                 type="text"
                 value={formData.siteName}
                 onChange={(e) => setFormData({ ...formData, siteName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -376,7 +430,7 @@ export default function SitesPage() {
               <textarea
                 value={formData.siteAddress}
                 onChange={(e) => setFormData({ ...formData, siteAddress: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 required
               />
@@ -389,7 +443,7 @@ export default function SitesPage() {
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -400,7 +454,7 @@ export default function SitesPage() {
                 type="text"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -411,7 +465,7 @@ export default function SitesPage() {
                 type="text"
                 value={formData.pinCode}
                 onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -422,10 +476,100 @@ export default function SitesPage() {
                 type="text"
                 value={formData.gstNo}
                 onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
+            
+            {/* Site Contacts Section */}
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Site Contacts</h3>
+                <button 
+                  type="button" 
+                  onClick={addContact} 
+                  className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                >
+                  + Add Contact
+                </button>
+              </div>
+              
+              {formContacts.map((contact, index) => (
+                <div key={index} className="bg-gray-50 p-4 rounded-lg mb-3 border">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-medium text-gray-700">Contact {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeContact(index)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contact Person *
+                      </label>
+                      <input
+                        type="text"
+                        value={contact.contactPerson}
+                        onChange={(e) => updateContact(index, 'contactPerson', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Designation *
+                      </label>
+                      <input
+                        type="text"
+                        value={contact.designation}
+                        onChange={(e) => updateContact(index, 'designation', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contact Number *
+                      </label>
+                      <input
+                        type="text"
+                        value={contact.contactNumber}
+                        onChange={(e) => updateContact(index, 'contactNumber', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={contact.emailAddress}
+                        onChange={(e) => updateContact(index, 'emailAddress', e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {formContacts.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No site contacts added yet. Click "Add Contact" to add contact information.</p>
+                </div>
+              )}
+            </div>
+            
             <div className="md:col-span-2 flex gap-2">
               <button
                 type="submit"
@@ -449,6 +593,7 @@ export default function SitesPage() {
                   });
                   setAddressBookSearch('');
                   setShowAddressBookDropdown(false);
+                  setFormContacts([]);
                 }}
                 className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >

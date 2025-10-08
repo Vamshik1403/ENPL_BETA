@@ -36,4 +36,30 @@ export class SitesController {
   remove(@Param('id') id: string) {
     return this.service.remove(Number(id));
   }
+
+  // SiteContact endpoints
+  @Post(':id/contacts')
+  async addContact(@Param('id') id: string, @Body() data: { contactPerson: string; designation: string; contactNumber: string; emailAddress: string }): Promise<any> {
+    return this.service.addContact(Number(id), data);
+  }
+
+  @Get(':id/contacts')
+  async findContacts(@Param('id') id: string): Promise<any[]> {
+    return this.service.findContacts(Number(id));
+  }
+
+  @Put('contacts/:contactId')
+  async updateContact(@Param('contactId') contactId: string, @Body() data: Partial<{ contactPerson: string; designation: string; contactNumber: string; emailAddress: string }>): Promise<any> {
+    return this.service.updateContact(Number(contactId), data);
+  }
+
+  @Delete('contacts/:contactId')
+  async removeContact(@Param('contactId') contactId: string): Promise<any> {
+    return this.service.removeContact(Number(contactId));
+  }
+
+  @Get('contacts/:contactId')
+  async findOneContact(@Param('contactId') contactId: string): Promise<any> {
+    return this.service.findOneContact(Number(contactId));
+  }
 }
