@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ContractWorkCategory {
   id?: number;
@@ -11,29 +11,62 @@ export default function ContractWorkPage() {
   const [contractWorkCategories, setContractWorkCategories] = useState<ContractWorkCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<ContractWorkCategory>({
-    contractWorkCategoryName: '',
-  });
+  const [formData, setFormData] = useState<ContractWorkCategory>({ contractWorkCategoryName: '' });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId) {
-      setContractWorkCategories(contractWorkCategories.map(item => 
-        item.id === editingId ? { ...formData, id: editingId } : item
-      ));
-    } else {
-      const newId = Math.max(...contractWorkCategories.map(c => c.id || 0), 0) + 1;
-      setContractWorkCategories([...contractWorkCategories, { ...formData, id: newId }]);
+  const API_URL = 'http://localhost:8000/contractworkcategory';
+
+  // 🔹 Fetch all categories from backend
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setContractWorkCategories(data);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    } finally {
+      setLoading(false);
     }
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({
-      contractWorkCategoryName: '',
-    });
   };
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // 🔹 Submit (Add / Update)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (editingId) {
+        // Update existing category
+        const res = await fetch(`${API_URL}/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!res.ok) throw new Error('Failed to update category');
+      } else {
+        // Add new category
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!res.ok) throw new Error('Failed to add category');
+      }
+
+      await fetchCategories();
+      resetForm();
+    } catch (err) {
+      console.error('Error saving category:', err);
+    }
+  };
+
+  // 🔹 Edit existing category
   const handleEdit = (id: number) => {
-    const item = contractWorkCategories.find(c => c.id === id);
+    const item = contractWorkCategories.find((c) => c.id === id);
     if (item) {
       setFormData(item);
       setEditingId(id);
@@ -41,8 +74,24 @@ export default function ContractWorkPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setContractWorkCategories(contractWorkCategories.filter(c => c.id !== id));
+  // 🔹 Delete category
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    try {
+      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      await fetchCategories();
+    } catch (err) {
+      console.error('Error deleting category:', err);
+    }
+  };
+
+  // 🔹 Reset form
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({ contractWorkCategoryName: '' });
   };
 
   return (
@@ -84,17 +133,11 @@ export default function ContractWorkPage() {
                 type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {editingId ? 'Update' : 'Add'} Contract Work Category
+                {editingId ? 'Update' : 'Add'}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                  setFormData({
-                    contractWorkCategoryName: '',
-                  });
-                }}
+                onClick={resetForm}
                 className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Cancel
@@ -105,49 +148,54 @@ export default function ContractWorkPage() {
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold">Contract Work Categories</h2>
+          {loading && <span className="text-sm text-gray-500">Loading...</span>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Category Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contract Work Category Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {contractWorkCategories.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.contractWorkCategoryName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item.id!)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id!)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+              {contractWorkCategories.length > 0 ? (
+                contractWorkCategories.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.contractWorkCategoryName}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(item.id!)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id!)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="text-center text-gray-500 py-4">
+                    No categories found
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

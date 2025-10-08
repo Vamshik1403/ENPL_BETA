@@ -44,7 +44,6 @@ model Site {
   state         String?
   pinCode       String?
   gstNo         String
-
   addressBook AddressBook   @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
   contacts    SiteContact[]
   tasks       Task[]
