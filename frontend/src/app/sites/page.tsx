@@ -11,7 +11,7 @@ interface AddressBook {
   city?: string;
   state?: string;
   pinCode?: string;
-  gstNo: string;
+  gstNo?: string;
 }
 
 interface Site {
@@ -23,7 +23,7 @@ interface Site {
   city?: string;
   state?: string;
   pinCode?: string;
-  gstNo: string;
+  gstNo?: string;
 }
 
 interface SiteContact {
@@ -196,14 +196,60 @@ export default function SitesPage() {
           body: JSON.stringify(formData),
         });
         
-        if (response.ok) {
-          const updatedSite = await response.json();
-          setSites(sites.map(item => 
-            item.id === editingId ? updatedSite : item
-          ));
-        } else {
-          console.error('Failed to update site:', response.statusText);
-        }
+         if (response.ok) {
+           const updatedSite = await response.json();
+           setSites(sites.map(item => 
+             item.id === editingId ? updatedSite : item
+           ));
+           
+           // Update site contacts
+           for (const contact of formContacts) {
+             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
+               if (contact.id) {
+                 // Update existing contact
+                 await fetch(`http://localhost:8000/sites/contacts/${contact.id}`, {
+                   method: 'PUT',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({
+                     contactPerson: contact.contactPerson,
+                     designation: contact.designation,
+                     contactNumber: contact.contactNumber,
+                     emailAddress: contact.emailAddress,
+                   }),
+                 });
+               } else {
+                 // Create new contact
+                 await fetch(`http://localhost:8000/sites/${editingId}/contacts`, {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({
+                     contactPerson: contact.contactPerson,
+                     designation: contact.designation,
+                     contactNumber: contact.contactNumber,
+                     emailAddress: contact.emailAddress,
+                   }),
+                 });
+               }
+             }
+           }
+           
+           setShowForm(false);
+           setEditingId(null);
+           setFormData({
+             addressBookId: 0,
+             siteName: '',
+             siteAddress: '',
+             city: '',
+             state: '',
+             pinCode: '',
+             gstNo: '',
+           });
+           setAddressBookSearch('');
+           setShowAddressBookDropdown(false);
+           setFormContacts([]);
+         } else {
+           console.error('Failed to update site:', response.statusText);
+         }
       } else {
         // Create new site
         const response = await fetch('http://localhost:8000/sites', {
@@ -359,7 +405,6 @@ export default function SitesPage() {
                   }}
                   placeholder="Search customer or vendor..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 />
                 {showAddressBookDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -477,7 +522,6 @@ export default function SitesPage() {
                 value={formData.gstNo}
                 onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             

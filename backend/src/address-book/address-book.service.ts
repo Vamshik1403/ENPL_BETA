@@ -9,23 +9,24 @@ export class AddressBookService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateAddressBookDto): Promise<AddressBook> {
-    // Generate the proper sequential ID
-    const addressBookID = await this.generateNextId(data.addressType);
+    // Generate the proper sequential ID for Customer
+    const addressBookID = await this.generateNextId('Customer');
     
     return this.prisma.addressBook.create({ 
       data: {
         ...data,
+        addressType: 'Customer', // Always set to Customer
         addressBookID,
       }
     });
   }
 
-  async generateNextId(addressType: string): Promise<string> {
-    const prefix = addressType === 'Customer' ? 'CUS' : 'VEN';
+  async generateNextId(addressType: string = 'Customer'): Promise<string> {
+    const prefix = 'CUS'; // Always use CUS prefix
     
-    // Count existing records of this type
+    // Count existing Customer records
     const count = await this.prisma.addressBook.count({
-      where: { addressType }
+      where: { addressType: 'Customer' }
     });
     
     const nextNumber = String(count + 1).padStart(3, '0');

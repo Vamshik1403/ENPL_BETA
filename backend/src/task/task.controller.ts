@@ -17,6 +17,11 @@ export class TaskController {
     return this.taskService.findAll();
   }
 
+  @Get('next-id')
+  async getNextId() {
+    const taskId = await this.taskService.generateNextTaskId();
+    return { taskId };
+  }
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.taskService.findOne(id);

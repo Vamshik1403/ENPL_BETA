@@ -7,5 +7,5 @@ export class CreateSiteDto {
   @IsString() @IsOptional() city?: string;
   @IsString() @IsOptional() state?: string;
   @IsString() @IsOptional() pinCode?: string;
-  @IsString() @IsNotEmpty() gstNo: string;
+  @IsString() @IsOptional() gstNo?: string;
 }

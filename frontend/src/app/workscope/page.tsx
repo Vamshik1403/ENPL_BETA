@@ -39,11 +39,15 @@ export default function WorkscopeCategoryPage() {
     e.preventDefault();
     try {
       if (editingId) {
-        // Update existing
+        // Update existing - only send the fields that should be updated
+        const updateData = {
+          workscopeCategoryName: formData.workscopeCategoryName,
+        };
+        
         const res = await fetch(`${API_URL}/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(updateData),
         });
         if (!res.ok) throw new Error('Failed to update');
       } else {
@@ -110,12 +114,12 @@ export default function WorkscopeCategoryPage() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
             {editingId ? 'Edit Workscope Category' : 'Add New Workscope Category'}
           </h2>
           <form onSubmit={handleSubmit} className="max-w-md">
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Workscope Category Name
               </label>
               <input
@@ -124,7 +128,7 @@ export default function WorkscopeCategoryPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, workscopeCategoryName: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                 required
               />
             </div>

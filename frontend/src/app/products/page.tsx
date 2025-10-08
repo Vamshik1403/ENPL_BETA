@@ -45,13 +45,17 @@ export default function ProductsPage() {
     
     try {
       if (editingId) {
-        // Update existing product
+        // Update existing product - only send the fields that should be updated
+        const updateData = {
+          productTypeName: formData.productTypeName,
+        };
+        
         const response = await fetch(`http://localhost:8000/producttype/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(updateData),
         });
         
         if (response.ok) {

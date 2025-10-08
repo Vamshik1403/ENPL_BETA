@@ -45,13 +45,17 @@ export default function ServiceWorkPage() {
     
     try {
       if (editingId) {
-        // Update existing service work category
+        // Update existing service work category - only send the fields that should be updated
+        const updateData = {
+          serviceWorkCategoryName: formData.serviceWorkCategoryName,
+        };
+        
         const response = await fetch(`http://localhost:8000/serviceworkcategory/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(updateData),
         });
         
         if (response.ok) {

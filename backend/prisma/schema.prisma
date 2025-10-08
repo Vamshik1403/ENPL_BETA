@@ -9,14 +9,14 @@ datasource db {
 
 model AddressBook {
   id            Int     @id @default(autoincrement())
-  addressType   String
-  addressBookID String  @default(uuid())
+  addressType   String?
+  addressBookID String
   customerName  String
   regdAddress   String
   city          String?
   state         String?
   pinCode       String?
-  gstNo         String
+  gstNo         String?
 
   contacts AddressBookContact[]
   sites    Site[]
@@ -43,7 +43,7 @@ model Site {
   city          String?
   state         String?
   pinCode       String?
-  gstNo         String
+  gstNo         String?
   addressBook AddressBook   @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
   contacts    SiteContact[]
   tasks       Task[]
@@ -80,6 +80,7 @@ model WorkscopeCategory {
   id                    Int                      @id @default(autoincrement())
   workscopeCategoryName String
   taskWorkscopeCategory TasksWorkscopeCategory[]
+  tasksWorkscopeDetails TasksWorkscopeDetails[]
 }
 
 model ServiceContract {
@@ -192,11 +193,13 @@ model TasksWorkscopeCategory {
 }
 
 model TasksWorkscopeDetails {
-  id               Int     @id @default(autoincrement())
-  taskId           Int
-  workscopeDetails String
-  extraNote        String?
-  task             Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id                  Int                @id @default(autoincrement())
+  taskId              Int
+  workscopeCategoryId Int
+  workscopeDetails    String
+  extraNote           String?
+  task                Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workscopeCategory   WorkscopeCategory  @relation(fields: [workscopeCategoryId], references: [id], onDelete: Cascade)
 }
 
 model TasksSchedule {

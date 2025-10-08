@@ -30,7 +30,7 @@ export default function AddressBookPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<AddressBook>({
-    addressType: '',
+    addressType: 'Customer',
     addressBookID: '',
     customerName: '',
     regdAddress: '',
@@ -102,34 +102,108 @@ export default function AddressBookPage() {
   };
 
   const handleAddressTypeChange = async (addressType: string) => {
-    const generatedId = await generateAddressBookId(addressType);
-    setGeneratedId(generatedId);
-    setFormData({ ...formData, addressType, addressBookID: generatedId });
+    // Only generate new ID for new records, not when editing
+    if (!editingId) {
+      const generatedId = await generateAddressBookId(addressType);
+      setGeneratedId(generatedId);
+      setFormData({ ...formData, addressType, addressBookID: generatedId });
+    } else {
+      // When editing, just update the address type without changing the ID
+      setFormData({ ...formData, addressType });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
+    console.log('Form submission started:', { editingId, formData, formContacts });
+    
     try {
       if (editingId) {
         // Update existing record
+        console.log('Updating existing record with ID:', editingId);
+        // Only send the fields that should be updated, excluding nested objects and addressBookID
+        const updateData = {
+          addressType: formData.addressType,
+          customerName: formData.customerName,
+          regdAddress: formData.regdAddress,
+          city: formData.city,
+          state: formData.state,
+          pinCode: formData.pinCode,
+          gstNo: formData.gstNo,
+        };
+        
+        console.log('Update data being sent:', updateData);
+        
         const response = await fetch(`http://localhost:8000/address-book/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(updateData),
         });
         
+        console.log('Update response status:', response.status);
+        
         if (response.ok) {
+          console.log('Record updated successfully');
+          
+          // Handle contacts separately with better error handling
+          try {
+            for (const contact of formContacts) {
+              if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
+                if (contact.id) {
+                  // Update existing contact
+                  console.log('Updating existing contact:', contact.id);
+                  const contactResponse = await fetch(`http://localhost:8000/address-book/contacts/${contact.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      contactPerson: contact.contactPerson,
+                      designation: contact.designation,
+                      contactNumber: contact.contactNumber,
+                      emailAddress: contact.emailAddress,
+                    }),
+                  });
+                  
+                  if (!contactResponse.ok) {
+                    console.error('Failed to update contact:', contact.id, contactResponse.status);
+                  }
+                } else {
+                  // Create new contact
+                  console.log('Creating new contact for address book:', editingId);
+                  const contactResponse = await fetch('http://localhost:8000/addressbookcontact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...contact,
+                      addressBookId: editingId,
+                    }),
+                  });
+                  
+                  if (!contactResponse.ok) {
+                    console.error('Failed to create contact:', contactResponse.status);
+                  }
+                }
+              }
+            }
+          } catch (contactError) {
+            console.error('Error handling contacts:', contactError);
+            // Don't fail the entire update if contacts fail
+          }
+          
           await fetchAddressBooks(); // Refresh the list
           setShowForm(false);
           setEditingId(null);
           resetForm();
+          console.log('Form reset and closed');
+        } else {
+          console.error('Failed to update record:', response.status, response.statusText);
         }
       } else {
         // Create new record
+        console.log('Creating new record');
         const response = await fetch('http://localhost:8000/address-book', {
           method: 'POST',
           headers: {
@@ -171,7 +245,7 @@ export default function AddressBookPage() {
 
   const resetForm = () => {
     setFormData({
-      addressType: '',
+      addressType: 'Customer',
       addressBookID: '',
       customerName: '',
       regdAddress: '',
@@ -228,15 +302,30 @@ export default function AddressBookPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
-        <p className="text-gray-600">Manage customer and vendor information</p>
+        <p className="text-gray-600">Manage customers</p>
       </div>
 
       <div className="mb-6">
         <button
-          onClick={() => setShowForm(true)}
+          onClick={async () => {
+            setEditingId(null);
+            const generatedId = await generateAddressBookId('Customer');
+            setGeneratedId(generatedId);
+            setFormData({ 
+              addressType: 'Customer',
+              addressBookID: generatedId,
+              customerName: '',
+              regdAddress: '',
+              city: '',
+              state: '',
+              pinCode: '',
+              gstNo: '',
+            });
+            setShowForm(true);
+          }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Add New Address Book Entry
+          Add New Customer
         </button>
       </div>
 
@@ -250,16 +339,12 @@ export default function AddressBookPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address Type
               </label>
-              <select
-                value={formData.addressType}
-                onChange={(e) => handleAddressTypeChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select Address Type</option>
-                <option value="Customer">Customer</option>
-                <option value="Vendor">Vendor</option>
-              </select>
+              <input
+                type="text"
+                value="Customer"
+                readOnly
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -267,7 +352,7 @@ export default function AddressBookPage() {
               </label>
               <input
                 type="text"
-                value={generatedId || ''}
+                value={editingId ? formData.addressBookID : (generatedId || '')}
                 readOnly
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600"
                 placeholder="Auto-generated"
@@ -339,7 +424,6 @@ export default function AddressBookPage() {
                 value={formData.gstNo}
                 onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             
@@ -379,7 +463,6 @@ export default function AddressBookPage() {
                         value={contact.contactPerson}
                         onChange={(e) => updateContact(index, 'contactPerson', e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
                       />
                     </div>
                     <div>
@@ -391,7 +474,6 @@ export default function AddressBookPage() {
                         value={contact.designation}
                         onChange={(e) => updateContact(index, 'designation', e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
                       />
                     </div>
                     <div>
@@ -403,7 +485,6 @@ export default function AddressBookPage() {
                         value={contact.contactNumber}
                         onChange={(e) => updateContact(index, 'contactNumber', e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
                       />
                     </div>
                     <div>
@@ -415,7 +496,6 @@ export default function AddressBookPage() {
                         value={contact.emailAddress}
                         onChange={(e) => updateContact(index, 'emailAddress', e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
                       />
                     </div>
                   </div>
