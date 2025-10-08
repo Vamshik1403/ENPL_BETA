@@ -125,7 +125,7 @@ export default function ServiceWorkPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Service Work</h1>
-        <p className="text-gray-600">Manage service work categories</p>
+        <p className="text-black">Manage service work categories</p>
       </div>
 
       <div className="mb-6">
@@ -227,7 +227,7 @@ export default function ServiceWorkPage() {
                       <button
                         onClick={() => handleEdit(item.id!)}
                         disabled={loading}
-                        className="text-blue-600 hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-black hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Edit
                       </button>

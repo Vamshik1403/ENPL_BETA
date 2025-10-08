@@ -31,26 +31,36 @@ export class ServiceContractInventoryService {
   }
 
   async findAll() {
-    const records = await this.prisma.serviceContractInventory.findMany({
-      include: { serviceContract: true, productType: true },
-    });
+  return this.prisma.serviceContract.findMany({
+    include: {
+      periods: true,
+      terms: true,
+      services: {
+        include: { contractWorkCategory: true }, // ✅ Correct relation name
+      },
+      inventories: {
+        include: { productType: true }, // ✅ Also include productType name
+      },
+      histories: true,
+    },
+  });
+}
 
-    return records.map(r => ({
-      ...r,
-      warrantyStatus: this.computeWarrantyStatus(r.purchaseDate, r.warrantyPeriod),
-    }));
-  }
+ async findOne(id: number) {
+  const record = await this.prisma.serviceContractInventory.findUnique({
+    where: { id },
+    include: { serviceContract: true, productType: true },
+  });
 
-  async findOne(id: number) {
-    const record = await this.prisma.serviceContractInventory.findUnique({
-      where: { id },
-      include: { serviceContract: true, productType: true },
-    });
+  // 🟢 Don’t throw NotFoundException — just return null
+  if (!record) return null;
 
-    if (!record) throw new NotFoundException(`ServiceContractInventory #${id} not found`);
+  return {
+    ...record,
+    warrantyStatus: this.computeWarrantyStatus(record.purchaseDate, record.warrantyPeriod),
+  };
+}
 
-    return { ...record, warrantyStatus: this.computeWarrantyStatus(record.purchaseDate, record.warrantyPeriod) };
-  }
 
   async update(id: number, dto: UpdateServiceContractInventoryDto) {
     await this.findOne(id);
@@ -63,6 +73,13 @@ export class ServiceContractInventoryService {
 
     return { ...record, warrantyStatus: this.computeWarrantyStatus(record.purchaseDate, record.warrantyPeriod) };
   }
+
+  async deleteManyByContract(contractId: number) {
+  await this.prisma.serviceContractInventory.deleteMany({
+    where: { serviceContractId: contractId },
+  });
+  return { message: 'All inventories removed for this contract.' };
+}
 
   async remove(id: number) {
     await this.findOne(id);

@@ -360,7 +360,7 @@ export default function SitesPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Sites</h1>
-        <p className="text-gray-600">Manage customer sites and locations</p>
+        <p className="text-black">Manage customer sites and locations</p>
       </div>
 
       <div className="mb-6">
@@ -416,7 +416,7 @@ export default function SitesPage() {
                             console.log('Manual retry clicked');
                             fetchAddressBooks();
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="text-black hover:text-blue-800 text-sm"
                         >
                           Retry
                         </button>
@@ -458,7 +458,7 @@ export default function SitesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Name
+                Site/Branch Name <span className=''>*</span>
               </label>
               <input
                 type="text"
@@ -470,7 +470,7 @@ export default function SitesPage() {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Address
+                Site Address <span>*</span>
               </label>
               <textarea
                 value={formData.siteAddress}
@@ -709,7 +709,7 @@ export default function SitesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(item.id!)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="text-black hover:text-blue-900 mr-3"
                     >
                       Edit
                     </button>

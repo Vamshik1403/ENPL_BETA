@@ -85,7 +85,7 @@ model WorkscopeCategory {
 
 model ServiceContract {
   id                Int                        @id @default(autoincrement())
-  serviceContractID String                     @default(uuid())
+  serviceContractID String                    
   customerId        Int
   branchId          Int
   salesManagerName  String

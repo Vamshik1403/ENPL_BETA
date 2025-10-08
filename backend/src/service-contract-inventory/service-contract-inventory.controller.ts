@@ -27,6 +27,12 @@ export class ServiceContractInventoryController {
     return this.serviceContractInventoryService.update(id, dto);
   }
 
+
+  @Delete(':contractId')
+removeByContract(@Param('contractId', ParseIntPipe) contractId: number) {
+  return this.serviceContractInventoryService.deleteManyByContract(contractId);
+}
+
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.serviceContractInventoryService.remove(id);

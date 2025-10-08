@@ -3,36 +3,42 @@ export default function Home() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">Welcome to ENPL ERP System</p>
+        <p className="text-black">Welcome to ENPL ERP System</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Main Operations */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Address Book</h3>
-          <p className="text-gray-600">Manage customer and vendor information</p>
+          <p className="text-black">Manage customer and vendor information</p>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Sites</h3>
-          <p className="text-gray-600">Manage customer sites and locations</p>
+          <p className="text-black">Manage customer sites and locations</p>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
+<<<<<<< Updated upstream
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Workscope</h3>
           <p className="text-gray-600">Manage workscope categories</p>
+=======
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Products</h3>
+          <p className="text-black">Manage product types and inventory</p>
+>>>>>>> Stashed changes
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Service Contracts</h3>
-          <p className="text-gray-600">Manage service contracts and agreements</p>
+          <p className="text-black">Manage service contracts and agreements</p>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Tasks</h3>
-          <p className="text-gray-600">Track and manage tasks and work orders</p>
+          <p className="text-black">Track and manage tasks and work orders</p>
         </div>
         
+<<<<<<< Updated upstream
         {/* Setup Section */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg shadow-md border border-blue-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
@@ -58,6 +64,11 @@ export default function Home() {
               Departments
             </div>
           </div>
+=======
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Departments</h3>
+          <p className="text-black">Manage organizational departments</p>
+>>>>>>> Stashed changes
         </div>
       </div>
     </div>

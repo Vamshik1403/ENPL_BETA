@@ -302,7 +302,11 @@ export default function AddressBookPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
+<<<<<<< Updated upstream
         <p className="text-gray-600">Manage customers</p>
+=======
+        <p className="text-black">Manage customers</p>
+>>>>>>> Stashed changes
       </div>
 
       <div className="mb-6">
@@ -339,12 +343,23 @@ export default function AddressBookPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address Type
               </label>
+<<<<<<< Updated upstream
               <input
                 type="text"
                 value="Customer"
                 readOnly
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
               />
+=======
+              <select
+                value={formData.addressType}
+                onChange={(e) => handleAddressTypeChange(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="Customer">Customer</option>
+              </select>
+>>>>>>> Stashed changes
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -354,13 +369,13 @@ export default function AddressBookPage() {
                 type="text"
                 value={editingId ? formData.addressBookID : (generatedId || '')}
                 readOnly
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-black"
                 placeholder="Auto-generated"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer Name
+                Customer Name <span>*</span>
               </label>
               <input
                 type="text"
@@ -372,7 +387,7 @@ export default function AddressBookPage() {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Registered Address
+                Registered Address <span>*</span>
               </label>
               <textarea
                 value={formData.regdAddress}
@@ -417,7 +432,7 @@ export default function AddressBookPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                GST Number
+                GST Number 
               </label>
               <input
                 type="text"
@@ -594,7 +609,7 @@ export default function AddressBookPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => handleEdit(item.id!)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="text-black hover:text-blue-900 mr-3"
                     >
                       Edit
                     </button>

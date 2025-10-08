@@ -26,6 +26,10 @@ export class ServiceContractController {
   update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateServiceContractDto) {
     return this.serviceContractService.update(id, updateDto);
   }
+    @Get('next/id')
+  async getNextContractId() {
+    return this.serviceContractService.getNextContractId();
+  }
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {

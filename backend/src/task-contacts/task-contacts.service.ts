@@ -39,8 +39,15 @@ export class TasksContactsService {
     });
   }
 
-  async remove(id: number) {
-    await this.findOne(id);
-    return this.prisma.tasksContacts.delete({ where: { id } });
+async remove(id: number) {
+  const existing = await this.prisma.serviceContractInventory.findUnique({ where: { id } });
+
+  if (!existing) {
+    console.warn(`⚠️ ServiceContractInventory ${id} not found, skipping delete.`);
+    return { message: `No record found with ID ${id}` };
   }
+
+  return this.prisma.serviceContractInventory.delete({ where: { id } });
+}
+
 }

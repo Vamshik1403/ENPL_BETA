@@ -353,7 +353,7 @@ export default function TasksPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Tasks</h1>
-        <p className="text-gray-600">Track and manage tasks and work orders</p>
+        <p className="text-black">Track and manage tasks and work orders</p>
       </div>
 
       <div className="mb-6">
@@ -715,6 +715,7 @@ export default function TasksPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
+<<<<<<< Updated upstream
               {tasks.length > 0 ? (
                 tasks.map((item) => (
                   <tr key={item.id}>
@@ -759,6 +760,44 @@ export default function TasksPage() {
                 <tr>
                   <td colSpan={8} className="text-center text-gray-500 py-4">
                     No tasks found
+=======
+              {tasks.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.taskID}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.departmentId}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.addressBookId}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.siteId}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.createdBy}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(item.id!)}
+                      className="text-black hover:text-blue-900 mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id!)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+>>>>>>> Stashed changes
                   </td>
                 </tr>
               )}

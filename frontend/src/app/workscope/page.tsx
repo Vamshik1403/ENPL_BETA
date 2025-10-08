@@ -100,7 +100,7 @@ export default function WorkscopeCategoryPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Workscope</h1>
-        <p className="text-gray-600">Manage workscope categories</p>
+        <p className="text-black">Manage workscope categories</p>
       </div>
 
       <div className="mb-6">
@@ -182,7 +182,7 @@ export default function WorkscopeCategoryPage() {
                     <td className="px-6 py-4 text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item.id!)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        className="text-black hover:text-blue-900 mr-3"
                       >
                         Edit
                       </button>
