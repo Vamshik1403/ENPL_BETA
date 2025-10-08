@@ -4,24 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-<<<<<<< Updated upstream
 const mainNavigationItems = [
   { name: 'Address Book', href: '/addressbook', icon: '👥' },
   { name: 'Sites', href: '/sites', icon: '🏢' },
   { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
   { name: 'Service Contract Category', href: '/service-contract', icon: '📄' },
-=======
-const navigationItems = [
-  
-  { name: 'Customers', href: '/addressbook', icon: '👥' },
-  { name: 'Sites', href: '/sites', icon: '🏢' },
-  { name: 'Products Type', href: '/products', icon: '📦' },
-  { name: 'Service Work Category', href: '/service-work', icon: '🔧' },
-  { name: 'Contract Work Category', href: '/contract-work', icon: '📋' },
-  { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
-  { name: 'Service Contract', href: '/service-contract', icon: '📄' },
-  { name: 'Departments', href: '/departments', icon: '🏛️' },
->>>>>>> Stashed changes
   { name: 'Tasks', href: '/tasks', icon: '✅' },
 ];
 
