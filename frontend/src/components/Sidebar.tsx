@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const mainNavigationItems = [
   { name: 'Address Book', href: '/addressbook', icon: '👥' },
@@ -21,7 +22,7 @@ const setupItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isCollapsed, setIsCollapsed } = useSidebar();
   const [isSetupExpanded, setIsSetupExpanded] = useState(true);
 
   const renderNavigationItem = (item: any) => {
@@ -45,8 +46,8 @@ export default function Sidebar() {
   };
 
   return (
-    <div className={`bg-gray-900 text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} min-h-screen`}>
-      <div className="p-4">
+    <div className={`bg-gray-900 text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-screen fixed left-0 top-0 z-50 flex flex-col`}>
+      <div className="flex-shrink-0 p-4">
         <div className="flex items-center justify-between mb-8">
           <h1 className={`font-bold text-xl transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
             ENPL ERP
@@ -54,11 +55,14 @@ export default function Sidebar() {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? '→' : '←'}
           </button>
         </div>
-        
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         <nav className="space-y-2">
           {/* Main Navigation Items */}
           {mainNavigationItems.map(renderNavigationItem)}

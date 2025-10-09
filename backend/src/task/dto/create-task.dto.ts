@@ -43,6 +43,10 @@ export class CreateTaskRemarkDto {
   @IsString()
   @IsNotEmpty()
   remark: string;
+
+  @IsString()
+  @IsNotEmpty()
+  status: string;
 }
 
 export class CreateTaskDto {
@@ -54,6 +58,10 @@ export class CreateTaskDto {
 
   @IsInt()
   siteId: number;
+
+  @IsString()
+  @IsNotEmpty()
+  status: string;
 
   @IsOptional()
   @IsArray()

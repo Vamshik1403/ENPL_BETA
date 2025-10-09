@@ -163,6 +163,7 @@ model Task {
   departmentId     Int
   addressBookId    Int
   siteId           Int
+  status           String                   @default("Open")
   createdBy        String
   createdAt        DateTime                 @default(now())
   department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
@@ -214,6 +215,7 @@ model TasksRemarks {
   id        Int      @id @default(autoincrement())
   taskId    Int
   remark    String
+  status    String   @default("Open")
   createdBy String
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)

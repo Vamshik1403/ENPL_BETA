@@ -61,6 +61,7 @@ export class TaskService {
         data: remarks.map((remark: any) => ({
           taskId: task.id,
           remark: remark.remark,
+          status: remark.status || 'Open',
           createdBy: 'System User', // TODO: Replace with actual logged-in user
         }))
       });
@@ -128,10 +129,10 @@ export class TaskService {
   async update(id: number, dto: UpdateTaskDto) {
     await this.findOne(id);
     
-    // Extract only the fields that should be updated
+    // Extract only the nested fields that should be handled separately
     const { contacts, workscopeDetails, schedule, remarks, ...updateData } = dto as any;
     
-    // Update the main task first
+    // Update the main task first (including status)
     const task = await this.prisma.task.update({
       where: { id },
       data: updateData,
@@ -181,6 +182,7 @@ export class TaskService {
         data: remarks.map((remark: any) => ({
           taskId: id,
           remark: remark.remark,
+          status: remark.status || 'Open',
           createdBy: 'System User', // TODO: Replace with actual logged-in user
         }))
       });
