@@ -28,21 +28,21 @@ const mainNavigationItems: NavigationItem[] = [
     href: '/addressbook', 
     icon: '👥',
     nested: [
-      { name: 'Customers', href: '/addressbook/customers', icon: '👤' },
-      { name: 'Sites', href: '/addressbook/sites', icon: '🏢' }
+      { name: 'Customers', href: '/addressbook', icon: '👤' },
+      { name: 'Sites', href: '/sites', icon: '📍' }
     ]
   },
-  { name: 'Sites', href: '/sites', icon: '📍' },
-  { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
   { name: 'Service Contract Category', href: '/service-contract', icon: '📄' },
   { name: 'Tasks', href: '/tasks', icon: '✅' },
 ];
 
 const setupItems: NavigationItem[] = [
+    { name: 'Departments', href: '/departments', icon: '🏛️' },
   { name: 'Products Type', href: '/products', icon: '📦' },
   { name: 'Service Work Category', href: '/service-work', icon: '🔧' },
   { name: 'Contract Work Category', href: '/contract-work', icon: '📋' },
-  { name: 'Departments', href: '/departments', icon: '🏛️' },
+    { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
+
 ];
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
