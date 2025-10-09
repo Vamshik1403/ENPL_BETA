@@ -14,7 +14,12 @@ interface NavigationItem {
 interface ExpandedSections {
   addressbook: boolean;
   setup: boolean;
-  [key: string]: boolean; // Add index signature to allow dynamic keys
+  [key: string]: boolean;
+}
+
+interface SidebarProps {
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
 }
 
 const mainNavigationItems: NavigationItem[] = [
@@ -40,13 +45,12 @@ const setupItems: NavigationItem[] = [
   { name: 'Departments', href: '/departments', icon: '🏛️' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
     addressbook: true,
     setup: true
-  });
+  }); 
 
   const toggleSection = (section: keyof ExpandedSections) => {
     setExpandedSections(prev => ({
@@ -137,11 +141,13 @@ export default function Sidebar() {
       bg-gradient-to-b from-gray-900 to-gray-800 text-white 
       transition-all duration-300 ease-in-out 
       ${isCollapsed ? 'w-16' : 'w-64'} 
-      min-h-screen relative
+      h-screen
       shadow-2xl border-r border-gray-700
+      fixed left-0 top-0 z-50
+      overflow-y-auto
     `}>
       {/* Toggle Button */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-gray-700 sticky top-0 bg-gray-900">
         <div className="flex items-center justify-between">
           <h1 className={`
             font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent
@@ -210,8 +216,8 @@ export default function Sidebar() {
 
       {/* Collapsed State Helper */}
       {isCollapsed && (
-        <div className="absolute bottom-4 left-0 right-0 text-center">
-          <div className="text-xs text-gray-500 px-2">
+        <div className="sticky bottom-0 left-0 right-0 text-center p-4 bg-gray-900 border-t border-gray-700">
+          <div className="text-xs text-gray-500">
             Hover for menu
           </div>
         </div>
