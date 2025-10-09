@@ -120,6 +120,7 @@ model ServiceContractServices {
   id                     Int                  @id @default(autoincrement())
   serviceContractId      Int
   contractWorkCategoryId Int
+    description            String?              // Add this line
   serviceContract        ServiceContract      @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
   contractWorkCategory   ContractWorkCategory @relation(fields: [contractWorkCategoryId], references: [id], onDelete: Cascade)
 }

@@ -123,6 +123,7 @@ export default function ServiceContractPage() {
   const [sites, setSites] = useState<any[]>([]);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<any[]>([]);
+const [tasks, setTasks] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<ServiceContract>({
     serviceContractID: '',
@@ -219,6 +220,18 @@ export default function ServiceContractPage() {
     }
   };
 
+  useEffect(() => {
+  const fetchTasks = async () => {
+    try {
+      const tasksData = await apiFetch('/task');
+      setTasks(tasksData);
+    } catch (err) {
+      console.error('Error fetching tasks', err);
+    }
+  };
+  fetchTasks();
+}, []);
+
   // ⬇️ when Add New button clicked → prefill next ID
   const handleAddNew = async () => {
     const res = await apiFetch('/service-contract/next/id');
@@ -288,107 +301,113 @@ export default function ServiceContractPage() {
   };
 
   // 🟢 Submit Form — save all related data
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    try {
-      let serviceContractId = editingId;
+  try {
+    let serviceContractId = editingId;
 
-      if (editingId) {
-        // 🟡 UPDATE EXISTING CONTRACT
-        await apiFetch(`/service-contract/${editingId}`, 'PATCH', {
-          customerId: formData.customerId,
-          branchId: formData.branchId,
-          salesManagerName: formData.salesManagerName,
-        });
+    if (editingId) {
+      // 🟡 UPDATE EXISTING CONTRACT
+      await apiFetch(`/service-contract/${editingId}`, 'PATCH', {
+        customerId: formData.customerId,
+        branchId: formData.branchId,
+        salesManagerName: formData.salesManagerName,
+      });
 
-        // 🔹 POST or PATCH period
-        await apiFetch(`/service-contract-period`, 'POST', {
-          serviceContractId: editingId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          nextPMVisitDate: formData.nextPMVisitDate,
-          contractDescription: formData.contractDescription,
-        });
+      // 🔹 POST or PATCH period
+      await apiFetch(`/service-contract-period`, 'POST', {
+        serviceContractId: editingId,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        nextPMVisitDate: formData.nextPMVisitDate,
+        contractDescription: formData.contractDescription,
+      });
 
-        // 🔹 POST or PATCH terms
-        await apiFetch(`/service-contract-terms`, 'POST', {
-          serviceContractId: editingId,
-          maxOnSiteVisits: formData.maxOnSiteVisits,
-          maxPreventiveMaintenanceVisit: formData.maxPreventiveMaintenanceVisit,
-          inclusiveInOnSiteVisitCounts: formData.inclusiveInOnSiteVisitCounts,
-          preventiveMaintenanceCycle: formData.preventiveMaintenanceCycle,
-        });
-      } else {
-        // 🟢 CREATE NEW CONTRACT FIRST
-        const main = await apiFetch('/service-contract', 'POST', {
-          customerId: formData.customerId,
-          branchId: formData.branchId,
-          salesManagerName: formData.salesManagerName,
-        });
-        serviceContractId = main.id;
+      // 🔹 POST or PATCH terms
+      await apiFetch(`/service-contract-terms`, 'POST', {
+        serviceContractId: editingId,
+        maxOnSiteVisits: formData.maxOnSiteVisits,
+        maxPreventiveMaintenanceVisit: formData.maxPreventiveMaintenanceVisit,
+        inclusiveInOnSiteVisitCounts: formData.inclusiveInOnSiteVisitCounts,
+        preventiveMaintenanceCycle: formData.preventiveMaintenanceCycle,
+      });
 
-        // 🔹 Create period + terms after contract creation
-        await apiFetch(`/service-contract-period`, 'POST', {
-          serviceContractId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          nextPMVisitDate: formData.nextPMVisitDate,
-          contractDescription: formData.contractDescription,
-        });
+      // 🔴 DELETE ALL existing services and inventories first (clean slate)
+      await apiFetch(`/service-contract-services/contract/${editingId}`, 'DELETE');
+      await apiFetch(`/service-contract-inventory/contract/${editingId}`, 'DELETE');
+    } else {
+      // 🟢 CREATE NEW CONTRACT FIRST
+      const main = await apiFetch('/service-contract', 'POST', {
+        customerId: formData.customerId,
+        branchId: formData.branchId,
+        salesManagerName: formData.salesManagerName,
+      });
+      serviceContractId = main.id;
 
-        await apiFetch(`/service-contract-terms`, 'POST', {
-          serviceContractId,
-          maxOnSiteVisits: formData.maxOnSiteVisits,
-          maxPreventiveMaintenanceVisit: formData.maxPreventiveMaintenanceVisit,
-          inclusiveInOnSiteVisitCounts: formData.inclusiveInOnSiteVisitCounts,
-          preventiveMaintenanceCycle: formData.preventiveMaintenanceCycle,
-        });
-      }
+      // 🔹 Create period + terms after contract creation
+      await apiFetch(`/service-contract-period`, 'POST', {
+        serviceContractId,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        nextPMVisitDate: formData.nextPMVisitDate,
+        contractDescription: formData.contractDescription,
+      });
 
-      // Now (re)insert child items
-      // ✅ Services
-      for (const s of contractServices) {
-        await apiFetch('/service-contract-services', 'POST', {
-          serviceContractId,
-          contractWorkCategoryId: parseInt(s.serviceName) || 1,
-        });
-      }
-
-      // ✅ Inventories
-      for (const inv of inventories) {
-        await apiFetch('/service-contract-inventory', 'POST', {
-          serviceContractId,
-          productTypeId: parseInt(inv.productType) || 1,
-          makeModel: inv.makeModel,
-          snMac: inv.snMac,
-          description: inv.description,
-          purchaseDate: inv.purchaseDate
-            ? new Date(inv.purchaseDate).toISOString()
-            : new Date().toISOString(),
-          warrantyPeriod: inv.warrantyPeriod,
-          warrantyStatus: inv.warrantyStatus,
-          thirdPartyPurchase: inv.thirdPartyPurchase,
-        });
-      }
-
-      // ✅ Service History
-      if (historyForm.taskId.trim() && historyForm.serviceDate && historyForm.startTime && historyForm.endTime) {
-        await apiFetch('/service-contract-history', 'POST', {
-          ...historyForm,
-          serviceContractId: serviceContractId || editingId,
-        });
-      }
-
-      alert(editingId ? '✅ Service Contract updated!' : '✅ Service Contract created!');
-      setShowForm(false);
-      await loadContracts();
-      await loadServiceHistories();
-    } catch (err) {
-      console.error('Save error', err);
-      alert('❌ Failed to save data. Check console.');
+      await apiFetch(`/service-contract-terms`, 'POST', {
+        serviceContractId,
+        maxOnSiteVisits: formData.maxOnSiteVisits,
+        maxPreventiveMaintenanceVisit: formData.maxPreventiveMaintenanceVisit,
+        inclusiveInOnSiteVisitCounts: formData.inclusiveInOnSiteVisitCounts,
+        preventiveMaintenanceCycle: formData.preventiveMaintenanceCycle,
+      });
     }
-  };
+
+    // Now CREATE ALL services (fresh insert after deletion)
+    for (const s of contractServices) {
+      await apiFetch('/service-contract-services', 'POST', {
+        serviceContractId,
+        contractWorkCategoryId: parseInt(s.serviceName) || 1,
+        description: s.description,
+      });
+    }
+
+    // CREATE ALL inventories (fresh insert after deletion)
+    for (const inv of inventories) {
+      await apiFetch('/service-contract-inventory', 'POST', {
+        serviceContractId,
+        productTypeId: parseInt(inv.productType) || 1,
+        makeModel: inv.makeModel,
+        snMac: inv.snMac,
+        description: inv.description,
+        purchaseDate: inv.purchaseDate
+          ? new Date(inv.purchaseDate).toISOString()
+          : new Date().toISOString(),
+        warrantyPeriod: inv.warrantyPeriod,
+        warrantyStatus: inv.warrantyStatus,
+        thirdPartyPurchase: inv.thirdPartyPurchase,
+      });
+    }
+
+    // ✅ Service History
+    if (historyForm.taskId.trim() && historyForm.serviceDate && historyForm.startTime && historyForm.endTime) {
+      await apiFetch('/service-contract-history', 'POST', {
+        ...historyForm,
+        serviceContractId: serviceContractId || editingId,
+        serviceDate: new Date(historyForm.serviceDate).toISOString(),
+      });
+    }
+
+    alert(editingId ? '✅ Service Contract updated!' : '✅ Service Contract created!');
+    setShowForm(false);
+    await loadContracts();
+    await loadServiceHistories();
+  } catch (err) {
+    console.error('Save error', err);
+    alert('❌ Failed to save data. Check console.');
+  }
+};
+
 
   const handleEdit = async (id: number) => {
     try {
@@ -435,7 +454,6 @@ export default function ServiceContractPage() {
       });
       
       setContractServices(enhancedServices);
-      console.log('Enhanced services:', enhancedServices);
 
       // 4️⃣ Set Inventories from the nested inventories array
       const inventoryData = main.inventories || [];
@@ -459,11 +477,9 @@ export default function ServiceContractPage() {
       });
       
       setInventories(enhancedInventories);
-      console.log('Enhanced inventories:', enhancedInventories);
 
       // 5️⃣ Set Service Histories from the nested histories array
       const historiesData = main.histories || [];
-      console.log('Histories data:', historiesData);
       
       if (historiesData.length > 0) {
         const latestHistory = historiesData[0];
@@ -891,15 +907,26 @@ export default function ServiceContractPage() {
                     <Icons.History />
                     Service History
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <InputField
-                      label="Task ID"
-                      value={historyForm.taskId}
-                      onChange={(val) => setHistoryForm({ ...historyForm, taskId: val })}
-                      placeholder="Enter task ID"
-                      className="text-black"
-                      icon={<Icons.Settings />}
-                    />
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {/* Replace Task ID InputField with dropdown */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+      <Icons.Settings />
+      Task ID
+    </label>
+    <select
+      value={historyForm.taskId}
+      onChange={(e) => setHistoryForm({ ...historyForm, taskId: e.target.value })}
+      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
+    >
+      <option value="">Select Task ID</option>
+      {tasks.map((task) => (
+        <option key={task.id} value={task.taskID || task.id}>
+          {task.taskID || `Task #${task.id}`}
+        </option>
+      ))}
+    </select>
+  </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>

@@ -24,6 +24,19 @@ export class ServiceContractServicesService {
     });
   }
 
+  async findByContract(contractId: number) {
+  return this.prisma.serviceContractServices.findMany({
+    where: { serviceContractId: contractId },
+    include: { serviceContract: true, contractWorkCategory: true },
+  });
+}
+
+async removeByContract(contractId: number) {
+  return this.prisma.serviceContractServices.deleteMany({
+    where: { serviceContractId: contractId },
+  });
+}
+
   async findOne(id: number) {
     const service = await this.prisma.serviceContractServices.findUnique({
       where: { id },

@@ -3,17 +3,37 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useSidebar } from '@/contexts/SidebarContext';
 
-const mainNavigationItems = [
-  { name: 'Address Book', href: '/addressbook', icon: '👥' },
-  { name: 'Sites', href: '/sites', icon: '🏢' },
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: string;
+  nested?: NavigationItem[];
+}
+
+interface ExpandedSections {
+  addressbook: boolean;
+  setup: boolean;
+  [key: string]: boolean; // Add index signature to allow dynamic keys
+}
+
+const mainNavigationItems: NavigationItem[] = [
+  { 
+    name: 'Address Book', 
+    href: '/addressbook', 
+    icon: '👥',
+    nested: [
+      { name: 'Customers', href: '/addressbook/customers', icon: '👤' },
+      { name: 'Sites', href: '/addressbook/sites', icon: '🏢' }
+    ]
+  },
+  { name: 'Sites', href: '/sites', icon: '📍' },
   { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
   { name: 'Service Contract Category', href: '/service-contract', icon: '📄' },
   { name: 'Tasks', href: '/tasks', icon: '✅' },
 ];
 
-const setupItems = [
+const setupItems: NavigationItem[] = [
   { name: 'Products Type', href: '/products', icon: '📦' },
   { name: 'Service Work Category', href: '/service-work', icon: '🔧' },
   { name: 'Contract Work Category', href: '/contract-work', icon: '📋' },
@@ -22,81 +42,180 @@ const setupItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isCollapsed, setIsCollapsed } = useSidebar();
-  const [isSetupExpanded, setIsSetupExpanded] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
+    addressbook: true,
+    setup: true
+  });
 
-  const renderNavigationItem = (item: any) => {
-    const isActive = pathname === item.href;
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        className={`flex items-center p-3 rounded-lg transition-colors ${
-          isActive
-            ? 'bg-blue-600 text-white'
-            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-        }`}
-      >
-        <span className="text-xl mr-3">{item.icon}</span>
-        <span className={`transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-          {item.name}
-        </span>
-      </Link>
-    );
+  const toggleSection = (section: keyof ExpandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  return (
-    <div className={`bg-gray-900 text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} h-screen fixed left-0 top-0 z-50 flex flex-col`}>
-      <div className="flex-shrink-0 p-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className={`font-bold text-xl transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-            ENPL ERP
-          </h1>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? '→' : '←'}
-          </button>
-        </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <nav className="space-y-2">
-          {/* Main Navigation Items */}
-          {mainNavigationItems.map(renderNavigationItem)}
-          
-          {/* Setup Section */}
-          <div className="mt-6">
+  const getSectionKey = (itemName: string): keyof ExpandedSections => {
+    const key = itemName.toLowerCase().replace(' ', '');
+    return key as keyof ExpandedSections;
+  };
+
+  const isActive = (href: string) => pathname === href;
+  const isActiveParent = (nestedItems: NavigationItem[] | undefined) => 
+    nestedItems?.some(item => pathname === item.href);
+
+  const renderNavigationItem = (item: NavigationItem, level = 0) => {
+    const hasNested = item.nested && item.nested.length > 0;
+    const isActiveItem = isActive(item.href);
+    const isParentActive = hasNested && isActiveParent(item.nested);
+    const sectionKey = getSectionKey(item.name);
+    
+    return (
+      <div key={item.href} className={`${level > 0 ? 'ml-2' : ''}`}>
+        {hasNested ? (
+          <>
             <button
-              onClick={() => setIsSetupExpanded(!isSetupExpanded)}
-              className={`flex items-center w-full p-3 rounded-lg transition-colors text-gray-300 hover:bg-gray-700 hover:text-white ${
-                !isCollapsed ? 'justify-between' : 'justify-center'
-              }`}
+              onClick={() => toggleSection(sectionKey)}
+              className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 group ${
+                isParentActive || isActiveItem
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              } ${level > 0 ? 'text-sm' : ''}`}
             >
-              <div className="flex items-center">
-                <span className="text-xl mr-3">⚙️</span>
-                <span className={`transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-                  Setup
-                </span>
-              </div>
+              <span className="text-xl mr-3 flex-shrink-0">{item.icon}</span>
+              <span className={`transition-all duration-200 ${
+                isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+              } truncate flex-1 text-left`}>
+                {item.name}
+              </span>
               {!isCollapsed && (
-                <span className={`transition-transform ${isSetupExpanded ? 'rotate-90' : ''}`}>
+                <span className={`transition-transform duration-200 ml-2 ${
+                  expandedSections[sectionKey] ? 'rotate-90' : ''
+                }`}>
                   ▶
                 </span>
               )}
             </button>
             
-            {/* Setup Items */}
-            {isSetupExpanded && !isCollapsed && (
-              <div className="ml-6 mt-2 space-y-1">
-                {setupItems.map(renderNavigationItem)}
+            {/* Nested Items */}
+            {!isCollapsed && expandedSections[sectionKey] && (
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-600 pl-2">
+                {item.nested?.map((nestedItem: NavigationItem) => renderNavigationItem(nestedItem, level + 1))}
               </div>
             )}
-          </div>
-        </nav>
+          </>
+        ) : (
+          <Link
+            href={item.href}
+            className={`flex items-center p-3 rounded-lg transition-all duration-200 group relative ${
+              isActiveItem
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white hover:shadow-md'
+            } ${level > 0 ? 'text-sm' : ''}`}
+          >
+            <span className="text-xl mr-3 flex-shrink-0">{item.icon}</span>
+            <span className={`transition-all duration-200 ${
+              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+            } truncate`}>
+              {item.name}
+            </span>
+            
+            {/* Tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-lg">
+                {item.name}
+              </div>
+            )}
+          </Link>
+        )}
       </div>
+    );
+  };
+
+  return (
+    <div className={`
+      bg-gradient-to-b from-gray-900 to-gray-800 text-white 
+      transition-all duration-300 ease-in-out 
+      ${isCollapsed ? 'w-16' : 'w-64'} 
+      min-h-screen relative
+      shadow-2xl border-r border-gray-700
+    `}>
+      {/* Toggle Button */}
+      <div className="p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between">
+          <h1 className={`
+            font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent
+            transition-all duration-300
+            ${isCollapsed ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}
+          `}>
+            ENPL ERP
+          </h1>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 hover:bg-gray-700 rounded-lg transition-all duration-200 hover:scale-110 hover:rotate-12"
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span className="text-lg">
+              {isCollapsed ? '→' : '←'}
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      {/* Navigation */}
+      <div className="p-4 space-y-1">
+        {/* Main Navigation Items */}
+        {mainNavigationItems.map(item => renderNavigationItem(item))}
+        
+        {/* Setup Section */}
+        <div className="mt-6 pt-4 border-t border-gray-700">
+          <button
+            onClick={() => toggleSection('setup')}
+            className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 group ${
+              setupItems.some(item => isActive(item.href))
+                ? 'bg-purple-600 text-white'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+          >
+            <span className="text-xl mr-3 flex-shrink-0">⚙️</span>
+            <span className={`transition-all duration-200 ${
+              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+            } truncate flex-1 text-left`}>
+              Setup
+            </span>
+            {!isCollapsed && (
+              <span className={`transition-transform duration-200 ml-2 ${
+                expandedSections.setup ? 'rotate-90' : ''
+              }`}>
+                ▶
+              </span>
+            )}
+            
+            {/* Tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-lg">
+                Setup
+              </div>
+            )}
+          </button>
+          
+          {/* Setup Items */}
+          {!isCollapsed && expandedSections.setup && (
+            <div className="ml-4 mt-1 space-y-1 border-l-2 border-purple-500 pl-2">
+              {setupItems.map(item => renderNavigationItem(item, 1))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Collapsed State Helper */}
+      {isCollapsed && (
+        <div className="absolute bottom-4 left-0 right-0 text-center">
+          <div className="text-xs text-gray-500 px-2">
+            Hover for menu
+          </div>
+        </div>
+      )}
     </div>
   );
 }

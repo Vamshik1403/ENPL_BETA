@@ -28,10 +28,17 @@ export class ServiceContractInventoryController {
   }
 
 
-  @Delete(':contractId')
-removeByContract(@Param('contractId', ParseIntPipe) contractId: number) {
-  return this.serviceContractInventoryService.deleteManyByContract(contractId);
+  @Get('contract/:contractId')
+findByContract(@Param('contractId', ParseIntPipe) contractId: number) {
+  return this.serviceContractInventoryService.findByContract(contractId);
 }
+
+@Delete('contract/:contractId')
+removeByContract(@Param('contractId', ParseIntPipe) contractId: number) {
+  return this.serviceContractInventoryService.removeByContract(contractId);
+}
+
+
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {

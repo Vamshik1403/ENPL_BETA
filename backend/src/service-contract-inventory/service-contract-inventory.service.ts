@@ -46,6 +46,19 @@ export class ServiceContractInventoryService {
   });
 }
 
+async findByContract(contractId: number) {
+  return this.prisma.serviceContractInventory.findMany({
+    where: { serviceContractId: contractId },
+    include: { serviceContract: true, productType: true },
+  });
+}
+
+async removeByContract(contractId: number) {
+  return this.prisma.serviceContractInventory.deleteMany({
+    where: { serviceContractId: contractId },
+  });
+}
+
  async findOne(id: number) {
   const record = await this.prisma.serviceContractInventory.findUnique({
     where: { id },

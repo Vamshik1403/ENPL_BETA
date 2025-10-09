@@ -8,4 +8,7 @@ export class CreateServiceContractServicesDto {
   @IsInt()
   @IsNotEmpty()
   contractWorkCategoryId: number;
+
+  @IsNotEmpty()
+  description?: string; // Add this line
 }
