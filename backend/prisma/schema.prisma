@@ -19,6 +19,8 @@ model AddressBook {
   gstNo         String?
 
   contacts AddressBookContact[]
+  supportTickets SupportTicket[]
+  supportTicketMappings SupportTicketMapping[]
   sites    Site[]
   tasks    Task[]
 }
@@ -44,8 +46,10 @@ model Site {
   state         String?
   pinCode       String?
   gstNo         String?
+  supportTicketMappings SupportTicketMapping[]
   addressBook AddressBook   @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
   contacts    SiteContact[]
+  supportTickets SupportTicket[]
   tasks       Task[]
 }
 
@@ -220,4 +224,46 @@ model TasksRemarks {
   createdBy String
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model SupportTicketUser{
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  designation String?
+  contactNumber String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  supportTicketMappings SupportTicketMapping[]
+  }
+
+  model SupportTicketMapping{
+    id Int @id @default(autoincrement())
+    customerId Int
+    siteId Int
+    supportTicketUserId Int
+    addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+    site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    supportTicketUser SupportTicketUser @relation(fields: [supportTicketUserId], references: [id], onDelete: Cascade)
+  }
+
+
+model SupportTicket{
+  id  Int @id @default(autoincrement())
+  ticketID String  @unique
+  name String
+  email String
+  designation String?
+  customerId Int
+  siteId Int
+  description String?
+  supportType String
+  prority String?
+  contactPerson String?
+  contactNumber String?
+  status String @default("Open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }

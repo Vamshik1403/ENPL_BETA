@@ -9,7 +9,7 @@ interface WorkscopeCategory {
 
 export default function WorkscopeCategoryPage() {
   const [workscopeCategories, setWorkscopeCategories] = useState<WorkscopeCategory[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<WorkscopeCategory>({ workscopeCategoryName: '' });
   const [loading, setLoading] = useState(false);
@@ -22,9 +22,10 @@ export default function WorkscopeCategoryPage() {
       setLoading(true);
       const res = await fetch(API_URL);
       const data = await res.json();
-      setWorkscopeCategories(data);
+      setWorkscopeCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching workscope categories:', err);
+      setWorkscopeCategories([]);
     } finally {
       setLoading(false);
     }
@@ -73,7 +74,7 @@ export default function WorkscopeCategoryPage() {
     if (item) {
       setFormData(item);
       setEditingId(id);
-      setShowForm(true);
+      setShowModal(true);
     }
   };
 
@@ -91,33 +92,36 @@ export default function WorkscopeCategoryPage() {
 
   // 🔹 Reset form
   const resetForm = () => {
-    setShowForm(false);
+    setShowModal(false);
     setEditingId(null);
     setFormData({ workscopeCategoryName: '' });
   };
 
-  return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Workscope</h1>
-        <p className="text-black">Manage workscope categories</p>
-      </div>
+  // 🔹 Handle Add New
+  const handleAddNew = () => {
+    setFormData({ workscopeCategoryName: '' });
+    setEditingId(null);
+    setShowModal(true);
+  };
 
-      <div className="mb-6">
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Add New Workscope Category
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {editingId ? 'Edit Workscope Category' : 'Add New Workscope Category'}
-          </h2>
-          <form onSubmit={handleSubmit} className="max-w-md">
+  // Modal component
+  const WorkscopeModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {editingId ? 'Edit Workscope Category' : 'Add New Workscope Category'}
+            </h2>
+            <button
+              onClick={resetForm}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Workscope Category Name
@@ -130,26 +134,48 @@ export default function WorkscopeCategoryPage() {
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                 required
+                autoFocus
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-4">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1"
               >
                 {editingId ? 'Update' : 'Add'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Workscope</h1>
+        <p className="text-black">Manage workscope categories</p>
+      </div>
+
+      <div className="mb-6">
+        <button
+          onClick={handleAddNew}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Add New Workscope Category
+        </button>
+      </div>
+
+      {/* Modal */}
+      {showModal && <WorkscopeModal />}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -172,7 +198,7 @@ export default function WorkscopeCategoryPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {workscopeCategories.length > 0 ? (
+              {Array.isArray(workscopeCategories) && workscopeCategories.length > 0 ? (
                 workscopeCategories.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 text-sm text-gray-900">{item.id}</td>
@@ -182,7 +208,7 @@ export default function WorkscopeCategoryPage() {
                     <td className="px-6 py-4 text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item.id!)}
-                        className="text-black hover:text-blue-900 mr-3"
+                        className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         Edit
                       </button>

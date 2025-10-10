@@ -58,6 +58,7 @@ export default function AddressBookPage() {
       console.error('Error fetching address books:', error);
     }
   };
+
   const generateAddressBookId = async (addressType: string) => {
     try {
       const response = await fetch(`http://localhost:8000/address-book/next-id/${addressType}`);
@@ -68,7 +69,7 @@ export default function AddressBookPage() {
       // Fallback to local generation
       const customerCount = addressBooks.filter(ab => ab.addressType === 'Customer').length;
       const vendorCount = addressBooks.filter(ab => ab.addressType === 'Vendor').length;
-      
+
       if (addressType === 'Customer') {
         const nextNumber = String(customerCount + 1).padStart(3, '0');
         return `CUS/${nextNumber}`;
@@ -116,9 +117,9 @@ export default function AddressBookPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     console.log('Form submission started:', { editingId, formData, formContacts });
-    
+
     try {
       if (editingId) {
         // Update existing record
@@ -133,9 +134,9 @@ export default function AddressBookPage() {
           pinCode: formData.pinCode,
           gstNo: formData.gstNo,
         };
-        
+
         console.log('Update data being sent:', updateData);
-        
+
         const response = await fetch(`http://localhost:8000/address-book/${editingId}`, {
           method: 'PUT',
           headers: {
@@ -143,12 +144,12 @@ export default function AddressBookPage() {
           },
           body: JSON.stringify(updateData),
         });
-        
+
         console.log('Update response status:', response.status);
-        
+
         if (response.ok) {
           console.log('Record updated successfully');
-          
+
           // Handle contacts separately with better error handling
           try {
             for (const contact of formContacts) {
@@ -166,7 +167,7 @@ export default function AddressBookPage() {
                       emailAddress: contact.emailAddress,
                     }),
                   });
-                  
+
                   if (!contactResponse.ok) {
                     console.error('Failed to update contact:', contact.id, contactResponse.status);
                   }
@@ -181,7 +182,7 @@ export default function AddressBookPage() {
                       addressBookId: editingId,
                     }),
                   });
-                  
+
                   if (!contactResponse.ok) {
                     console.error('Failed to create contact:', contactResponse.status);
                   }
@@ -192,7 +193,7 @@ export default function AddressBookPage() {
             console.error('Error handling contacts:', contactError);
             // Don't fail the entire update if contacts fail
           }
-          
+
           await fetchAddressBooks(); // Refresh the list
           setShowForm(false);
           setEditingId(null);
@@ -211,10 +212,10 @@ export default function AddressBookPage() {
           },
           body: JSON.stringify(formData),
         });
-        
+
         if (response.ok) {
           const newAddressBook = await response.json();
-          
+
           // Create contacts for this address book
           for (const contact of formContacts) {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
@@ -230,7 +231,7 @@ export default function AddressBookPage() {
               });
             }
           }
-          
+
           await fetchAddressBooks(); // Refresh the list
           setShowForm(false);
           resetForm();
@@ -265,7 +266,7 @@ export default function AddressBookPage() {
       setGeneratedId(item.addressBookID);
       setEditingId(id);
       setShowForm(true);
-      
+
       // Fetch existing contacts for this address book
       try {
         const response = await fetch(`http://localhost:8000/address-book/${id}/contacts`);
@@ -288,7 +289,7 @@ export default function AddressBookPage() {
         const response = await fetch(`http://localhost:8000/address-book/${id}`, {
           method: 'DELETE',
         });
-        
+
         if (response.ok) {
           await fetchAddressBooks(); // Refresh the list
         }
@@ -296,6 +297,12 @@ export default function AddressBookPage() {
         console.error('Error deleting address book:', error);
       }
     }
+  };
+
+  const closeModal = () => {
+    setShowForm(false);
+    setEditingId(null);
+    resetForm();
   };
 
   return (
@@ -311,7 +318,7 @@ export default function AddressBookPage() {
             setEditingId(null);
             const generatedId = await generateAddressBookId('Customer');
             setGeneratedId(generatedId);
-            setFormData({ 
+            setFormData({
               addressType: 'Customer',
               addressBookID: generatedId,
               customerName: '',
@@ -323,287 +330,319 @@ export default function AddressBookPage() {
             });
             setShowForm(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
         >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
           Add New Customer
         </button>
       </div>
 
+      {/* Modal Overlay */}
       {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? 'Edit Address Book Entry' : 'Add New Address Book Entry'}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address Type
-              </label>
-              <input
-                type="text"
-                value="Customer"
-                readOnly
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address Book ID
-              </label>
-              <input
-                type="text"
-                value={editingId ? formData.addressBookID : (generatedId || '')}
-                readOnly
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600"
-                placeholder="Auto-generated"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer Name
-              </label>
-              <input
-                type="text"
-                value={formData.customerName}
-                onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Registered Address
-              </label>
-              <textarea
-                value={formData.regdAddress}
-                onChange={(e) => setFormData({ ...formData, regdAddress: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                State
-              </label>
-              <input
-                type="text"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pin Code
-              </label>
-              <input
-                type="text"
-                value={formData.pinCode}
-                onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                GST Number
-              </label>
-              <input
-                type="text"
-                value={formData.gstNo}
-                onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            {/* Contacts Section */}
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Contacts</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingId ? 'Edit' : 'Add'}
+                </h2>
                 <button
-                  type="button"
-                  onClick={addContact}
-                  className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 text-lg p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  + Add Contact
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-              
-              {formContacts.map((contact, index) => (
-                <div key={index} className="bg-gray-50 p-4 rounded-lg mb-3 border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-700">Contact {index + 1}</h4>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Address Type
+                    </label>
+                    <input
+                      type="text"
+                      value="Customer"
+                      readOnly
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Address Book ID
+                    </label>
+                    <input
+                      type="text"
+                      value={editingId ? formData.addressBookID : (generatedId || '')}
+                      readOnly
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-600"
+                      placeholder="Auto-generated"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Customer Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Registered Address *
+                    </label>
+                    <textarea
+                      value={formData.regdAddress}
+                      onChange={(e) => setFormData({ ...formData, regdAddress: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[100px]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pin Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.pinCode}
+                      onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GST Number
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.gstNo}
+                      onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Contacts Section */}
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900">Contacts</h3>
                     <button
                       type="button"
-                      onClick={() => removeContact(index)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      onClick={addContact}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm"
                     >
-                      Remove
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Contact
                     </button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contact Person *
-                      </label>
-                      <input
-                        type="text"
-                        value={contact.contactPerson}
-                        onChange={(e) => updateContact(index, 'contactPerson', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+
+                  {formContacts.map((contact, index) => (
+                    <div key={index} className="bg-gray-50 p-6 rounded-lg mb-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-medium text-gray-700 text-lg">Contact {index + 1}</h4>
+                        <button
+                          type="button"
+                          onClick={() => removeContact(index)}
+                          className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Person *
+                          </label>
+                          <input
+                            type="text"
+                            value={contact.contactPerson}
+                            onChange={(e) => updateContact(index, 'contactPerson', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Designation *
+                          </label>
+                          <input
+                            type="text"
+                            value={contact.designation}
+                            onChange={(e) => updateContact(index, 'designation', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Number *
+                          </label>
+                          <input
+                            type="text"
+                            value={contact.contactNumber}
+                            onChange={(e) => updateContact(index, 'contactNumber', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Email Address *
+                          </label>
+                          <input
+                            type="email"
+                            value={contact.emailAddress}
+                            onChange={(e) => updateContact(index, 'emailAddress', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Designation *
-                      </label>
-                      <input
-                        type="text"
-                        value={contact.designation}
-                        onChange={(e) => updateContact(index, 'designation', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                  ))}
+
+                  {formContacts.length === 0 && (
+                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                      <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <p className="text-lg font-medium mb-1">No contacts added yet</p>
+                      <p className="text-sm">Click "Add Contact" to add contact information</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contact Number *
-                      </label>
-                      <input
-                        type="text"
-                        value={contact.contactNumber}
-                        onChange={(e) => updateContact(index, 'contactNumber', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address *
-                      </label>
-                      <input
-                        type="email"
-                        value={contact.emailAddress}
-                        onChange={(e) => updateContact(index, 'emailAddress', e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
-              ))}
-              
-              {formContacts.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No contacts added yet. Click "Add Contact" to add contact information.</p>
+
+                {/* Form Actions */}
+                <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium shadow-md flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {editingId ? 'Update ' : 'Add'}
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
+              </form>
             </div>
-            
-            <div className="md:col-span-2 flex gap-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Entry
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                  resetForm();
-                }}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">Address Book Entries</h2>
+      {/* Main Content - Table */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+          <h2 className="text-xl font-semibold text-white">Address Book Entries</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="w-full text-sm">
+            <thead className="bg-blue-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Address Book ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Address Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  City
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  State
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  GST No
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">ID</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Address Book ID</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Address Type</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Customer Name</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">City</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">State</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">GST No</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200">
               {addressBooks.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.id}
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 text-gray-700 font-medium">{item.id}</td>
+                  <td className="px-6 py-4 text-gray-700">{item.addressBookID}</td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      item.addressType === 'Customer' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {item.addressType}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.addressBookID}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.addressType}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.customerName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.city}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.state}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.gstNo}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item.id!)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id!)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+                  <td className="px-6 py-4 text-gray-700 font-medium">{item.customerName}</td>
+                  <td className="px-6 py-4 text-gray-700">{item.city || '-'}</td>
+                  <td className="px-6 py-4 text-gray-700">{item.state || '-'}</td>
+                  <td className="px-6 py-4 text-gray-700 font-mono">{item.gstNo || '-'}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => handleEdit(item.id!)}
+                        className="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(item.id!)}
+                        className="text-red-600 hover:text-red-800 font-medium transition-colors flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

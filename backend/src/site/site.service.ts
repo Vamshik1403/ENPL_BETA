@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { Site } from '@prisma/client';
+import { CreateSiteContactDto } from './dto/create-site-contact.dto';
+import { UpdateSiteContactDto } from './dto/update-site-contact.dto';
 
 @Injectable()
 export class SitesService {
@@ -47,8 +49,47 @@ export class SitesService {
     return this.prisma.site.findUnique({ where: { id }, include: { contacts: true } });
   }
 
-  update(id: number, data: UpdateSiteDto): Promise<Site> {
-    return this.prisma.site.update({ where: { id }, data });
+  async update(id: number, data: UpdateSiteDto) {
+    // Remove any nested relations from the data
+    const { contacts, ...siteData } = data as any;
+    
+    return this.prisma.site.update({
+      where: { id },
+      data: siteData,
+      include: {
+        addressBook: true,
+        contacts: true,
+      },
+    });
+  }
+
+   // Contact management methods
+  async getSiteContacts(siteId: number) {
+    return this.prisma.siteContact.findMany({
+      where: { siteId },
+    });
+  }
+
+  async createSiteContact(siteId: number, data: CreateSiteContactDto) {
+    return this.prisma.siteContact.create({
+      data: {
+        ...data,
+        siteId,
+      },
+    });
+  }
+
+  async updateSiteContact(contactId: number, data: UpdateSiteContactDto) {
+    return this.prisma.siteContact.update({
+      where: { id: contactId },
+      data,
+    });
+  }
+
+  async deleteSiteContact(contactId: number) {
+    return this.prisma.siteContact.delete({
+      where: { id: contactId },
+    });
   }
 
   remove(id: number): Promise<Site> {

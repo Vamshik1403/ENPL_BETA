@@ -9,7 +9,7 @@ interface Department {
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Department>({ departmentName: '' });
   const [loading, setLoading] = useState(false);
@@ -22,9 +22,10 @@ export default function DepartmentsPage() {
       setLoading(true);
       const res = await fetch(API_URL);
       const data = await res.json();
-      setDepartments(data);
+      setDepartments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching departments:', err);
+      setDepartments([]);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function DepartmentsPage() {
     if (dept) {
       setFormData(dept);
       setEditingId(id);
-      setShowForm(true);
+      setShowModal(true);
     }
   };
 
@@ -92,33 +93,36 @@ export default function DepartmentsPage() {
 
   // 🔹 Reset form
   const resetForm = () => {
-    setShowForm(false);
+    setShowModal(false);
     setEditingId(null);
     setFormData({ departmentName: '' });
   };
 
-  return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Departments</h1>
-        <p className="text-black">Manage organizational departments</p>
-      </div>
+  // 🔹 Handle Add New
+  const handleAddNew = () => {
+    setFormData({ departmentName: '' });
+    setEditingId(null);
+    setShowModal(true);
+  };
 
-      <div className="mb-6">
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Add New Department
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {editingId ? 'Edit Department' : 'Add New Department'}
-          </h2>
-          <form onSubmit={handleSubmit} className="max-w-md">
+  // Modal component
+  const DepartmentModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {editingId ? 'Edit Department' : 'Add New Department'}
+            </h2>
+            <button
+              onClick={resetForm}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Department Name
@@ -131,26 +135,48 @@ export default function DepartmentsPage() {
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                 required
+                autoFocus
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-4">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1"
               >
                 {editingId ? 'Update' : 'Add'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Departments</h1>
+        <p className="text-black">Manage organizational departments</p>
+      </div>
+
+      <div className="mb-6">
+        <button
+          onClick={handleAddNew}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Add New Department
+        </button>
+      </div>
+
+      {/* Modal */}
+      {showModal && <DepartmentModal />}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -173,7 +199,7 @@ export default function DepartmentsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {departments.length > 0 ? (
+              {Array.isArray(departments) && departments.length > 0 ? (
                 departments.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 text-sm text-gray-900">{item.id}</td>
@@ -181,7 +207,7 @@ export default function DepartmentsPage() {
                     <td className="px-6 py-4 text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item.id!)}
-                        className="text-black hover:text-blue-900 mr-3"
+                        className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         Edit
                       </button>

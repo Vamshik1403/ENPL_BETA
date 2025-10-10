@@ -124,6 +124,55 @@ export default function ServiceContractPage() {
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<any[]>([]);
 const [tasks, setTasks] = useState<any[]>([]);
+// For search and suggestion visibility
+const [customerSearch, setCustomerSearch] = useState('');
+const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+const [showTaskSuggestions, setShowTaskSuggestions] = useState(false);
+const [filteredTasks, setFilteredTasks] = useState<any[]>([]);
+const [showProductTypeSuggestions, setShowProductTypeSuggestions] = useState(false);
+const [filteredProductTypes, setFilteredProductTypes] = useState<any[]>([]);
+const [serviceCategorySearch, setServiceCategorySearch] = useState('');
+const [productTypeSearch, setProductTypeSearch] = useState('');
+
+const [showManagerSuggestions, setShowManagerSuggestions] = useState(false);
+const [showServiceCatSuggestions, setShowServiceCatSuggestions] = useState(false);
+const [filteredServiceCats, setFilteredServiceCats] = useState<any[]>([]);
+
+const [showHistoryModal, setShowHistoryModal] = useState(false);
+const [serviceHistoryList, setServiceHistoryList] = useState<ServiceContractHistory[]>([]);
+const [historyFormModal, setHistoryFormModal] = useState<ServiceContractHistory>({
+  serviceContractId: 0,
+  taskId: '',
+  serviceType: 'On-Site Visit',
+  serviceDate: '',
+  startTime: '',
+  endTime: '',
+  serviceDetails: '',
+});
+
+const handleAddHistory = () => {
+  if (historyFormModal.taskId && historyFormModal.serviceDate) {
+    setServiceHistoryList((prev) => [...prev, historyFormModal]);
+    setHistoryFormModal({
+      serviceContractId: 0,
+      taskId: '',
+      serviceType: 'On-Site Visit',
+      serviceDate: '',
+      startTime: '',
+      endTime: '',
+      serviceDetails: '',
+    });
+    setShowHistoryModal(false);
+  } else {
+    alert('Please fill required fields');
+  }
+};
+
+const removeHistory = (index: number) => {
+  setServiceHistoryList(serviceHistoryList.filter((_, i) => i !== index));
+};
+
 
   const [formData, setFormData] = useState<ServiceContract>({
     serviceContractID: '',
@@ -554,6 +603,19 @@ const handleSubmit = async (e: React.FormEvent) => {
     setInventories(inventories.filter((_, i) => i !== index));
   };
 
+  useEffect(() => {
+  const handleClickOutside = () => {
+    setShowCustomerSuggestions(false);
+    setShowManagerSuggestions(false);
+    setShowServiceCatSuggestions(false);
+    setShowTaskSuggestions(false);
+    setShowProductTypeSuggestions(false);
+  };
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+}, []);
+
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="mb-8">
@@ -607,25 +669,56 @@ const handleSubmit = async (e: React.FormEvent) => {
                       />
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        <Icons.User />
-                        Customer Name
-                      </label>
-                      <select
-                        value={formData.customerId || ''}
-                        onChange={(e) => handleCustomerSelect(parseInt(e.target.value))}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
-                        required
-                      >
-                        <option value="">Select Customer</option>
-                        {customers.map((cust) => (
-                          <option key={cust.id} value={cust.id}>
-                            {cust.customerName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                   <div className="relative">
+  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+    <Icons.User />
+    Customer Name
+  </label>
+  <input
+    type="text"
+    value={
+      customerSearch ||
+      customers.find((c) => c.id === formData.customerId)?.customerName ||
+      ''
+    }
+    onChange={(e) => {
+      const val = e.target.value;
+      setCustomerSearch(val);
+      setShowCustomerSuggestions(true);
+      if (val.trim()) {
+        const filtered = customers.filter((c) =>
+          c.customerName.toLowerCase().includes(val.toLowerCase())
+        );
+        setFilteredCustomers(filtered);
+      } else {
+        setFilteredCustomers(customers);
+      }
+    }}
+    onFocus={() => setShowCustomerSuggestions(true)}
+    placeholder="Search customer..."
+    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+  />
+
+  {/* Suggestions dropdown */}
+  {showCustomerSuggestions && filteredCustomers.length > 0 && (
+    <ul className="absolute z-50 bg-white border border-gray-200 w-full max-h-48 overflow-y-auto rounded-lg shadow-lg mt-1">
+      {filteredCustomers.map((cust) => (
+        <li
+          key={cust.id}
+          className="px-4 py-2 cursor-pointer hover:bg-blue-100 text-gray-800"
+          onClick={() => {
+            handleCustomerSelect(cust.id);
+            setCustomerSearch(cust.customerName);
+            setShowCustomerSuggestions(false);
+          }}
+        >
+          {cust.customerName}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -653,7 +746,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         value={formData.salesManagerName}
                         onChange={val => setFormData({ ...formData, salesManagerName: val })}
                         required
-                        className="text-black"
+                        className="text-black bg-white"
                         icon={<Icons.User />}
                       />
                     </div>
@@ -666,14 +759,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                     <Icons.Calendar />
                     Contract Period
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField 
                       label="Contract Start Date" 
                       type="date" 
                       value={formData.startDate} 
                       onChange={val => setFormData({ ...formData, startDate: val })} 
                       required
-                      className="text-black"
+                      className="text-black  bg-white"
                       icon={<Icons.Calendar />}
                     />
                     <InputField 
@@ -682,17 +775,18 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={formData.endDate} 
                       onChange={val => setFormData({ ...formData, endDate: val })} 
                       required
-                      className="text-black"
+                      className="text-black  bg-white"
                       icon={<Icons.Calendar />}
                     />
-                    <InputField 
+                    {/* <InputField 
                       label="Next Due PM Visit" 
                       type="date" 
                       value={formData.nextPMVisitDate} 
                       onChange={val => setFormData({ ...formData, nextPMVisitDate: val })} 
                       className="text-black"
                       icon={<Icons.Calendar />}
-                    />
+                      readOnly
+                    /> */}
                   </div>
                 </div>
 
@@ -707,23 +801,25 @@ const handleSubmit = async (e: React.FormEvent) => {
                       label="Max On-Site Visits" 
                       value={formData.maxOnSiteVisits} 
                       onChange={val => setFormData({ ...formData, maxOnSiteVisits: val })} 
-                      type="number"
-                      className="text-black"
+                      type="text"
+                      placeholder='Nos'
+                      className="text-black  bg-white"
                       icon={<Icons.Settings />}
                     />
                     <InputField 
-                      label="Max Preventive Maintenance Visit" 
+                      label="Max PM Visits" 
                       value={formData.maxPreventiveMaintenanceVisit} 
                       onChange={val => setFormData({ ...formData, maxPreventiveMaintenanceVisit: val })} 
-                      type="number"
-                      className="text-black"
+                      type="text"
+                                            placeholder='Nos'
+
+                      className="text-black  bg-white"
                       icon={<Icons.Settings />}
                     />
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        <Icons.Settings />
-                        Inclusive in On-Site Visit Counts
+                        PM Visit Inclusive in On-Site Visit
                       </label>
                       <select
                         value={formData.inclusiveInOnSiteVisitCounts ? 'Yes' : 'No'}
@@ -736,11 +832,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                     </div>
 
                     <InputField 
-                      label="Preventive Maintenance Cycle (Days)" 
+                      label="Preventive Maintenance Cycle" 
                       value={formData.preventiveMaintenanceCycle} 
                       onChange={val => setFormData({ ...formData, preventiveMaintenanceCycle: val })} 
-                      type="number"
-                      className="text-black"
+                      type="text"
+                                            placeholder='Nos'
+
+                      className="text-black  bg-white"
                       icon={<Icons.Settings />}
                     />
                   </div>
@@ -771,21 +869,28 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                   {/* Add Service Form */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-white rounded-lg border">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Service Category</label>
-                      <select
-                        value={serviceForm.serviceName}
-                        onChange={(e) => setServiceForm({ ...serviceForm, serviceName: e.target.value })}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                      >
-                        <option value="">Select Service Category</option>
-                        {serviceCategories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.serviceWorkCategoryName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Service Category Searchable Input */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Service Category
+  </label>
+  <select
+    value={serviceForm.serviceName || ""}
+    onChange={(e) =>
+      setServiceForm({ ...serviceForm, serviceName: e.target.value })
+    }
+    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+    required
+  >
+    <option value="">Select Service Category</option>
+    {serviceCategories.map((cat) => (
+      <option key={cat.id} value={cat.id}>
+        {cat.serviceWorkCategoryName}
+      </option>
+    ))}
+  </select>
+</div>
+
 
                     <div className="flex gap-2 items-end">
                       <div className="flex-1">
@@ -902,83 +1007,224 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 {/* Service History Section */}
-                <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-                  <h3 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
-                    <Icons.History />
-                    Service History
-                  </h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {/* Replace Task ID InputField with dropdown */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-      <Icons.Settings />
-      Task ID
-    </label>
-    <select
-      value={historyForm.taskId}
-      onChange={(e) => setHistoryForm({ ...historyForm, taskId: e.target.value })}
-      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
+{/* Service History Section */}
+<div className="bg-red-50 p-6 rounded-lg border border-red-200">
+  <div className="flex justify-between items-center mb-4">
+    <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+      <Icons.History />
+      Service History ({serviceHistoryList.length})
+    </h3>
+    <button
+      type="button"
+      onClick={() => setShowHistoryModal(true)}
+      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
     >
-      <option value="">Select Task ID</option>
-      {tasks.map((task) => (
-        <option key={task.id} value={task.taskID || task.id}>
-          {task.taskID || `Task #${task.id}`}
-        </option>
-      ))}
-    </select>
+      <Icons.Plus />
+      Add Service History
+    </button>
   </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
-                      <select
-                        value={historyForm.serviceType}
-                        onChange={(e) => setHistoryForm({ ...historyForm, serviceType: e.target.value })}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
-                      >
-                        <option value="On-Site Visit">On-Site Visit</option>
-                        <option value="PM Visit">PM Visit</option>
-                        <option value="Remote Support">Remote Support</option>
-                      </select>
-                    </div>
+  {serviceHistoryList.length > 0 && (
+    <div className="bg-white rounded-lg border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-red-100">
+          <tr>
+            <th className="p-3 text-left text-red-800 font-semibold">Task ID</th>
+            <th className="p-3 text-left text-red-800 font-semibold">Service Type</th>
+            <th className="p-3 text-left text-red-800 font-semibold">Service Date</th>
+            <th className="p-3 text-left text-red-800 font-semibold">Time</th>
+            <th className="p-3 text-left text-red-800 font-semibold">Details</th>
+            <th className="p-3 text-left text-red-800 font-semibold w-20">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {serviceHistoryList.map((hist, i) => (
+            <tr key={i} className="border-t border-gray-200 hover:bg-gray-50">
+              <td className="p-3 text-gray-700">{hist.taskId}</td>
+              <td className="p-3 text-gray-700">{hist.serviceType}</td>
+              <td className="p-3 text-gray-700">{hist.serviceDate}</td>
+              <td className="p-3 text-gray-700">
+                {hist.startTime} - {hist.endTime}
+              </td>
+              <td className="p-3 text-gray-700">{hist.serviceDetails}</td>
+              <td className="p-3">
+                <button
+                  type="button"
+                  onClick={() => removeHistory(i)}
+                  className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1"
+                >
+                  <Icons.Delete />
+                  Remove
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
 
-                    <InputField
-                      label="Service Date"
-                      type="date"
-                      value={historyForm.serviceDate}
-                      onChange={(val) => setHistoryForm({ ...historyForm, serviceDate: val })}
-                      className="text-black"
-                      icon={<Icons.Calendar />}
-                    />
+{/* ---- Service History Modal ---- */}
+{showHistoryModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold text-red-800 flex items-center gap-2">
+          <Icons.History />
+          Add Service History
+        </h3>
+        <button
+          onClick={() => setShowHistoryModal(false)}
+          className="text-gray-500 hover:text-gray-700 text-lg p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <Icons.Close />
+        </button>
+      </div>
 
-                    <InputField
-                      label="Start Time"
-                      type="time"
-                      value={historyForm.startTime}
-                      onChange={(val) => setHistoryForm({ ...historyForm, startTime: val })}
-                      className="text-black"
-                      icon={<Icons.Calendar />}
-                    />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Task ID Searchable Input */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <Icons.Settings />
+            Task ID
+          </label>
 
-                    <InputField
-                      label="End Time"
-                      type="time"
-                      value={historyForm.endTime}
-                      onChange={(val) => setHistoryForm({ ...historyForm, endTime: val })}
-                      className="text-black"
-                      icon={<Icons.Calendar />}
-                    />
+          <input
+            type="text"
+            value={historyFormModal.taskId}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFilteredTasks(
+                tasks.filter(
+                  (t) =>
+                    t.taskID?.toLowerCase().includes(val.toLowerCase()) ||
+                    t.id.toString().includes(val)
+                )
+              );
+              setHistoryFormModal({ ...historyFormModal, taskId: val });
+              setShowTaskSuggestions(true);
+            }}
+            onFocus={() => setShowTaskSuggestions(true)}
+            placeholder="Search Task ID..."
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+          />
 
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Service Details</label>
-                      <textarea
-                        value={historyForm.serviceDetails}
-                        onChange={(e) => setHistoryForm({ ...historyForm, serviceDetails: e.target.value })}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[80px] text-black bg-white"
-                        placeholder="Enter service details..."
-                      />
-                    </div>
-                  </div>
-                </div>
+          {showTaskSuggestions && filteredTasks.length > 0 && (
+            <ul className="absolute z-50 bg-white border border-gray-200 w-full max-h-48 overflow-y-auto rounded-lg shadow-lg mt-1">
+              {filteredTasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="px-4 py-2 cursor-pointer hover:bg-blue-100 text-gray-800"
+                  onClick={() => {
+                    setHistoryFormModal({
+                      ...historyFormModal,
+                      taskId: task.taskID || task.id.toString(),
+                    });
+                    setShowTaskSuggestions(false);
+                  }}
+                >
+                  {task.taskID || `Task #${task.id}`}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Service Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Service Type
+          </label>
+          <select
+            value={historyFormModal.serviceType}
+            onChange={(e) =>
+              setHistoryFormModal({
+                ...historyFormModal,
+                serviceType: e.target.value,
+              })
+            }
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
+          >
+            <option value="">select type</option>
+            <option value="On-Site Visit">On-Site Visit</option>
+            <option value="PM Visit">PM Visit</option>
+            <option value="Remote Support">Remote Support</option>
+          </select>
+        </div>
+
+        <InputField
+          label="Service Date"
+          type="date"
+          value={historyFormModal.serviceDate}
+          onChange={(val) =>
+            setHistoryFormModal({ ...historyFormModal, serviceDate: val })
+          }
+          className="text-black"
+          icon={<Icons.Calendar />}
+        />
+
+        <InputField
+          label="Start Time"
+          type="time"
+          value={historyFormModal.startTime}
+          onChange={(val) =>
+            setHistoryFormModal({ ...historyFormModal, startTime: val })
+          }
+          className="text-black"
+          icon={<Icons.Calendar />}
+        />
+
+        <InputField
+          label="End Time"
+          type="time"
+          value={historyFormModal.endTime}
+          onChange={(val) =>
+            setHistoryFormModal({ ...historyFormModal, endTime: val })
+          }
+          className="text-black"
+          icon={<Icons.Calendar />}
+        />
+
+        <div className="md:col-span-2 lg:col-span-3">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Service Details
+          </label>
+          <textarea
+            value={historyFormModal.serviceDetails}
+            onChange={(e) =>
+              setHistoryFormModal({
+                ...historyFormModal,
+                serviceDetails: e.target.value,
+              })
+            }
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[100px] text-black bg-white"
+            placeholder="Enter service details..."
+          />
+        </div>
+      </div>
+
+      {/* Modal Footer */}
+      <div className="flex gap-3 justify-end border-t border-gray-200 pt-6">
+        <button
+          onClick={() => setShowHistoryModal(false)}
+          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+        >
+          <Icons.Close />
+          Cancel
+        </button>
+        <button
+          onClick={handleAddHistory}
+          disabled={!historyFormModal.taskId.trim()}
+          className="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+        >
+          <Icons.Plus />
+          Add History
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
                 {/* Form Actions */}
                 <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
@@ -1022,21 +1268,27 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Product Category</label>
-                <select
-                  value={inventoryForm.productType}
-                  onChange={(e) => setInventoryForm({ ...inventoryForm, productType: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
-                >
-                  <option value="">Select Product Type</option>
-                  {productTypes.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.productTypeName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Product Category Searchable Input */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Product Category
+  </label>
+  <select
+    value={inventoryForm.productType}
+    onChange={(e) =>
+      setInventoryForm({ ...inventoryForm, productType: e.target.value })
+    }
+    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black bg-white"
+    required
+  >
+    <option value="">Select Product Category</option>
+    {productTypes.map((p) => (
+      <option key={p.id} value={p.id}>
+        {p.productTypeName}
+      </option>
+    ))}
+  </select>
+</div>
 
               <InputField
                 label="Make & Model"

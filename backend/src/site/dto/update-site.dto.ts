@@ -1,4 +1,10 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateSiteDto } from './create-site.dto';
-
-export class UpdateSiteDto extends PartialType(CreateSiteDto) {}
+export class UpdateSiteDto {
+  addressBookId?: number;
+  siteName?: string;
+  siteAddress?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
+  gstNo?: string;
+  // Don't include contacts here
+}

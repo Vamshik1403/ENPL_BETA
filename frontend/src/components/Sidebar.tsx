@@ -34,6 +34,8 @@ const mainNavigationItems: NavigationItem[] = [
   },
   { name: 'Service Contract Category', href: '/service-contract', icon: '📄' },
   { name: 'Tasks', href: '/tasks', icon: '✅' },
+  // { name: 'Support Tickets', href: '/support-tickets', icon: '🎫' },
+  // { name: 'Ticket Users', href: '/support-ticket-users', icon: '🧑‍💻' },
 ];
 
 const setupItems: NavigationItem[] = [
@@ -44,6 +46,8 @@ const setupItems: NavigationItem[] = [
     { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
 
 ];
+
+
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname();
@@ -156,15 +160,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           `}>
             ENPL ERP
           </h1>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-all duration-200 hover:scale-110 hover:rotate-12"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <span className="text-lg">
-              {isCollapsed ? '→' : '←'}
-            </span>
-          </button>
+         
         </div>
       </div>
       

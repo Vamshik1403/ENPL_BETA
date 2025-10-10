@@ -9,7 +9,7 @@ interface ProductType {
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductType[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<ProductType>({
@@ -23,12 +23,14 @@ export default function ProductsPage() {
       const response = await fetch('http://localhost:8000/producttype');
       if (response.ok) {
         const data = await response.json();
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
       } else {
         console.error('Failed to fetch products');
+        setProducts([]);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -60,9 +62,7 @@ export default function ProductsPage() {
         
         if (response.ok) {
           await fetchProducts(); // Refresh the list
-          setShowForm(false);
-          setEditingId(null);
-          setFormData({ productTypeName: '' });
+          resetForm();
         } else {
           console.error('Failed to update product');
         }
@@ -78,8 +78,7 @@ export default function ProductsPage() {
         
         if (response.ok) {
           await fetchProducts(); // Refresh the list
-          setShowForm(false);
-          setFormData({ productTypeName: '' });
+          resetForm();
         } else {
           console.error('Failed to create product');
         }
@@ -96,7 +95,7 @@ export default function ProductsPage() {
     if (item) {
       setFormData(item);
       setEditingId(id);
-      setShowForm(true);
+      setShowModal(true);
     }
   };
 
@@ -121,28 +120,41 @@ export default function ProductsPage() {
     }
   };
 
-  return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
-        <p className="text-black">Manage product types and inventory</p>
-      </div>
+  const resetForm = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({
+      productTypeName: '',
+    });
+  };
 
-      <div className="mb-6">
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Add New Product Type
-        </button>
-      </div>
+  const handleAddNew = () => {
+    setFormData({
+      productTypeName: '',
+    });
+    setEditingId(null);
+    setShowModal(true);
+  };
 
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? 'Edit Product Type' : 'Add New Product Type'}
-          </h2>
-          <form onSubmit={handleSubmit} className="max-w-md">
+  // Modal component
+  const ProductModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {editingId ? 'Edit Product Type' : 'Add New Product Type'}
+            </h2>
+            <button
+              onClick={resetForm}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+              disabled={loading}
+            >
+              ×
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Product Type Name
@@ -153,34 +165,51 @@ export default function ProductsPage() {
                 onChange={(e) => setFormData({ ...formData, productTypeName: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                autoFocus
+                disabled={loading}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Product Type
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                  setFormData({
-                    productTypeName: '',
-                  });
-                }}
+                onClick={resetForm}
                 disabled={loading}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
+        <p className="text-black">Manage product types and inventory</p>
+      </div>
+
+      <div className="mb-6">
+        <button
+          onClick={handleAddNew}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Add New Product Type
+        </button>
+      </div>
+
+      {/* Modal */}
+      {showModal && <ProductModal />}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -208,7 +237,7 @@ export default function ProductsPage() {
                     Loading products...
                   </td>
                 </tr>
-              ) : products.length === 0 ? (
+              ) : !Array.isArray(products) || products.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
                     No product types found. Add one to get started.
@@ -227,7 +256,7 @@ export default function ProductsPage() {
                       <button
                         onClick={() => handleEdit(item.id!)}
                         disabled={loading}
-                        className="text-black hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-blue-600 hover:text-blue-900 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Edit
                       </button>
