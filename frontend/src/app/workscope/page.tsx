@@ -14,7 +14,7 @@ export default function WorkscopeCategoryPage() {
   const [formData, setFormData] = useState<WorkscopeCategory>({ workscopeCategoryName: '' });
   const [loading, setLoading] = useState(false);
 
-  const API_URL = 'http://localhost:8000/workscope-category';
+  const API_URL = 'http://139.59.93.154:8000/workscope-category';
 
   // 🔹 Fetch all categories
   const fetchCategories = async () => {

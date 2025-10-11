@@ -68,7 +68,7 @@ export default function SitesPage() {
       setLoading(true);
       console.log('Fetching sites from backend...');
 
-      const response = await fetch('http://localhost:8000/sites');
+      const response = await fetch('http://139.59.93.154:8000/sites');
       if (response.ok) {
         const data = await response.json();
         setSites(data);
@@ -108,7 +108,7 @@ export default function SitesPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('http://localhost:8000/address-book', {
+      const response = await fetch('http://139.59.93.154:8000/address-book', {
         signal: controller.signal
       });
 
@@ -199,7 +199,7 @@ export default function SitesPage() {
 
     if (editingId) {
       // Update existing site
-      const response = await fetch(`http://localhost:8000/sites/${editingId}`, {
+      const response = await fetch(`http://139.59.93.154:8000/sites/${editingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export default function SitesPage() {
           if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
             if (contact.id) {
               // Update existing contact
-              await fetch(`http://localhost:8000/sites/contacts/${contact.id}`, {
+              await fetch(`http://139.59.93.154:8000/sites/contacts/${contact.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -225,7 +225,7 @@ export default function SitesPage() {
               });
             } else {
               // Create new contact
-              await fetch(`http://localhost:8000/sites/${editingId}/contacts`, {
+              await fetch(`http://139.59.93.154:8000/sites/${editingId}/contacts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -244,7 +244,7 @@ export default function SitesPage() {
       }
     } else {
       // Create new site
-      const response = await fetch('http://localhost:8000/sites', {
+      const response = await fetch('http://139.59.93.154:8000/sites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function SitesPage() {
         // Create site contacts
         for (const contact of formContacts) {
           if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-            await fetch(`http://localhost:8000/sites/${newSite.id}/contacts`, {
+            await fetch(`http://139.59.93.154:8000/sites/${newSite.id}/contacts`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -298,7 +298,7 @@ export default function SitesPage() {
 
     // Fetch existing site contacts
     try {
-      const response = await fetch(`http://localhost:8000/sites/${id}/contacts`);
+      const response = await fetch(`http://139.59.93.154:8000/sites/${id}/contacts`);
       if (response.ok) {
         const contactsData = await response.json();
         setFormContacts(contactsData);
@@ -316,7 +316,7 @@ export default function SitesPage() {
     if (confirm('Are you sure you want to delete this site?')) {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8000/sites/${id}`, {
+        const response = await fetch(`http://139.59.93.154:8000/sites/${id}`, {
           method: 'DELETE',
         });
 

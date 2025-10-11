@@ -49,7 +49,7 @@ export default function AddressBookPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/address-book');
+      const response = await fetch('http://139.59.93.154:8000/address-book');
       if (response.ok) {
         const data = await response.json();
         setAddressBooks(data);
@@ -61,7 +61,7 @@ export default function AddressBookPage() {
 
   const generateAddressBookId = async (addressType: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/address-book/next-id/${addressType}`);
+      const response = await fetch(`http://139.59.93.154:8000/address-book/next-id/${addressType}`);
       const data = await response.json();
       return data.nextId;
     } catch (error) {
@@ -137,7 +137,7 @@ export default function AddressBookPage() {
 
         console.log('Update data being sent:', updateData);
 
-        const response = await fetch(`http://localhost:8000/address-book/${editingId}`, {
+        const response = await fetch(`http://139.59.93.154:8000/address-book/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ export default function AddressBookPage() {
                 if (contact.id) {
                   // Update existing contact
                   console.log('Updating existing contact:', contact.id);
-                  const contactResponse = await fetch(`http://localhost:8000/address-book/contacts/${contact.id}`, {
+                  const contactResponse = await fetch(`http://139.59.93.154:8000/address-book/contacts/${contact.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -174,7 +174,7 @@ export default function AddressBookPage() {
                 } else {
                   // Create new contact
                   console.log('Creating new contact for address book:', editingId);
-                  const contactResponse = await fetch('http://localhost:8000/addressbookcontact', {
+                  const contactResponse = await fetch('http://139.59.93.154:8000/addressbookcontact', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -205,7 +205,7 @@ export default function AddressBookPage() {
       } else {
         // Create new record
         console.log('Creating new record');
-        const response = await fetch('http://localhost:8000/address-book', {
+        const response = await fetch('http://139.59.93.154:8000/address-book', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -219,7 +219,7 @@ export default function AddressBookPage() {
           // Create contacts for this address book
           for (const contact of formContacts) {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              await fetch('http://localhost:8000/addressbookcontact', {
+              await fetch('http://139.59.93.154:8000/addressbookcontact', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -269,7 +269,7 @@ export default function AddressBookPage() {
 
       // Fetch existing contacts for this address book
       try {
-        const response = await fetch(`http://localhost:8000/address-book/${id}/contacts`);
+        const response = await fetch(`http://139.59.93.154:8000/address-book/${id}/contacts`);
         if (response.ok) {
           const contactsData = await response.json();
           setFormContacts(contactsData);
@@ -286,7 +286,7 @@ export default function AddressBookPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this address book entry?')) {
       try {
-        const response = await fetch(`http://localhost:8000/address-book/${id}`, {
+        const response = await fetch(`http://139.59.93.154:8000/address-book/${id}`, {
           method: 'DELETE',
         });
 

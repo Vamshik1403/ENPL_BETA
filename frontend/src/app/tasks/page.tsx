@@ -1113,7 +1113,7 @@ export default function TasksPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:8000/department');
+      const response = await fetch('http://139.59.93.154:8000/department');
       const data = await response.json();
       setDepartments(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1124,7 +1124,7 @@ export default function TasksPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/address-book');
+      const response = await fetch('http://139.59.93.154:8000/address-book');
       const data = await response.json();
       setAddressBooks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1135,7 +1135,7 @@ export default function TasksPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('http://localhost:8000/sites');
+      const response = await fetch('http://139.59.93.154:8000/sites');
       const data = await response.json();
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1146,7 +1146,7 @@ export default function TasksPage() {
 
   const fetchServiceWorkscopeCategories = async () => {
     try {
-      const response = await fetch('http://localhost:8000/workscope-category');
+      const response = await fetch('http://139.59.93.154:8000/workscope-category');
       if (!response.ok) {
         throw new Error('Failed to fetch service workscope categories');
       }
@@ -1160,7 +1160,7 @@ export default function TasksPage() {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/task');
+      const response = await fetch('http://139.59.93.154:8000/task');
       const data = await response.json();
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1171,7 +1171,7 @@ export default function TasksPage() {
 
   const fetchNextTaskId = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/task/next-id`);
+      const res = await fetch(`http://139.59.93.154:8000/task/next-id`);
       const data = await res.json();
       return data.taskId;
     } catch (err) {
@@ -1267,7 +1267,7 @@ export default function TasksPage() {
         )]
       };
 
-      const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
+      const url = editingId ? `http://139.59.93.154:8000/task/${editingId}` : 'http://139.59.93.154:8000/task';
       const method = editingId ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
@@ -1320,7 +1320,7 @@ export default function TasksPage() {
       };
 
       // ✅ Use same PATCH endpoint as full edit
-      const response = await fetch(`http://localhost:8000/task/${id}`, {
+      const response = await fetch(`http://139.59.93.154:8000/task/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),
@@ -1350,7 +1350,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
         };
 
         // Use the same API as edit modal
-        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
+        const response = await fetch(`http://139.59.93.154:8000/task/${selectedTask.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1375,7 +1375,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
     if (!confirm('Are you sure you want to delete this task?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/task/${id}`, {
+      const response = await fetch(`http://139.59.93.154:8000/task/${id}`, {
         method: 'DELETE',
       });
 
@@ -1671,7 +1671,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
       };
 
       // Update in backend
-      const response = await fetch(`http://localhost:8000/task/${taskForRemarkEdit.id}`, {
+      const response = await fetch(`http://139.59.93.154:8000/task/${taskForRemarkEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),

@@ -20,7 +20,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/producttype');
+      const response = await fetch('http://139.59.93.154:8000/producttype');
       if (response.ok) {
         const data = await response.json();
         setProducts(Array.isArray(data) ? data : []);
@@ -52,7 +52,7 @@ export default function ProductsPage() {
           productTypeName: formData.productTypeName,
         };
         
-        const response = await fetch(`http://localhost:8000/producttype/${editingId}`, {
+        const response = await fetch(`http://139.59.93.154:8000/producttype/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export default function ProductsPage() {
         }
       } else {
         // Create new product
-        const response = await fetch('http://localhost:8000/producttype', {
+        const response = await fetch('http://139.59.93.154:8000/producttype', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ export default function ProductsPage() {
     if (window.confirm('Are you sure you want to delete this product type?')) {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:8000/producttype/${id}`, {
+        const response = await fetch(`http://139.59.93.154:8000/producttype/${id}`, {
           method: 'DELETE',
         });
         
