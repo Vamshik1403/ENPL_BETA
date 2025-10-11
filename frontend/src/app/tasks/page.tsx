@@ -33,6 +33,11 @@ interface Task {
   addressBookId: number;
   siteId: number;
   status: string;
+  department?: string;
+  customer?: string;
+  site?: string;
+  addressBook?: string;
+  workscopeCat?: string;
   createdBy: string;
   createdAt: string;
   contacts?: TasksContacts[];
@@ -80,7 +85,7 @@ interface TaskFormData extends Task {
   remarks: TasksRemarks[];
 }
 
-// Move TaskModal outside of TasksPage to prevent recreation
+// TaskModal Component
 interface TaskModalProps {
   showModal: boolean;
   editingId: number | null;
@@ -145,6 +150,7 @@ interface TaskModalProps {
   onSaveEditedSchedule: (id: number, updatedSchedule: TasksSchedule) => void;
   onCancelEditSavedSchedule: () => void;
   isTaskClosed: () => boolean;
+  onEditLatestRemark: (remark: TasksRemarks) => void;
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({
@@ -153,17 +159,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
   formData,
   departments,
   addressBooks,
-  sites,
   serviceWorkscopeCategories,
-  departmentSearch,
   customerSearch,
-  workscopeCategorySearch,
-  showDepartmentDropdown,
   showCustomerDropdown,
-  showWorkscopeDropdown,
-  filteredDepartments,
   filteredCustomers,
-  filteredWorkscopeCategories,
   filteredSites,
   savedContacts,
   savedWorkscopeDetails,
@@ -174,29 +173,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
   editingSavedSchedule,
   onClose,
   onSubmit,
-  onDepartmentSearchChange,
   onCustomerSearchChange,
-  onWorkscopeCategorySearchChange,
-  onShowDepartmentDropdownChange,
   onShowCustomerDropdownChange,
-  onShowWorkscopeDropdownChange,
   onFormDataChange,
-  onAddContact,
-  onRemoveContact,
   onUpdateContact,
-  onAddWorkscopeDetail,
   onRemoveWorkscopeDetail,
   onUpdateWorkscopeDetail,
-  onAddSchedule,
-  onRemoveSchedule,
   onUpdateSchedule,
   onAddRemark,
   onRemoveRemark,
   onUpdateRemark,
-  onSaveContact,
   onSaveWorkscopeDetail,
-  onSaveSchedule,
-  onSaveRemark,
   onRemoveSavedContact,
   onRemoveSavedWorkscopeDetail,
   onRemoveSavedSchedule,
@@ -204,13 +191,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onStartEditSavedContact,
   onSaveEditedContact,
   onCancelEditSavedContact,
-  onStartEditSavedWorkscope,
-  onSaveEditedWorkscope,
   onCancelEditSavedWorkscope,
   onStartEditSavedSchedule,
   onSaveEditedSchedule,
   onCancelEditSavedSchedule,
   isTaskClosed,
+  onEditLatestRemark,
 }) => {
   if (!showModal) return null;
 
@@ -814,78 +800,68 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               </div>
 
-              {/* Saved Remarks Table */}
-              {(savedRemarks.length > 0 || formData.remarks.length > 1) && (
-                <div className="bg-white rounded-lg border overflow-hidden mb-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-green-100">
-                      <tr>
-                        <th className="p-3 text-left text-green-800 font-semibold">Remark</th>
-                        <th className="p-3 text-left text-green-800 font-semibold">Status</th>
-                        <th className="p-3 text-left text-green-800 font-semibold">Created At</th>
-                        <th className="p-3 text-left text-green-800 font-semibold w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Saved Remarks */}
-                      {savedRemarks.map((remark) => (
-                        <tr key={remark.id} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">{remark.remark}</td>
-                          <td className="p-3 text-gray-700">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
-                              remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                                remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                              }`}>
-                              {remark.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-700">
-                            {new Date(remark.createdAt).toLocaleString()}
-                          </td>
-                          <td className="p-3">
-                            <button
-                              type="button"
-                              onClick={() => onRemoveSavedRemark(remark.id!)}
-                              className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1"
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+              {/* Saved Remarks Display */}
+            {/* Saved Remarks Display - Latest First */}
+{savedRemarks.length > 0 && (
+  <div className="mb-4">
+    <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
+    <div className="space-y-3">
+      {[...savedRemarks].reverse().map((remark, index) => (
+        <div
+          key={remark.id}
+          className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
+        >
+          <div className="flex-1">
+            <div className="text-sm text-gray-800 mb-1">
+              <strong>Status:</strong> {remark.status}
+            </div>
+            <div className="text-gray-700">{remark.remark}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
+            </div>
+          </div>
 
-                      {/* Current Form Remarks (excluding the first one used for input) */}
-                      {formData.remarks.slice(1).map((remark, index) => (
-                        <tr key={index + 1} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">{remark.remark}</td>
-                          <td className="p-3 text-gray-700">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
-                              remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                                remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                              }`}>
-                              {remark.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-700">
-                            {new Date().toLocaleString()}
-                          </td>
-                          <td className="p-3">
-                            <button
-                              type="button"
-                              onClick={() => onRemoveRemark(index + 1)}
-                              className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1"
-                            >
-                              Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {/* Edit button for latest remark only - now checking the original array order */}
+          {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+            <button
+              type="button"
+              onClick={() => onEditLatestRemark(remark)}
+              className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
+              title="Edit latest remark"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+
+              {/* Current Form Remarks (excluding the first one used for input) */}
+              {formData.remarks.slice(1).map((remark, index) => (
+                <div key={index + 1} className="p-3 mb-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-800 mb-1">
+                        <strong>Status:</strong> {remark.status}
+                      </div>
+                      <div className="text-gray-700">{remark.remark}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveRemark(index + 1)}
+                      className="text-red-600 hover:text-red-800 text-sm ml-2"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
 
             {/* Form Actions */}
@@ -919,6 +895,7 @@ interface RemarksModalProps {
   onClose: () => void;
   onAddRemark: (remark: string, status: string) => void;
   onRemoveRemark: (id: number) => void;
+  onEditLatestRemark: (remark: TasksRemarks) => void;
 }
 
 const RemarksModal: React.FC<RemarksModalProps> = ({
@@ -928,6 +905,7 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
   onClose,
   onAddRemark,
   onRemoveRemark,
+  onEditLatestRemark,
 }) => {
   const [newRemark, setNewRemark] = useState('');
   const [newStatus, setNewStatus] = useState('Open');
@@ -1000,38 +978,50 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
           </form>
 
           {/* Remarks List */}
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            {savedRemarks.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No remarks yet</p>
-            ) : (
-              savedRemarks.map((remark) => (
-                <div
-                  key={remark.id}
-                  className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
-                      remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                        remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                      }`}>
-                      {remark.status}
-                    </span>
-                    <button
-                      onClick={() => onRemoveRemark(remark.id!)}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <p className="text-gray-900 mb-2">{remark.remark}</p>
-                  <div className="text-xs text-gray-500">
-                    Added by {remark.createdBy} on {new Date(remark.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              ))
+        {/* Remarks List - Latest First */}
+<div className="space-y-4 max-h-96 overflow-y-auto">
+  {savedRemarks.length === 0 ? (
+    <p className="text-gray-500 text-center py-4">No remarks yet</p>
+  ) : (
+    [...savedRemarks].reverse().map((remark, index) => (
+      <div
+        key={remark.id}
+        className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
+      >
+        <div className="flex justify-between items-start mb-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
+            remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+              remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
+                'bg-gray-100 text-gray-800'
+            }`}>
+            {remark.status}
+          </span>
+          <div className="flex gap-2">
+            {/* Edit button for latest remark only - now checking the original array order */}
+            {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+              <button
+                onClick={() => onEditLatestRemark(remark)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                Edit
+              </button>
             )}
+            <button
+              onClick={() => onRemoveRemark(remark.id!)}
+              className="text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Remove
+            </button>
           </div>
+        </div>
+        <p className="text-gray-900 mb-2">{remark.remark}</p>
+        <div className="text-xs text-gray-500">
+          Added by {remark.createdBy} on {new Date(remark.createdAt).toLocaleString()}
+        </div>
+      </div>
+    ))
+  )}
+</div>
         </div>
       </div>
     </div>
@@ -1086,6 +1076,13 @@ export default function TasksPage() {
   const [editingSavedWorkscope, setEditingSavedWorkscope] = useState<number | null>(null);
   const [editingSavedSchedule, setEditingSavedSchedule] = useState<number | null>(null);
 
+  // Remark editing states
+  const [showEditRemarkModal, setShowEditRemarkModal] = useState(false);
+  const [remarkToEdit, setRemarkToEdit] = useState<TasksRemarks | null>(null);
+  const [editRemarkText, setEditRemarkText] = useState("");
+  const [editRemarkStatus, setEditRemarkStatus] = useState("");
+  const [taskForRemarkEdit, setTaskForRemarkEdit] = useState<Task | null>(null);
+
   // Filtered data
   const filteredDepartments = departments.filter(dept =>
     dept.departmentName.toLowerCase().includes(departmentSearch.toLowerCase())
@@ -1104,13 +1101,6 @@ export default function TasksPage() {
     site.addressBookId === formData.addressBookId
   );
 
-  // Generate task ID
-  const generateTaskID = () => {
-    const timestamp = new Date().getTime();
-    const random = Math.floor(Math.random() * 1000);
-    return `TASK-${timestamp}-${random}`;
-  };
-
   // Fetch data
   useEffect(() => {
     fetchTasks();
@@ -1121,100 +1111,98 @@ export default function TasksPage() {
     fetchServiceWorkscopeCategories();
   }, []);
 
-const fetchDepartments = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/department');
-    const data = await response.json();
-    setDepartments(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error('Error fetching departments:', error);
-    setDepartments([]);
-  }
-};
-
-const fetchAddressBooks = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/address-book');
-    const data = await response.json();
-    setAddressBooks(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error('Error fetching address books:', error);
-    setAddressBooks([]);
-  }
-};
-
-const fetchSites = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/sites');
-    const data = await response.json();
-    setSites(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error('Error fetching sites:', error);
-    setSites([]);
-  }
-};
-
-const fetchServiceWorkscopeCategories = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/workscope-category');
-    if (!response.ok) {
-      throw new Error('Failed to fetch service workscope categories');
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/department');
+      const data = await response.json();
+      setDepartments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      setDepartments([]);
     }
-    const data = await response.json();
-    setServiceWorkscopeCategories(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error('Error fetching service workscope categories:', error);
-    setServiceWorkscopeCategories([]);
-  }
-};
+  };
 
-const fetchTasks = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/task');
-    const data = await response.json();
-    setTasks(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error('Error fetching tasks:', error);
-    setTasks([]);
-  }
-};
+  const fetchAddressBooks = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/address-book');
+      const data = await response.json();
+      setAddressBooks(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching address books:', error);
+      setAddressBooks([]);
+    }
+  };
 
-const fetchNextTaskId = async () => {
-  try {
-    const res = await fetch(`http://localhost:8000/task/next-id`);
-    const data = await res.json();
-    return data.taskId;
-  } catch (err) {
-    console.error('Error fetching next task ID:', err);
-    return 'TASK/001';
-  }
-};
+  const fetchSites = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/sites');
+      const data = await response.json();
+      setSites(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching sites:', error);
+      setSites([]);
+    }
+  };
 
+  const fetchServiceWorkscopeCategories = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/workscope-category');
+      if (!response.ok) {
+        throw new Error('Failed to fetch service workscope categories');
+      }
+      const data = await response.json();
+      setServiceWorkscopeCategories(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching service workscope categories:', error);
+      setServiceWorkscopeCategories([]);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/task');
+      const data = await response.json();
+      setTasks(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setTasks([]);
+    }
+  };
+
+  const fetchNextTaskId = async () => {
+    try {
+      const res = await fetch(`http://localhost:8000/task/next-id`);
+      const data = await res.json();
+      return data.taskId;
+    } catch (err) {
+      console.error('Error fetching next task ID:', err);
+      return 'TASK/001';
+    }
+  };
 
   // Modal handlers
   const handleOpenModal = async () => {
-  const nextTaskId = await fetchNextTaskId();
-  setFormData({
-    taskID: nextTaskId,
-    departmentId: 0,
-    addressBookId: 0,
-    siteId: 0,
-    status: 'Open',
-    createdBy: 'Admin',
-    createdAt: new Date().toISOString(),
-    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
-    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
-    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
-    remarks: [{ taskId: 0, remark: '', status: 'Open', createdBy: 'Admin', createdAt: new Date().toISOString() }]
-  });
-  setSavedContacts([]);
-  setSavedWorkscopeDetails([]);
-  setSavedSchedule([]);
-  setSavedRemarks([]);
-  setEditingId(null);
-  setShowModal(true);
-};
-
+    const nextTaskId = await fetchNextTaskId();
+    setFormData({
+      taskID: nextTaskId,
+      departmentId: 0,
+      addressBookId: 0,
+      siteId: 0,
+      status: 'Open',
+      createdBy: 'Admin',
+      createdAt: new Date().toISOString(),
+      contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+      workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+      remarks: [{ taskId: 0, remark: '', status: 'Open', createdBy: 'Admin', createdAt: new Date().toISOString() }]
+    });
+    setSavedContacts([]);
+    setSavedWorkscopeDetails([]);
+    setSavedSchedule([]);
+    setSavedRemarks([]);
+    setEditingId(null);
+    setShowModal(true);
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -1238,11 +1226,11 @@ const fetchNextTaskId = async () => {
     setSavedRemarks([]);
   };
 
-const handleOpenRemarksModal = (task: Task) => {
-  setSelectedTask(task);
-  setSavedRemarks(task.remarks || []);
-  setShowRemarksModal(true);
-};
+  const handleOpenRemarksModal = (task: Task) => {
+    setSelectedTask(task);
+    setSavedRemarks(task.remarks || []);
+    setShowRemarksModal(true);
+  };
 
   const handleCloseRemarksModal = () => {
     setShowRemarksModal(false);
@@ -1252,154 +1240,152 @@ const handleOpenRemarksModal = (task: Task) => {
 
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  try {
-    const taskData = {
-      taskID: formData.taskID,
-      departmentId: formData.departmentId,
-      addressBookId: formData.addressBookId,
-      siteId: formData.siteId,
-      status: formData.status,
-      createdBy: formData.createdBy,
-      createdAt: formData.createdAt,
-      contacts: [...savedContacts, ...formData.contacts.filter(contact =>
-        contact.contactName && contact.contactNumber
-      )],
-      workscopeDetails: [...savedWorkscopeDetails, ...formData.workscopeDetails.filter(workscope =>
-        workscope.workscopeDetails && workscope.workscopeCategoryId
-      )],
-      schedule: [...savedSchedule, ...formData.schedule.filter(schedule =>
-        schedule.proposedDateTime && schedule.priority
-      )],
-      remarks: [...savedRemarks, ...formData.remarks.filter(remark =>
-        remark.remark && remark.status
-      )]
-    };
-
-    const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
-    const method = editingId ? 'PATCH' : 'POST';
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(taskData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save task');
-    }
-
-    await fetchTasks();
-    handleCloseModal();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to save task');
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Update the handleAddRemarkInModal function
-const handleAddRemarkInModal = async (remark: string, status: string) => {
-  if (!selectedTask) return;
-
-  try {
-    // 🧹 Prepare a safe payload — remove relation objects dynamically
-    const { id, ...rest } = selectedTask as any;
-
-    // Remove potential nested relation objects if they exist
-    delete rest.department;
-    delete rest.addressBook;
-    delete rest.site;
-    delete rest.workscopeCat;
-
-    // 🆕 New remark object
-    const newRemark = {
-      taskId: id!,
-      remark,
-      status,
-      createdBy: "Admin",
-      createdAt: new Date().toISOString(),
-    };
-
-    // ✅ Construct update payload
-    const updatedTask = {
-      ...rest,
-      remarks: [...(selectedTask.remarks || []), newRemark],
-    };
-
-    // ✅ Use same PATCH endpoint as full edit
-    const response = await fetch(`http://localhost:8000/task/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedTask),
-    });
-
-    if (!response.ok) throw new Error("Failed to update task with new remark");
-
-    // ✅ Update UI instantly
-setSavedRemarks((prev) => [{ ...newRemark, id: Date.now() }, ...prev]);
-    await fetchTasks();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to update remark");
-  }
-};
-
-
-const handleRemoveRemarkInModal = async (id: number) => {
-  try {
-    // Remove remark from local state
-    const updatedRemarks = savedRemarks.filter(remark => remark.id !== id);
-    
-    if (selectedTask) {
-      // Create updated task without the removed remark
-      const updatedTask = {
-        ...selectedTask,
-        remarks: updatedRemarks
+    try {
+      const taskData = {
+        taskID: formData.taskID,
+        departmentId: formData.departmentId,
+        addressBookId: formData.addressBookId,
+        siteId: formData.siteId,
+        status: formData.status,
+        createdBy: formData.createdBy,
+        createdAt: formData.createdAt,
+        contacts: [...savedContacts, ...formData.contacts.filter(contact =>
+          contact.contactName && contact.contactNumber
+        )],
+        workscopeDetails: [...savedWorkscopeDetails, ...formData.workscopeDetails.filter(workscope =>
+          workscope.workscopeDetails && workscope.workscopeCategoryId
+        )],
+        schedule: [...savedSchedule, ...formData.schedule.filter(schedule =>
+          schedule.proposedDateTime && schedule.priority
+        )],
+        remarks: [...savedRemarks, ...formData.remarks.filter(remark =>
+          remark.remark && remark.status
+        )]
       };
 
-      // Use the same API as edit modal
-      const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
-        method: 'PATCH',
+      const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
+      const method = editingId ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save task');
+      }
+
+      await fetchTasks();
+      handleCloseModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddRemarkInModal = async (remark: string, status: string) => {
+    if (!selectedTask) return;
+
+    try {
+      // 🧹 Prepare a safe payload — remove relation objects dynamically
+      const { id, ...rest } = selectedTask as any;
+
+      // Remove potential nested relation objects if they exist
+      delete rest.department;
+      delete rest.addressBook;
+      delete rest.site;
+      delete rest.workscopeCat;
+
+      // 🆕 New remark object
+      const newRemarkObj = {
+        taskId: id!,
+        remark,
+        status,
+        createdBy: "Admin",
+        createdAt: new Date().toISOString(),
+      };
+
+      // ✅ Construct update payload
+      const updatedTask = {
+        ...rest,
+        remarks: [...(selectedTask.remarks || []), newRemarkObj],
+      };
+
+      // ✅ Use same PATCH endpoint as full edit
+      const response = await fetch(`http://localhost:8000/task/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),
       });
 
-      if (!response.ok) throw new Error('Failed to remove remark');
+      if (!response.ok) throw new Error("Failed to update task with new remark");
+
+      // ✅ Update UI instantly
+// ✅ Update UI instantly - add to end so it appears first when reversed
+setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
+      await fetchTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update remark");
     }
+  };
 
-    // Update local state
-    setSavedRemarks(updatedRemarks);
-    await fetchTasks();
-    
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to remove remark');
-  }
-};
+  const handleRemoveRemarkInModal = async (id: number) => {
+    try {
+      // Remove remark from local state
+      const updatedRemarks = savedRemarks.filter(remark => remark.id !== id);
 
+      if (selectedTask) {
+        // Create updated task without the removed remark
+        const updatedTask = {
+          ...selectedTask,
+          remarks: updatedRemarks
+        };
 
-// Update the handleDeleteTask function
-const handleDeleteTask = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this task?')) return;
+        // Use the same API as edit modal
+        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedTask),
+        });
 
-  try {
-    const response = await fetch(`http://localhost:8000/task/${id}`, {
-      method: 'DELETE',
-    });
+        if (!response.ok) throw new Error('Failed to remove remark');
+      }
 
-    if (!response.ok) throw new Error('Failed to delete task');
+      // Update local state
+      setSavedRemarks(updatedRemarks);
+      await fetchTasks();
 
-    await fetchTasks();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to delete task');
-  }
-};
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove remark');
+    }
+  };
+
+  // Update the handleDeleteTask function
+  const handleDeleteTask = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/task/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete task');
+
+      await fetchTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete task');
+    }
+  };
 
   // Contact handlers
   const handleAddContact = () => {
@@ -1514,10 +1500,10 @@ const handleDeleteTask = async (id: number) => {
     const remark = formData.remarks[0];
     if (remark.remark && remark.status) {
       setSavedRemarks(prev => [...prev, {
-        ...remark,
-        id: Date.now(),
-        createdAt: new Date().toISOString()
-      }]);
+  ...remark,
+  id: Date.now(),
+  createdAt: new Date().toISOString()
+}]);
       setFormData(prev => ({
         ...prev,
         remarks: [{ taskId: 0, remark: '', status: 'Open', createdBy: 'Admin', createdAt: new Date().toISOString() }]
@@ -1553,8 +1539,6 @@ const handleDeleteTask = async (id: number) => {
     setSavedRemarks(prev => prev.filter(remark => remark.id !== id));
   };
 
-  
- 
   // Edit handlers for saved items
   const handleStartEditSavedContact = (id: number) => {
     setEditingSavedContact(id);
@@ -1630,7 +1614,100 @@ const handleDeleteTask = async (id: number) => {
     setShowModal(true);
   };
 
-  
+  // Remark editing handlers
+  const handleOpenEditRemarkModal = (remark: TasksRemarks) => {
+    setRemarkToEdit(remark);
+    setEditRemarkText(remark.remark);
+    setEditRemarkStatus(remark.status);
+    
+    // Determine which task we're editing
+    if (showModal) {
+      // We're in the main task modal
+      setTaskForRemarkEdit({
+        id: editingId || 0,
+        taskID: formData.taskID,
+        departmentId: formData.departmentId,
+        addressBookId: formData.addressBookId,
+        siteId: formData.siteId,
+        status: formData.status,
+        createdBy: formData.createdBy,
+        createdAt: formData.createdAt,
+        remarks: savedRemarks
+      } as Task);
+    } else if (showRemarksModal && selectedTask) {
+      // We're in the remarks-only modal
+      setTaskForRemarkEdit(selectedTask);
+    }
+    
+    setShowEditRemarkModal(true);
+  };
+
+  const handleSaveEditedRemark = async () => {
+    if (!remarkToEdit || !taskForRemarkEdit) return;
+
+    try {
+      // Create updated remarks array - replace only the latest remark
+      const currentRemarks = taskForRemarkEdit.remarks || [];
+      const updatedRemarks = currentRemarks.map((remark, index, array) =>
+        index === array.length - 1 // Only modify the last remark
+          ? {
+            ...remark,
+            remark: editRemarkText,
+            status: editRemarkStatus
+          }
+          : remark
+      );
+
+      // Prepare task data for update
+      const cleanTask = { ...taskForRemarkEdit } as any;
+      delete cleanTask.department;
+      delete cleanTask.addressBook;
+      delete cleanTask.site;
+      delete cleanTask.workscopeCat;
+
+      const updatedTask = {
+        ...cleanTask,
+        remarks: updatedRemarks,
+      };
+
+      // Update in backend
+      const response = await fetch(`http://localhost:8000/task/${taskForRemarkEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask),
+      });
+
+      if (!response.ok) throw new Error("Failed to update remark");
+
+      // Update local state based on which modal we're in
+      if (showModal) {
+        // Update the saved remarks in task modal
+        setSavedRemarks(updatedRemarks);
+      } else if (showRemarksModal) {
+        // Update the saved remarks in remarks modal
+        setSavedRemarks(updatedRemarks);
+        // Also update the tasks list
+        setTasks(prev => prev.map(task =>
+          task.id === taskForRemarkEdit.id
+            ? { ...task, remarks: updatedRemarks }
+            : task
+        ));
+      }
+
+      setShowEditRemarkModal(false);
+      setRemarkToEdit(null);
+      setTaskForRemarkEdit(null);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update remark");
+    }
+  };
+
+  const handleCloseEditRemarkModal = () => {
+    setShowEditRemarkModal(false);
+    setRemarkToEdit(null);
+    setTaskForRemarkEdit(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -1711,27 +1788,26 @@ const handleDeleteTask = async (id: number) => {
                         {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          task.status === 'Closed' ? 'bg-green-100 text-green-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${task.status === 'Closed' ? 'bg-green-100 text-green-800' :
                           task.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                          task.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                            task.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
                           {task.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {task.remarks && task.remarks.length > 0 ? (
-                          <div>
-                            <div className="font-medium">Latest: {task.remarks[task.remarks.length - 1].remark}</div>
-                            <div className="text-xs text-gray-500">
-                              Status: {task.remarks[task.remarks.length - 1].status}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">No remarks</span>
-                        )}
-                      </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+  {task.remarks && task.remarks.length > 0 ? (
+    <div>
+      <div className="font-medium">Latest: {task.remarks[task.remarks.length - 1].remark}</div>
+      <div className="text-xs text-gray-500">
+        Status: {task.remarks[task.remarks.length - 1].status}
+      </div>
+    </div>
+  ) : (
+    <span className="text-gray-400">No remarks</span>
+  )}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
                           <button
@@ -1843,6 +1919,7 @@ const handleDeleteTask = async (id: number) => {
           onSaveEditedSchedule={handleSaveEditedSchedule}
           onCancelEditSavedSchedule={handleCancelEditSavedSchedule}
           isTaskClosed={isTaskClosed}
+          onEditLatestRemark={handleOpenEditRemarkModal}
         />
 
         {/* Remarks Modal */}
@@ -1853,7 +1930,60 @@ const handleDeleteTask = async (id: number) => {
           onClose={handleCloseRemarksModal}
           onAddRemark={handleAddRemarkInModal}
           onRemoveRemark={handleRemoveRemarkInModal}
+          onEditLatestRemark={handleOpenEditRemarkModal}
         />
+
+        {/* Edit Remark Modal */}
+        {showEditRemarkModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Edit Latest Remark
+              </h3>
+
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={editRemarkStatus}
+                onChange={(e) => setEditRemarkStatus(e.target.value)}
+                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="Open">Open</option>
+                <option value="Assigned">Assigned</option>
+                <option value="Work in Progress">Work in Progress</option>
+                <option value="Closed">Closed</option>
+              </select>
+
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Remark
+              </label>
+              <textarea
+                value={editRemarkText}
+                onChange={(e) => setEditRemarkText(e.target.value)}
+                className="w-full border text-black border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4"
+                rows={3}
+              />
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseEditRemarkModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedRemark}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
