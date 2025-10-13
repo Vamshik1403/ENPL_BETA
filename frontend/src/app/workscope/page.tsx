@@ -161,7 +161,7 @@ export default function WorkscopeCategoryPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Workscope</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Task Service List</h1>
         <p className="text-black">Manage workscope categories</p>
       </div>
 
@@ -170,7 +170,7 @@ export default function WorkscopeCategoryPage() {
           onClick={handleAddNew}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Add New Workscope Category
+          Add New 
         </button>
       </div>
 

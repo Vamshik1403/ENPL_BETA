@@ -3,7 +3,7 @@ import { ServiceWorkCategoryService } from './service-work-category.service';
 import { CreateServiceWorkCategoryDto } from './dto/create-service-work-category.dto';
 import { UpdateServiceWorkCategoryDto } from './dto/update-service-work-category.dto';
 
-@Controller('serviceworkcategory')
+@Controller(' ')
 export class ServiceWorkCategoryController {
   constructor(private readonly serviceWorkService: ServiceWorkCategoryService) {}
 

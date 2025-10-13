@@ -32,7 +32,7 @@ const mainNavigationItems: NavigationItem[] = [
       { name: 'Sites', href: '/sites', icon: '📍' }
     ]
   },
-  { name: 'Service Contract Category', href: '/service-contract', icon: '📄' },
+  { name: 'Service Contracts ', href: '/service-contract', icon: '📄' },
   { name: 'Tasks', href: '/tasks', icon: '✅' },
   // { name: 'Support Tickets', href: '/support-tickets', icon: '🎫' },
   // { name: 'Ticket Users', href: '/support-ticket-users', icon: '🧑‍💻' },
@@ -41,9 +41,8 @@ const mainNavigationItems: NavigationItem[] = [
 const setupItems: NavigationItem[] = [
     { name: 'Departments', href: '/departments', icon: '🏛️' },
   { name: 'Products Type', href: '/products', icon: '📦' },
-  { name: 'Service Work Category', href: '/service-work', icon: '🔧' },
-  { name: 'Contract Work Category', href: '/contract-work', icon: '📋' },
-    { name: 'Service Workscope Category', href: '/workscope', icon: '📊' },
+  { name: 'CW Category', href: '/contract-work', icon: '📋' },
+    { name: 'Task Services', href: '/workscope', icon: '📊' },
 
 ];
 

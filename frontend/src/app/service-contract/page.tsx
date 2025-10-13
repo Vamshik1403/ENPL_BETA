@@ -239,17 +239,18 @@ const removeHistory = (index: number) => {
   }, []);
 
   // ⬇️ Fetch all categories once when form mounts
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await apiFetch('/serviceworkcategory');
-        setServiceCategories(res);
-      } catch (err) {
-        console.error('Error loading service work categories', err);
-      }
-    };
-    fetchCategories();
-  }, []);
+ // ⬇️ Fetch all categories once when form mounts
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const res = await apiFetch('/contractworkcategory');
+      setServiceCategories(res);
+    } catch (err) {
+      console.error('Error loading contract work categories', err);
+    }
+  };
+  fetchCategories();
+}, []);
 
   // 🟢 Load all contracts with names when customers are loaded
   useEffect(() => {
@@ -488,21 +489,22 @@ const handleSubmit = async (e: React.FormEvent) => {
       setSites(sites);
 
       // 3️⃣ Set Contract Services from the nested services array
-      const servicesData = main.services || [];
-      console.log('Services data:', servicesData);
-      
-      const enhancedServices = servicesData.map((s: any) => {
-        const category = serviceCategories.find(cat => cat.id === s.contractWorkCategoryId);
-        return {
-          id: s.id,
-          serviceName: s.contractWorkCategoryId?.toString() || '',
-          description: s.description || '',
-          serviceCategoryName: category?.serviceWorkCategoryName || 'Unknown Category',
-          contractWorkCategoryId: s.contractWorkCategoryId
-        };
-      });
-      
-      setContractServices(enhancedServices);
+     // 3️⃣ Set Contract Services from the nested services array
+const servicesData = main.services || [];
+console.log('Services data:', servicesData);
+
+const enhancedServices = servicesData.map((s: any) => {
+  const category = serviceCategories.find(cat => cat.id === s.contractWorkCategoryId);
+  return {
+    id: s.id,
+    serviceName: s.contractWorkCategoryId?.toString() || '',
+    description: s.description || '',
+    serviceCategoryName: category?.contractWorkCategoryName || 'Unknown Category', // Changed this line
+    contractWorkCategoryId: s.contractWorkCategoryId
+  };
+});
+
+setContractServices(enhancedServices);
 
       // 4️⃣ Set Inventories from the nested inventories array
       const inventoryData = main.inventories || [];
@@ -557,19 +559,19 @@ const handleSubmit = async (e: React.FormEvent) => {
     await loadContracts();
   };
 
-  const handleAddService = () => {
-    if (serviceForm.serviceName.trim()) {
-      const category = serviceCategories.find(cat => cat.id.toString() === serviceForm.serviceName);
-      setContractServices([
-        ...contractServices, 
-        {
-          ...serviceForm,
-          serviceCategoryName: category?.serviceWorkCategoryName || 'Unknown Category'
-        }
-      ]);
-      setServiceForm({ serviceName: '', description: '' });
-    }
-  };
+const handleAddService = () => {
+  if (serviceForm.serviceName.trim()) {
+    const category = serviceCategories.find(cat => cat.id.toString() === serviceForm.serviceName);
+    setContractServices([
+      ...contractServices, 
+      {
+        ...serviceForm,
+        serviceCategoryName: category?.contractWorkCategoryName || 'Unknown Category' // Changed this line
+      }
+    ]);
+    setServiceForm({ serviceName: '', description: '' });
+  }
+};
 
   const handleAddInventory = () => {
     if (inventoryForm.productType.trim()) {
@@ -885,12 +887,11 @@ const handleSubmit = async (e: React.FormEvent) => {
     <option value="">Select Service Category</option>
     {serviceCategories.map((cat) => (
       <option key={cat.id} value={cat.id}>
-        {cat.serviceWorkCategoryName}
+        {cat.contractWorkCategoryName} {/* Changed this line */}
       </option>
     ))}
   </select>
 </div>
-
 
                     <div className="flex gap-2 items-end">
                       <div className="flex-1">

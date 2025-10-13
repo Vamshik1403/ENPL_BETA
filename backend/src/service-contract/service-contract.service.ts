@@ -51,7 +51,7 @@ async getNextContractId() {
     }
   }
 
-  const nextID = `RST/CSR/${nextNumber.toString().padStart(5, '0')}`;
+  const nextID = `EN/CSR/${nextNumber.toString().padStart(5, '0')}`;
 
   return { nextID };
 }

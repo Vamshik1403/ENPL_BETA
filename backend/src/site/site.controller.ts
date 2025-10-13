@@ -3,10 +3,16 @@ import { UpdateSiteDto } from './dto/update-site.dto';
 import { CreateSiteContactDto } from './dto/create-site-contact.dto';
 import { UpdateSiteContactDto } from './dto/update-site-contact.dto';
 import { SitesService } from './site.service';
+import { CreateSiteDto } from './dto/create-site.dto';
 
 @Controller('sites')
 export class SiteController {
   constructor(private readonly siteService: SitesService) {}
+
+    @Post()
+  create(@Body() dto: CreateSiteDto) {
+    return this.siteService.create(dto);
+  }
 
   @Put(':id')
   update(@Param('id') id: string, @Body() updateSiteDto: UpdateSiteDto) {
