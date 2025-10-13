@@ -2,43 +2,43 @@
 
 import { useState, useEffect } from 'react';
 
-interface ProductType {
+interface ServiceWorkCategory {
   id?: number;
-  productTypeName: string;
+  serviceWorkCategoryName: string;
 }
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<ProductType[]>([]);
+export default function ServiceWorkPage() {
+  const [serviceWorkCategories, setServiceWorkCategories] = useState<ServiceWorkCategory[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<ProductType>({
-    productTypeName: '',
+  const [formData, setFormData] = useState<ServiceWorkCategory>({
+    serviceWorkCategoryName: '',
   });
 
-  // Fetch products from backend API
-  const fetchProducts = async () => {
+  // Fetch service work categories from backend API
+  const fetchServiceWorkCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://139.59.93.154:8000/producttype');
+      const response = await fetch('http://139.59.93.154:8000/serviceworkcategory');
       if (response.ok) {
         const data = await response.json();
-        setProducts(Array.isArray(data) ? data : []);
+        setServiceWorkCategories(Array.isArray(data) ? data : []);
       } else {
-        console.error('Failed to fetch products');
-        setProducts([]);
+        console.error('Failed to fetch service work categories');
+        setServiceWorkCategories([]);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-      setProducts([]);
+      console.error('Error fetching service work categories:', error);
+      setServiceWorkCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load products on component mount
+  // Load service work categories on component mount
   useEffect(() => {
-    fetchProducts();
+    fetchServiceWorkCategories();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,12 +47,12 @@ export default function ProductsPage() {
     
     try {
       if (editingId) {
-        // Update existing product - only send the fields that should be updated
+        // Update existing service work category - only send the fields that should be updated
         const updateData = {
-          productTypeName: formData.productTypeName,
+          serviceWorkCategoryName: formData.serviceWorkCategoryName,
         };
         
-        const response = await fetch(`http://139.59.93.154:8000/producttype/${editingId}`, {
+        const response = await fetch(`http://139.59.93.154:8000/serviceworkcategory/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -61,14 +61,14 @@ export default function ProductsPage() {
         });
         
         if (response.ok) {
-          await fetchProducts(); // Refresh the list
+          await fetchServiceWorkCategories(); // Refresh the list
           resetForm();
         } else {
-          console.error('Failed to update product');
+          console.error('Failed to update service work category');
         }
       } else {
-        // Create new product
-        const response = await fetch('http://139.59.93.154:8000/producttype', {
+        // Create new service work category
+        const response = await fetch('http://139.59.93.154:8000/serviceworkcategory', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -77,10 +77,10 @@ export default function ProductsPage() {
         });
         
         if (response.ok) {
-          await fetchProducts(); // Refresh the list
+          await fetchServiceWorkCategories(); // Refresh the list
           resetForm();
         } else {
-          console.error('Failed to create product');
+          console.error('Failed to create service work category');
         }
       }
     } catch (error) {
@@ -91,7 +91,7 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (id: number) => {
-    const item = products.find(p => p.id === id);
+    const item = serviceWorkCategories.find(s => s.id === id);
     if (item) {
       setFormData(item);
       setEditingId(id);
@@ -100,20 +100,20 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this product type?')) {
+    if (window.confirm('Are you sure you want to delete this service work category?')) {
       setLoading(true);
       try {
-        const response = await fetch(`http://139.59.93.154:8000/producttype/${id}`, {
+        const response = await fetch(`http://139.59.93.154:8000/serviceworkcategory/${id}`, {
           method: 'DELETE',
         });
         
         if (response.ok) {
-          await fetchProducts(); // Refresh the list
+          await fetchServiceWorkCategories(); // Refresh the list
         } else {
-          console.error('Failed to delete product');
+          console.error('Failed to delete service work category');
         }
       } catch (error) {
-        console.error('Error deleting product:', error);
+        console.error('Error deleting service work category:', error);
       } finally {
         setLoading(false);
       }
@@ -124,26 +124,26 @@ export default function ProductsPage() {
     setShowModal(false);
     setEditingId(null);
     setFormData({
-      productTypeName: '',
+      serviceWorkCategoryName: '',
     });
   };
 
   const handleAddNew = () => {
     setFormData({
-      productTypeName: '',
+      serviceWorkCategoryName: '',
     });
     setEditingId(null);
     setShowModal(true);
   };
 
   // Modal component
-  const ProductModal = () => (
+  const ServiceWorkModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Product Type' : 'Add New Product Type'}
+              {editingId ? 'Edit Service Work Category' : 'Add New Service Work Category'}
             </h2>
             <button
               onClick={resetForm}
@@ -157,12 +157,12 @@ export default function ProductsPage() {
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Type Name
+                Service Work Category Name
               </label>
               <input
                 type="text"
-                value={formData.productTypeName}
-                onChange={(e) => setFormData({ ...formData, productTypeName: e.target.value })}
+                value={formData.serviceWorkCategoryName}
+                onChange={(e) => setFormData({ ...formData, serviceWorkCategoryName: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
                 autoFocus
@@ -175,7 +175,7 @@ export default function ProductsPage() {
                 disabled={loading}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Product Type
+                {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Service Work Category
               </button>
               <button
                 type="button"
@@ -195,8 +195,8 @@ export default function ProductsPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
-        <p className="text-black">Manage product types and inventory</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Service Work</h1>
+        <p className="text-black">Manage service work categories</p>
       </div>
 
       <div className="mb-6">
@@ -204,16 +204,16 @@ export default function ProductsPage() {
           onClick={handleAddNew}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Add New Product Type
+          Add New Service Work Category
         </button>
       </div>
 
       {/* Modal */}
-      {showModal && <ProductModal />}
+      {showModal && <ServiceWorkModal />}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">Product Types</h2>
+          <h2 className="text-xl font-semibold">Service Work Categories</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -223,7 +223,7 @@ export default function ProductsPage() {
                   ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product Type Name
+                  Service Work Category Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -234,23 +234,23 @@ export default function ProductsPage() {
               {loading ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                    Loading products...
+                    Loading service work categories...
                   </td>
                 </tr>
-              ) : !Array.isArray(products) || products.length === 0 ? (
+              ) : !Array.isArray(serviceWorkCategories) || serviceWorkCategories.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                    No product types found. Add one to get started.
+                    No service work categories found. Add one to get started.
                   </td>
                 </tr>
               ) : (
-                products.map((item) => (
+                serviceWorkCategories.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.productTypeName}
+                      {item.serviceWorkCategoryName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button

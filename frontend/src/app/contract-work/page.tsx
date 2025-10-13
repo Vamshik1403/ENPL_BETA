@@ -14,7 +14,7 @@ export default function ContractWorkPage() {
   const [formData, setFormData] = useState<ContractWorkCategory>({ contractWorkCategoryName: '' });
   const [loading, setLoading] = useState(false);
 
-  const API_URL = 'http://localhost:8000/contractworkcategory';
+  const API_URL = 'http://139.59.93.154:8000/contractworkcategory';
 
   // 🔹 Fetch all categories from backend
   const fetchCategories = async () => {

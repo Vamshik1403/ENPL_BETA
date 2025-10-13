@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 // Simple API helper
 async function apiFetch(url: string, method = 'GET', body?: any) {
   try {
-    const res = await fetch(`http://localhost:8000${url}`, {
+    const res = await fetch(`http://139.59.93.154:8000${url}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,

@@ -14,7 +14,7 @@ export default function DepartmentsPage() {
   const [formData, setFormData] = useState<Department>({ departmentName: '' });
   const [loading, setLoading] = useState(false);
 
-  const API_URL = 'http://localhost:8000/department';
+  const API_URL = 'http://139.59.93.154:8000/department';
 
   // 🔹 Fetch departments
   const fetchDepartments = async () => {
