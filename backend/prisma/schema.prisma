@@ -93,12 +93,37 @@ model ServiceContract {
   customerId        Int
   branchId          Int
   salesManagerName  String
+  serviceContractType ServiceContractType[]
   periods           ServiceContractPeriod[]
   terms             ServiceContractTerms[]
   services          ServiceContractServices[]
   inventories       ServiceContractInventory[]
   histories         ServiceContractHistory[]
 }
+
+model ServiceContractType {
+  id                   Int              @id @default(autoincrement())
+  serviceContractType  String
+  serviceContractId    Int
+  billingType          String
+  billingCycle         String
+  billingDueDate       String
+  paymentStatus        String
+  serviceContractBillings ServiceContractBilling[]
+  serviceContract      ServiceContract  @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+}
+
+model ServiceContractBilling {
+  id                    Int                 @id @default(autoincrement())
+  serviceContractTypeId Int
+  dueDate               String
+  paymentStatus         String
+  overdueDays           Int                 @default(0)
+
+  serviceContractType  ServiceContractType @relation(fields: [serviceContractTypeId], references: [id], onDelete: Cascade)
+}
+
+
 
 model ServiceContractPeriod {
   id                  Int             @id @default(autoincrement())

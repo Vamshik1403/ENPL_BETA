@@ -272,7 +272,7 @@ export default function SupportTicketUsersPage() {
     mappings: [],
   });
 
-  const API_URL = 'http://139.59.93.154:8000/support-ticket-users';
+  const API_URL = 'http://localhost:8000/support-ticket-users';
 
   useEffect(() => {
     fetchSupportTicketUsers();
@@ -292,7 +292,7 @@ export default function SupportTicketUsersPage() {
 
   const fetchSites = async () => {
     try {
-      const res = await fetch('http://139.59.93.154:8000/sites');
+      const res = await fetch('http://localhost:8000/sites');
       const data = await res.json();
       setSites(Array.isArray(data) ? data : []);
     } catch {
@@ -302,7 +302,7 @@ export default function SupportTicketUsersPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const res = await fetch('http://139.59.93.154:8000/address-book');
+      const res = await fetch('http://localhost:8000/address-book');
       const data = await res.json();
       setAddressBooks(Array.isArray(data) ? data.filter((ab: AddressBook) => ab.addressType === 'Customer') : []);
     } catch {

@@ -56,6 +56,11 @@ export default function SitesPage() {
     gstNo: '',
   });
 
+  // Search and Pagination states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   // Load address books and sites on component mount
   useEffect(() => {
     console.log('Component mounted, fetching address books and sites...');
@@ -68,7 +73,7 @@ export default function SitesPage() {
       setLoading(true);
       console.log('Fetching sites from backend...');
 
-      const response = await fetch('http://139.59.93.154:8000/sites');
+      const response = await fetch('http://localhost:8000/sites');
       if (response.ok) {
         const data = await response.json();
         setSites(data);
@@ -108,7 +113,7 @@ export default function SitesPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('http://139.59.93.154:8000/address-book', {
+      const response = await fetch('http://localhost:8000/address-book', {
         signal: controller.signal
       });
 
@@ -148,6 +153,30 @@ export default function SitesPage() {
       addressType.includes(searchTerm);
   });
 
+  // Filter sites based on search term
+  const filteredSites = sites.filter(item =>
+    item.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.siteID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.siteAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.state?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredSites.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSites.length / itemsPerPage);
+
+  // Pagination controls
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
   // Debug logging
   console.log('Search term:', addressBookSearch);
   console.log('Total address books:', addressBooks.length);
@@ -155,7 +184,7 @@ export default function SitesPage() {
 
   const handleAddressBookSelect = (addressBook: AddressBook) => {
     setFormData({ ...formData, addressBookId: addressBook.id });
-    setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName} (${addressBook.addressType})`);
+    setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName}`);
     setShowAddressBookDropdown(false);
   };
 
@@ -182,50 +211,83 @@ export default function SitesPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // Prepare site data without contacts
-    const siteData = {
-      addressBookId: formData.addressBookId,
-      siteName: formData.siteName,
-      siteAddress: formData.siteAddress,
-      city: formData.city,
-      state: formData.state,
-      pinCode: formData.pinCode,
-      gstNo: formData.gstNo,
-    };
+    try {
+      // Prepare site data without contacts
+      const siteData = {
+        addressBookId: formData.addressBookId,
+        siteName: formData.siteName,
+        siteAddress: formData.siteAddress,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pinCode,
+        gstNo: formData.gstNo,
+      };
 
-    if (editingId) {
-      // Update existing site
-      const response = await fetch(`http://139.59.93.154:8000/sites/${editingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(siteData),
-      });
+      if (editingId) {
+        // Update existing site
+        const response = await fetch(`http://localhost:8000/sites/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(siteData),
+        });
 
-      if (response.ok) {
-        // Handle contacts separately
-        for (const contact of formContacts) {
-          if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-            if (contact.id) {
-              // Update existing contact
-              await fetch(`http://139.59.93.154:8000/sites/contacts/${contact.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contactPerson: contact.contactPerson,
-                  designation: contact.designation,
-                  contactNumber: contact.contactNumber,
-                  emailAddress: contact.emailAddress,
-                }),
-              });
-            } else {
-              // Create new contact
-              await fetch(`http://139.59.93.154:8000/sites/${editingId}/contacts`, {
+        if (response.ok) {
+          // Handle contacts separately
+          for (const contact of formContacts) {
+            if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
+              if (contact.id) {
+                // Update existing contact
+                await fetch(`http://localhost:8000/sites/contacts/${contact.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contactPerson: contact.contactPerson,
+                    designation: contact.designation,
+                    contactNumber: contact.contactNumber,
+                    emailAddress: contact.emailAddress,
+                  }),
+                });
+              } else {
+                // Create new contact
+                await fetch(`http://localhost:8000/sites/${editingId}/contacts`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contactPerson: contact.contactPerson,
+                    designation: contact.designation,
+                    contactNumber: contact.contactNumber,
+                    emailAddress: contact.emailAddress,
+                  }),
+                });
+              }
+            }
+          }
+
+          await fetchSites();
+          closeModal();
+        }
+      } else {
+        // Create new site
+        const response = await fetch('http://localhost:8000/sites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(siteData),
+        });
+
+        if (response.ok) {
+          const newSite = await response.json();
+
+          // Create site contacts
+          for (const contact of formContacts) {
+            if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
+              await fetch(`http://localhost:8000/sites/${newSite.id}/contacts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -237,86 +299,53 @@ export default function SitesPage() {
               });
             }
           }
+
+          await fetchSites();
+          closeModal();
         }
-
-        await fetchSites();
-        closeModal();
-      }
-    } else {
-      // Create new site
-      const response = await fetch('http://139.59.93.154:8000/sites', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(siteData),
-      });
-
-      if (response.ok) {
-        const newSite = await response.json();
-
-        // Create site contacts
-        for (const contact of formContacts) {
-          if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-            await fetch(`http://139.59.93.154:8000/sites/${newSite.id}/contacts`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contactPerson: contact.contactPerson,
-                designation: contact.designation,
-                contactNumber: contact.contactNumber,
-                emailAddress: contact.emailAddress,
-              }),
-            });
-          }
-        }
-
-        await fetchSites();
-        closeModal();
-      }
-    }
-  } catch (error) {
-    console.error('Error submitting site:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
- const handleEdit = async (id: number) => {
-  const item = sites.find(s => s.id === id);
-  if (item) {
-    setFormData(item);
-    setEditingId(id);
-    setShowForm(true);
-
-    // Find the address book for this site and set the search field
-    const addressBook = addressBooks.find(ab => ab.id === item.addressBookId);
-    if (addressBook) {
-      setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName} (${addressBook.addressType})`);
-    }
-
-    // Fetch existing site contacts
-    try {
-      const response = await fetch(`http://139.59.93.154:8000/sites/${id}/contacts`);
-      if (response.ok) {
-        const contactsData = await response.json();
-        setFormContacts(contactsData);
-      } else {
-        setFormContacts([]);
       }
     } catch (error) {
-      console.error('Error fetching site contacts:', error);
-      setFormContacts([]);
+      console.error('Error submitting site:', error);
+    } finally {
+      setLoading(false);
     }
-  }
-};
+  };
+
+
+  const handleEdit = async (id: number) => {
+    const item = sites.find(s => s.id === id);
+    if (item) {
+      setFormData(item);
+      setEditingId(id);
+      setShowForm(true);
+
+      // Find the address book for this site and set the search field
+      const addressBook = addressBooks.find(ab => ab.id === item.addressBookId);
+      if (addressBook) {
+        setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName}`);
+      }
+
+      // Fetch existing site contacts
+      try {
+        const response = await fetch(`http://localhost:8000/sites/${id}/contacts`);
+        if (response.ok) {
+          const contactsData = await response.json();
+          setFormContacts(contactsData);
+        } else {
+          setFormContacts([]);
+        }
+      } catch (error) {
+        console.error('Error fetching site contacts:', error);
+        setFormContacts([]);
+      }
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this site?')) {
       try {
         setLoading(true);
-        const response = await fetch(`http://139.59.93.154:8000/sites/${id}`, {
+        const response = await fetch(`http://localhost:8000/sites/${id}`, {
           method: 'DELETE',
         });
 
@@ -351,6 +380,11 @@ export default function SitesPage() {
     setFormContacts([]);
   };
 
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -358,7 +392,7 @@ export default function SitesPage() {
         <p className="text-black">Manage customer sites and locations</p>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
           onClick={() => setShowForm(true)}
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
@@ -368,6 +402,32 @@ export default function SitesPage() {
           </svg>
           Add New Site
         </button>
+
+        {/* Search Bar */}
+        <div className="w-full sm:w-64">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search sites..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-black px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Modal Overlay */}
@@ -417,7 +477,7 @@ export default function SitesPage() {
                           }
                         }}
                         placeholder="Search customer..."
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full border text-black border-gray-300 rounded-lg px-4 py-3  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       />
                       {showAddressBookDropdown && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -445,7 +505,7 @@ export default function SitesPage() {
                                   {addressBook.addressBookID} - {addressBook.customerName}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {addressBook.addressType} | {addressBook.regdAddress}
+                                  {addressBook.regdAddress}
                                 </div>
                               </div>
                             ))
@@ -688,7 +748,15 @@ export default function SitesPage() {
       {/* Main Content - Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-          <h2 className="text-xl font-semibold text-white">Sites</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-xl font-semibold text-white">Sites</h2>
+            <div className="text-white text-sm">
+              Showing {currentItems.length} of {filteredSites.length} entries
+              {searchTerm && (
+                <span className="ml-2">(filtered from {sites.length} total)</span>
+              )}
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -698,25 +766,19 @@ export default function SitesPage() {
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site ID</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site Name</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site Address</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">City</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">State</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">GST No</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sites.map((item) => (
+              {currentItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-gray-700 font-medium">{item.id}</td>
                   <td className="px-6 py-4 text-gray-700">{item.siteID}</td>
                   <td className="px-6 py-4 text-gray-700 font-medium">{item.siteName}</td>
                   <td className="px-6 py-4 text-gray-700">{item.siteAddress}</td>
-                  <td className="px-6 py-4 text-gray-700">{item.city || '-'}</td>
-                  <td className="px-6 py-4 text-gray-700">{item.state || '-'}</td>
-                  <td className="px-6 py-4 text-gray-700 font-mono">{item.gstNo || '-'}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-3">
-                      <button 
+                      <button
                         onClick={() => handleEdit(item.id!)}
                         className="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1"
                       >
@@ -725,7 +787,7 @@ export default function SitesPage() {
                         </svg>
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(item.id!)}
                         className="text-red-600 hover:text-red-800 font-medium transition-colors flex items-center gap-1"
                       >
@@ -740,7 +802,65 @@ export default function SitesPage() {
               ))}
             </tbody>
           </table>
+          
+          {/* Show message when no results found */}
+          {currentItems.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-lg font-medium">No sites found</p>
+              <p className="text-sm">
+                {searchTerm ? 'Try adjusting your search terms' : 'Add your first site to get started'}
+              </p>
+            </div>
+          )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages} • {filteredSites.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border text-black border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                >
+                  Previous
+                </button>
+                
+                {/* Page Numbers */}
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => paginate(page)}
+                      className={`px-3 py-1 border text-sm rounded transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border text-black border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

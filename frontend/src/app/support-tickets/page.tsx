@@ -311,7 +311,7 @@ export default function SupportTicketsPage() {
     status: 'Open',
   });
 
-  const API_URL = 'http://139.59.93.154:8000/support-tickets';
+  const API_URL = 'http://localhost:8000/support-tickets';
 
   const fetchSupportTickets = async () => {
     try {
@@ -331,7 +331,7 @@ export default function SupportTicketsPage() {
 
     try {
       setLoading(true);
-      const res = await fetch('http://139.59.93.154:8000/support-ticket-users');
+      const res = await fetch('http://localhost:8000/support-ticket-users');
       const data: SupportTicketUser[] = await res.json();
       const user = data.find((u) => u.email.toLowerCase() === formData.email.toLowerCase());
 

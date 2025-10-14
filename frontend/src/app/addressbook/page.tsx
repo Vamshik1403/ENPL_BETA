@@ -42,6 +42,11 @@ export default function AddressBookPage() {
   const [generatedId, setGeneratedId] = useState<string>('');
   const [formContacts, setFormContacts] = useState<AddressBookContact[]>([]);
 
+  // Search and Pagination states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   // Load data from backend on component mount
   useEffect(() => {
     fetchAddressBooks();
@@ -49,7 +54,7 @@ export default function AddressBookPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/address-book');
+      const response = await fetch('http://localhost:8000/address-book');
       if (response.ok) {
         const data = await response.json();
         setAddressBooks(data);
@@ -59,9 +64,32 @@ export default function AddressBookPage() {
     }
   };
 
+  // Filter address books based on search term
+  const filteredAddressBooks = addressBooks.filter(item =>
+    item.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.addressBookID.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.gstNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.regdAddress.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredAddressBooks.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredAddressBooks.length / itemsPerPage);
+
+  // Pagination controls
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
   const generateAddressBookId = async (addressType: string) => {
     try {
-      const response = await fetch(`http://139.59.93.154:8000/address-book/next-id/${addressType}`);
+      const response = await fetch(`http://localhost:8000/address-book/next-id/${addressType}`);
       const data = await response.json();
       return data.nextId;
     } catch (error) {
@@ -102,17 +130,7 @@ export default function AddressBookPage() {
     setFormContacts(updatedContacts);
   };
 
-  const handleAddressTypeChange = async (addressType: string) => {
-    // Only generate new ID for new records, not when editing
-    if (!editingId) {
-      const generatedId = await generateAddressBookId(addressType);
-      setGeneratedId(generatedId);
-      setFormData({ ...formData, addressType, addressBookID: generatedId });
-    } else {
-      // When editing, just update the address type without changing the ID
-      setFormData({ ...formData, addressType });
-    }
-  };
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +155,7 @@ export default function AddressBookPage() {
 
         console.log('Update data being sent:', updateData);
 
-        const response = await fetch(`http://139.59.93.154:8000/address-book/${editingId}`, {
+        const response = await fetch(`http://localhost:8000/address-book/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -157,7 +175,7 @@ export default function AddressBookPage() {
                 if (contact.id) {
                   // Update existing contact
                   console.log('Updating existing contact:', contact.id);
-                  const contactResponse = await fetch(`http://139.59.93.154:8000/address-book/contacts/${contact.id}`, {
+                  const contactResponse = await fetch(`http://localhost:8000/address-book/contacts/${contact.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -174,7 +192,7 @@ export default function AddressBookPage() {
                 } else {
                   // Create new contact
                   console.log('Creating new contact for address book:', editingId);
-                  const contactResponse = await fetch('http://139.59.93.154:8000/addressbookcontact', {
+                  const contactResponse = await fetch('http://localhost:8000/addressbookcontact', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -205,7 +223,7 @@ export default function AddressBookPage() {
       } else {
         // Create new record
         console.log('Creating new record');
-        const response = await fetch('http://139.59.93.154:8000/address-book', {
+        const response = await fetch('http://localhost:8000/address-book', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -219,7 +237,7 @@ export default function AddressBookPage() {
           // Create contacts for this address book
           for (const contact of formContacts) {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              await fetch('http://139.59.93.154:8000/addressbookcontact', {
+              await fetch('http://localhost:8000/addressbookcontact', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -269,7 +287,7 @@ export default function AddressBookPage() {
 
       // Fetch existing contacts for this address book
       try {
-        const response = await fetch(`http://139.59.93.154:8000/address-book/${id}/contacts`);
+        const response = await fetch(`http://localhost:8000/address-book/${id}/contacts`);
         if (response.ok) {
           const contactsData = await response.json();
           setFormContacts(contactsData);
@@ -286,7 +304,7 @@ export default function AddressBookPage() {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this address book entry?')) {
       try {
-        const response = await fetch(`http://139.59.93.154:8000/address-book/${id}`, {
+        const response = await fetch(`http://localhost:8000/address-book/${id}`, {
           method: 'DELETE',
         });
 
@@ -305,6 +323,11 @@ export default function AddressBookPage() {
     resetForm();
   };
 
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -312,7 +335,7 @@ export default function AddressBookPage() {
         <p className="text-gray-600">Manage customers</p>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
           onClick={async () => {
             setEditingId(null);
@@ -337,6 +360,32 @@ export default function AddressBookPage() {
           </svg>
           Add New Customer
         </button>
+
+        {/* Search Bar */}
+        <div className="w-full sm:w-64">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search customers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-black px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Modal Overlay */}
@@ -536,7 +585,7 @@ export default function AddressBookPage() {
                   {formContacts.length === 0 && (
                     <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                       <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                       <p className="text-lg font-medium mb-1">No contacts added yet</p>
                       <p className="text-sm">Click "Add Contact" to add contact information</p>
@@ -588,43 +637,35 @@ export default function AddressBookPage() {
       {/* Main Content - Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-          <h2 className="text-xl font-semibold text-white">Address Book Entries</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-xl font-semibold text-white">Address Book Entries</h2>
+            <div className="text-white text-sm">
+              Showing {currentItems.length} of {filteredAddressBooks.length} entries
+              {searchTerm && (
+                <span className="ml-2">(filtered from {addressBooks.length} total)</span>
+              )}
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-blue-50">
               <tr>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">ID</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Address Book ID</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Address Type</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Customer ID</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Customer Name</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">City</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">State</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">GST No</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {addressBooks.map((item) => (
+              {currentItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-gray-700 font-medium">{item.id}</td>
                   <td className="px-6 py-4 text-gray-700">{item.addressBookID}</td>
-                  <td className="px-6 py-4 text-gray-700">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      item.addressType === 'Customer' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {item.addressType}
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-gray-700 font-medium">{item.customerName}</td>
-                  <td className="px-6 py-4 text-gray-700">{item.city || '-'}</td>
-                  <td className="px-6 py-4 text-gray-700">{item.state || '-'}</td>
                   <td className="px-6 py-4 text-gray-700 font-mono">{item.gstNo || '-'}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-3">
-                      <button 
+                      <button
                         onClick={() => handleEdit(item.id!)}
                         className="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1"
                       >
@@ -633,7 +674,7 @@ export default function AddressBookPage() {
                         </svg>
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(item.id!)}
                         className="text-red-600 hover:text-red-800 font-medium transition-colors flex items-center gap-1"
                       >
@@ -648,7 +689,65 @@ export default function AddressBookPage() {
               ))}
             </tbody>
           </table>
+          
+          {/* Show message when no results found */}
+          {currentItems.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-lg font-medium">No customers found</p>
+              <p className="text-sm">
+                {searchTerm ? 'Try adjusting your search terms' : 'Add your first customer to get started'}
+              </p>
+            </div>
+          )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages} • {filteredAddressBooks.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border text-black border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                >
+                  Previous
+                </button>
+                
+                {/* Page Numbers */}
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => paginate(page)}
+                      className={`px-3 py-1 border text-sm rounded transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 text-black hover:bg-gray-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border text-black border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

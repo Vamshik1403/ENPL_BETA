@@ -20,7 +20,7 @@ export default function ServiceWorkPage() {
   const fetchServiceWorkCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://139.59.93.154:8000/serviceworkcategory');
+      const response = await fetch('http://localhost:8000/serviceworkcategory');
       if (response.ok) {
         const data = await response.json();
         setServiceWorkCategories(Array.isArray(data) ? data : []);
@@ -52,7 +52,7 @@ export default function ServiceWorkPage() {
           serviceWorkCategoryName: formData.serviceWorkCategoryName,
         };
         
-        const response = await fetch(`http://139.59.93.154:8000/serviceworkcategory/${editingId}`, {
+        const response = await fetch(`http://localhost:8000/serviceworkcategory/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export default function ServiceWorkPage() {
         }
       } else {
         // Create new service work category
-        const response = await fetch('http://139.59.93.154:8000/serviceworkcategory', {
+        const response = await fetch('http://localhost:8000/serviceworkcategory', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ export default function ServiceWorkPage() {
     if (window.confirm('Are you sure you want to delete this service work category?')) {
       setLoading(true);
       try {
-        const response = await fetch(`http://139.59.93.154:8000/serviceworkcategory/${id}`, {
+        const response = await fetch(`http://localhost:8000/serviceworkcategory/${id}`, {
           method: 'DELETE',
         });
         

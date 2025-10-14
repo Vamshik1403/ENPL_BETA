@@ -187,7 +187,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onRemoveSavedContact,
   onRemoveSavedWorkscopeDetail,
   onRemoveSavedSchedule,
-  onRemoveSavedRemark,
   onStartEditSavedContact,
   onSaveEditedContact,
   onCancelEditSavedContact,
@@ -801,45 +800,45 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </div>
 
               {/* Saved Remarks Display */}
-            {/* Saved Remarks Display - Latest First */}
-{savedRemarks.length > 0 && (
-  <div className="mb-4">
-    <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
-    <div className="space-y-3">
-      {[...savedRemarks].reverse().map((remark, index) => (
-        <div
-          key={remark.id}
-          className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
-        >
-          <div className="flex-1">
-            <div className="text-sm text-gray-800 mb-1">
-              <strong>Status:</strong> {remark.status}
-            </div>
-            <div className="text-gray-700">{remark.remark}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
-            </div>
-          </div>
+              {/* Saved Remarks Display - Latest First */}
+              {savedRemarks.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
+                  <div className="space-y-3">
+                    {[...savedRemarks].reverse().map((remark, index) => (
+                      <div
+                        key={remark.id}
+                        className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-800 mb-1">
+                            <strong>Status:</strong> {remark.status}
+                          </div>
+                          <div className="text-gray-700">{remark.remark}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
+                          </div>
+                        </div>
 
-          {/* Edit button for latest remark only - now checking the original array order */}
-          {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
-            <button
-              type="button"
-              onClick={() => onEditLatestRemark(remark)}
-              className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
-              title="Edit latest remark"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                        {/* Edit button for latest remark only - now checking the original array order */}
+                        {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => onEditLatestRemark(remark)}
+                            className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
+                            title="Edit latest remark"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
 
               {/* Current Form Remarks (excluding the first one used for input) */}
@@ -978,50 +977,50 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
           </form>
 
           {/* Remarks List */}
-        {/* Remarks List - Latest First */}
-<div className="space-y-4 max-h-96 overflow-y-auto">
-  {savedRemarks.length === 0 ? (
-    <p className="text-gray-500 text-center py-4">No remarks yet</p>
-  ) : (
-    [...savedRemarks].reverse().map((remark, index) => (
-      <div
-        key={remark.id}
-        className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-      >
-        <div className="flex justify-between items-start mb-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
-            remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-              remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
-                'bg-gray-100 text-gray-800'
-            }`}>
-            {remark.status}
-          </span>
-          <div className="flex gap-2">
-            {/* Edit button for latest remark only - now checking the original array order */}
-            {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
-              <button
-                onClick={() => onEditLatestRemark(remark)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                Edit
-              </button>
+          {/* Remarks List - Latest First */}
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {savedRemarks.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No remarks yet</p>
+            ) : (
+              [...savedRemarks].reverse().map((remark, index) => (
+                <div
+                  key={remark.id}
+                  className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Closed' ? 'bg-green-100 text-green-800' :
+                      remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                        remark.status === 'Assigned' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                      }`}>
+                      {remark.status}
+                    </span>
+                    <div className="flex gap-2">
+                      {/* Edit button for latest remark only - now checking the original array order */}
+                      {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+                        <button
+                          onClick={() => onEditLatestRemark(remark)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onRemoveRemark(remark.id!)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-900 mb-2">{remark.remark}</p>
+                  <div className="text-xs text-gray-500">
+                    Added by {remark.createdBy} on {new Date(remark.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              ))
             )}
-            <button
-              onClick={() => onRemoveRemark(remark.id!)}
-              className="text-red-600 hover:text-red-800 text-sm font-medium"
-            >
-              Remove
-            </button>
           </div>
-        </div>
-        <p className="text-gray-900 mb-2">{remark.remark}</p>
-        <div className="text-xs text-gray-500">
-          Added by {remark.createdBy} on {new Date(remark.createdAt).toLocaleString()}
-        </div>
-      </div>
-    ))
-  )}
-</div>
         </div>
       </div>
     </div>
@@ -1041,6 +1040,33 @@ export default function TasksPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 🔍 Search & Pagination
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // 🔍 Filter tasks by ID, department, customer, site, or status
+  const filteredTasks = tasks.filter((task) => {
+    const term = searchTerm.toLowerCase();
+    const departmentName = departments.find(d => d.id === task.departmentId)?.departmentName?.toLowerCase() || '';
+    const customerName = addressBooks.find(a => a.id === task.addressBookId)?.customerName?.toLowerCase() || '';
+    const siteName = sites.find(s => s.id === task.siteId)?.siteName?.toLowerCase() || '';
+
+    return (
+      task.taskID.toLowerCase().includes(term) ||
+      departmentName.includes(term) ||
+      customerName.includes(term) ||
+      siteName.includes(term) ||
+      task.status.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  const paginatedTasks = filteredTasks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
 
   // Form state
   const [formData, setFormData] = useState<TaskFormData>({
@@ -1113,7 +1139,7 @@ export default function TasksPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/department');
+      const response = await fetch('http://localhost:8000/department');
       const data = await response.json();
       setDepartments(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1124,7 +1150,7 @@ export default function TasksPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/address-book');
+      const response = await fetch('http://localhost:8000/address-book');
       const data = await response.json();
       setAddressBooks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1135,7 +1161,7 @@ export default function TasksPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/sites');
+      const response = await fetch('http://localhost:8000/sites');
       const data = await response.json();
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1146,7 +1172,7 @@ export default function TasksPage() {
 
   const fetchServiceWorkscopeCategories = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/workscope-category');
+      const response = await fetch('http://localhost:8000/workscope-category');
       if (!response.ok) {
         throw new Error('Failed to fetch service workscope categories');
       }
@@ -1160,7 +1186,7 @@ export default function TasksPage() {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch('http://139.59.93.154:8000/task');
+      const response = await fetch('http://localhost:8000/task');
       const data = await response.json();
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -1171,7 +1197,7 @@ export default function TasksPage() {
 
   const fetchNextTaskId = async () => {
     try {
-      const res = await fetch(`http://139.59.93.154:8000/task/next-id`);
+      const res = await fetch(`http://localhost:8000/task/next-id`);
       const data = await res.json();
       return data.taskId;
     } catch (err) {
@@ -1267,7 +1293,7 @@ export default function TasksPage() {
         )]
       };
 
-      const url = editingId ? `http://139.59.93.154:8000/task/${editingId}` : 'http://139.59.93.154:8000/task';
+      const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
       const method = editingId ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
@@ -1320,7 +1346,7 @@ export default function TasksPage() {
       };
 
       // ✅ Use same PATCH endpoint as full edit
-      const response = await fetch(`http://139.59.93.154:8000/task/${id}`, {
+      const response = await fetch(`http://localhost:8000/task/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),
@@ -1329,8 +1355,8 @@ export default function TasksPage() {
       if (!response.ok) throw new Error("Failed to update task with new remark");
 
       // ✅ Update UI instantly
-// ✅ Update UI instantly - add to end so it appears first when reversed
-setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
+      // ✅ Update UI instantly - add to end so it appears first when reversed
+      setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
       await fetchTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update remark");
@@ -1350,7 +1376,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
         };
 
         // Use the same API as edit modal
-        const response = await fetch(`http://139.59.93.154:8000/task/${selectedTask.id}`, {
+        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1375,7 +1401,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
     if (!confirm('Are you sure you want to delete this task?')) return;
 
     try {
-      const response = await fetch(`http://139.59.93.154:8000/task/${id}`, {
+      const response = await fetch(`http://localhost:8000/task/${id}`, {
         method: 'DELETE',
       });
 
@@ -1500,10 +1526,10 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
     const remark = formData.remarks[0];
     if (remark.remark && remark.status) {
       setSavedRemarks(prev => [...prev, {
-  ...remark,
-  id: Date.now(),
-  createdAt: new Date().toISOString()
-}]);
+        ...remark,
+        id: Date.now(),
+        createdAt: new Date().toISOString()
+      }]);
       setFormData(prev => ({
         ...prev,
         remarks: [{ taskId: 0, remark: '', status: 'Open', createdBy: 'Admin', createdAt: new Date().toISOString() }]
@@ -1619,7 +1645,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
     setRemarkToEdit(remark);
     setEditRemarkText(remark.remark);
     setEditRemarkStatus(remark.status);
-    
+
     // Determine which task we're editing
     if (showModal) {
       // We're in the main task modal
@@ -1638,7 +1664,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
       // We're in the remarks-only modal
       setTaskForRemarkEdit(selectedTask);
     }
-    
+
     setShowEditRemarkModal(true);
   };
 
@@ -1671,7 +1697,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
       };
 
       // Update in backend
-      const response = await fetch(`http://139.59.93.154:8000/task/${taskForRemarkEdit.id}`, {
+      const response = await fetch(`http://localhost:8000/task/${taskForRemarkEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedTask),
@@ -1726,7 +1752,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
         )}
 
         {/* Actions Bar */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="flex gap-4">
             <button
               onClick={handleOpenModal}
@@ -1736,7 +1762,20 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
               Add New Task
             </button>
           </div>
+
+          {/* 🔍 Search Bar */}
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+
 
         {/* Tasks Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -1773,7 +1812,7 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {tasks.map((task) => (
+                  {paginatedTasks.map((task) => (
                     <tr key={task.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {task.taskID}
@@ -1796,18 +1835,18 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
                           {task.status}
                         </span>
                       </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-  {task.remarks && task.remarks.length > 0 ? (
-    <div>
-      <div className="font-medium">Latest: {task.remarks[task.remarks.length - 1].remark}</div>
-      <div className="text-xs text-gray-500">
-        Status: {task.remarks[task.remarks.length - 1].status}
-      </div>
-    </div>
-  ) : (
-    <span className="text-gray-400">No remarks</span>
-  )}
-</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {task.remarks && task.remarks.length > 0 ? (
+                          <div>
+                            <div className="font-medium">Latest: {task.remarks[task.remarks.length - 1].remark}</div>
+                            <div className="text-xs text-gray-500">
+                              Status: {task.remarks[task.remarks.length - 1].status}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No remarks</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
                           <button
@@ -1850,6 +1889,30 @@ setSavedRemarks((prev) => [...prev, { ...newRemarkObj, id: Date.now() }]);
                   )}
                 </tbody>
               </table>
+              {/* 📄 Pagination Controls */}
+              <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages || 1}
+                </span>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+
             </div>
           )}
         </div>
