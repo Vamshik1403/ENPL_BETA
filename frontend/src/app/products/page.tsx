@@ -333,18 +333,20 @@ export default function ProductsPage() {
                         <button
                           onClick={() => handleEdit(item.id!)}
                           disabled={loading}
-                          className="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Edit"
+                          title="Edit"
                         >
                           <Icons.Edit />
-                          Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.id!)}
                           disabled={loading}
-                          className="text-red-600 hover:text-red-800 font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Delete"
+                          title="Delete"
                         >
                           <Icons.Delete />
-                          Delete
                         </button>
                       </div>
                     </td>

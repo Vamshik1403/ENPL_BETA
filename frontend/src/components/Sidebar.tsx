@@ -56,10 +56,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   }); 
 
   const toggleSection = (section: keyof ExpandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    // Accordion behavior: open the clicked section, close others
+    setExpandedSections(prev => {
+      const next: ExpandedSections = Object.keys(prev).reduce((acc, key) => {
+        acc[key] = false;
+        return acc;
+      }, {} as ExpandedSections);
+      return { ...next, [section]: !prev[section] };
+    });
   };
 
   const getSectionKey = (itemName: string): keyof ExpandedSections => {
@@ -83,45 +87,56 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           <>
             <button
               onClick={() => toggleSection(sectionKey)}
-              className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 group ${
+              className={`flex items-center w-full p-3 rounded-lg transition-all duration-300 ease-in-out group ${
                 isParentActive || isActiveItem
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-900/30 ring-1 ring-blue-400/30'
+                  : 'text-gray-300 hover:bg-gray-700/70 hover:text-white hover:shadow-md'
               } ${level > 0 ? 'text-sm' : ''}`}
             >
               <span className="text-xl mr-3 flex-shrink-0">{item.icon}</span>
-              <span className={`transition-all duration-200 ${
+              <span className={`transition-all duration-300 ${
                 isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
               } truncate flex-1 text-left`}>
                 {item.name}
               </span>
               {!isCollapsed && (
-                <span className={`transition-transform duration-200 ml-2 ${
-                  expandedSections[sectionKey] ? 'rotate-90' : ''
-                }`}>
-                  ▶
+                <span
+                  className={`ml-2 transition-transform duration-300 ease-in-out ${
+                    expandedSections[sectionKey] ? 'rotate-90' : 'rotate-0'
+                  }`}
+                  aria-hidden
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
                 </span>
               )}
             </button>
             
-            {/* Nested Items */}
-            {!isCollapsed && expandedSections[sectionKey] && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-600 pl-2">
-                {item.nested?.map((nestedItem: NavigationItem) => renderNavigationItem(nestedItem, level + 1))}
+            {/* Nested Items with smooth transition */}
+            {!isCollapsed && (
+              <div
+                className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                  expandedSections[sectionKey] ? 'max-h-64 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="space-y-1 border-l-2 border-gray-600 pl-2">
+                  {item.nested?.map((nestedItem: NavigationItem) => renderNavigationItem(nestedItem, level + 1))}
+                </div>
               </div>
             )}
           </>
         ) : (
           <Link
             href={item.href}
-            className={`flex items-center p-3 rounded-lg transition-all duration-200 group relative ${
+            className={`flex items-center p-3 rounded-lg transition-all duration-300 ease-in-out group relative ${
               isActiveItem
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white hover:shadow-md'
+                ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-900/30 ring-1 ring-blue-400/30'
+                : 'text-gray-300 hover:bg-gray-700/70 hover:text-white hover:shadow-md'
             } ${level > 0 ? 'text-sm' : ''}`}
           >
             <span className="text-xl mr-3 flex-shrink-0">{item.icon}</span>
-            <span className={`transition-all duration-200 ${
+            <span className={`transition-all duration-300 ${
               isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
             } truncate`}>
               {item.name}
@@ -150,7 +165,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       overflow-y-auto
     `}>
       {/* Toggle Button */}
-      <div className="p-4 border-b border-gray-700 sticky top-0 bg-gray-900">
+      <div className="p-4 border-b border-gray-700 sticky top-0 bg-gray-900/95 backdrop-blur">
         <div className="flex items-center justify-between">
           <h1 className={`
             font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent
@@ -159,7 +174,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           `}>
             ENPL ERP
           </h1>
-         
         </div>
       </div>
       
@@ -172,23 +186,28 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         <div className="mt-6 pt-4 border-t border-gray-700">
           <button
             onClick={() => toggleSection('setup')}
-            className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 group ${
+            className={`flex items-center w-full p-3 rounded-lg transition-all duration-300 ease-in-out group ${
               setupItems.some(item => isActive(item.href))
-                ? 'bg-purple-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'bg-purple-600/90 text-white shadow-lg shadow-purple-900/30 ring-1 ring-purple-400/30'
+                : 'text-gray-300 hover:bg-gray-700/70 hover:text-white hover:shadow-md'
             }`}
           >
             <span className="text-xl mr-3 flex-shrink-0">⚙️</span>
-            <span className={`transition-all duration-200 ${
+            <span className={`transition-all duration-300 ${
               isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
             } truncate flex-1 text-left`}>
               Setup
             </span>
             {!isCollapsed && (
-              <span className={`transition-transform duration-200 ml-2 ${
-                expandedSections.setup ? 'rotate-90' : ''
-              }`}>
-                ▶
+              <span
+                className={`ml-2 transition-transform duration-300 ease-in-out ${
+                  expandedSections.setup ? 'rotate-90' : 'rotate-0'
+                }`}
+                aria-hidden
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
               </span>
             )}
             
@@ -200,10 +219,16 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             )}
           </button>
           
-          {/* Setup Items */}
-          {!isCollapsed && expandedSections.setup && (
-            <div className="ml-4 mt-1 space-y-1 border-l-2 border-purple-500 pl-2">
-              {setupItems.map(item => renderNavigationItem(item, 1))}
+          {/* Setup Items with smooth transition */}
+          {!isCollapsed && (
+            <div
+              className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.setup ? 'max-h-64 opacity-100 mt-1' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="space-y-1 border-l-2 border-purple-500 pl-2">
+                {setupItems.map(item => renderNavigationItem(item, 1))}
+              </div>
             </div>
           )}
         </div>

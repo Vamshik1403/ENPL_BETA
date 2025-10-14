@@ -287,17 +287,19 @@ export default function ContractWorkPage() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => handleEdit(item.id!)}
-                          className="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
+                          aria-label="Edit"
+                          title="Edit"
                         >
                           <Icons.Edit />
-                          Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.id!)}
-                          className="text-red-600 hover:text-red-800 font-medium transition-colors flex items-center gap-1"
+                          className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
+                          aria-label="Delete"
+                          title="Delete"
                         >
                           <Icons.Delete />
-                          Delete
                         </button>
                       </div>
                     </td>

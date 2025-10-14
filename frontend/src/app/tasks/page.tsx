@@ -123,7 +123,7 @@ interface TaskModalProps {
   onAddContact: () => void;
   onRemoveContact: (index: number) => void;
   onUpdateContact: (index: number, field: keyof TasksContacts, value: string) => void;
-  onAddWorkscopeDetail: () => void;
+  onAddWorkscopeDetail: () => void; // ✅ Add this line
   onRemoveWorkscopeDetail: (index: number) => void;
   onUpdateWorkscopeDetail: (index: number, field: keyof TasksWorkscopeDetails, value: string | number) => void;
   onAddSchedule: () => void;
@@ -177,6 +177,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onShowCustomerDropdownChange,
   onFormDataChange,
   onUpdateContact,
+  onAddWorkscopeDetail,
   onRemoveWorkscopeDetail,
   onUpdateWorkscopeDetail,
   onUpdateSchedule,
@@ -487,70 +488,88 @@ const TaskModal: React.FC<TaskModalProps> = ({
               ))}
             </div>
 
-            {/* Workscope Details - Single Row Layout */}
             <div className="border-t pt-4">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-medium text-gray-900">Workscope Details</h3>
+                <button
+                  type="button"
+                  onClick={onAddWorkscopeDetail}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                >
+                  + Add Another
+                </button>
               </div>
 
-              {/* Add New Workscope - Single Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white rounded-lg border">
-                {/* Workscope Category Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Workscope Category
-                  </label>
-                  <select
-                    value={formData.workscopeDetails[0]?.workscopeCategoryId || 0}
-                    onChange={(e) => onUpdateWorkscopeDetail(0, "workscopeCategoryId", parseInt(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                  >
-                    <option value={0}>Select Category</option>
-                    {serviceWorkscopeCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.workscopeCategoryName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Current Form Workscope Details */}
+              {formData.workscopeDetails.map((detail, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                  {/* Workscope Category Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Workscope Category
+                    </label>
+                    <select
+                      value={detail.workscopeCategoryId || 0}
+                      onChange={(e) => onUpdateWorkscopeDetail(index, "workscopeCategoryId", parseInt(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    >
+                      <option value={0}>Select Category</option>
+                      {serviceWorkscopeCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.workscopeCategoryName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Workscope Details Textarea */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Workscope Details
-                  </label>
-                  <textarea
-                    value={formData.workscopeDetails[0]?.workscopeDetails || ''}
-                    onChange={(e) => onUpdateWorkscopeDetail(0, 'workscopeDetails', e.target.value)}
-                    placeholder="Enter workscope details..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
-                    rows={2}
-                  />
-                </div>
+                  {/* Workscope Details Textarea */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Workscope Details
+                    </label>
+                    <textarea
+                      value={detail.workscopeDetails || ''}
+                      onChange={(e) => onUpdateWorkscopeDetail(index, 'workscopeDetails', e.target.value)}
+                      placeholder="Enter workscope details..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
+                      rows={2}
+                    />
+                  </div>
 
-                {/* Add Button */}
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={() => onSaveWorkscopeDetail(0)}
-                    disabled={!formData.workscopeDetails[0]?.workscopeDetails || formData.workscopeDetails[0]?.workscopeCategoryId === 0}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-6"
-                  >
-                    Add Workscope
-                  </button>
+
+
+                  {/* Add/Remove Buttons */}
+                  <div className="flex items-end gap-2 md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => onSaveWorkscopeDetail(index)}
+                      disabled={!detail.workscopeDetails || detail.workscopeCategoryId === 0}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Save Workscope
+                    </button>
+                    {formData.workscopeDetails.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveWorkscopeDetail(index)}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ))}
 
               {/* Saved Workscope Details Table */}
-              {(savedWorkscopeDetails.length > 0 || formData.workscopeDetails.length > 1) && (
+              {savedWorkscopeDetails.length > 0 && (
                 <div className="bg-white rounded-lg border overflow-hidden mb-4">
                   <table className="w-full text-sm">
-                    <thead className="bg-green-100">
+                    <thead className="bg-blue-50">
                       <tr>
-                        <th className="p-3 text-left text-green-800 font-semibold">Category</th>
-                        <th className="p-3 text-left text-green-800 font-semibold">Details</th>
-                        <th className="p-3 text-left text-green-800 font-semibold">Extra Note</th>
-                        <th className="p-3 text-left text-green-800 font-semibold w-20">Actions</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Category</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Details</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -561,7 +580,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                             {serviceWorkscopeCategories.find(cat => cat.id === workscope.workscopeCategoryId)?.workscopeCategoryName || 'N/A'}
                           </td>
                           <td className="p-3 text-gray-700">{workscope.workscopeDetails}</td>
-                          <td className="p-3 text-gray-700">{workscope.extraNote || 'N/A'}</td>
                           <td className="p-3">
                             <div className="flex gap-2">
                               <button
@@ -572,26 +590,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                                 Remove
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-
-                      {/* Current Form Workscope Details (excluding the first one used for input) */}
-                      {formData.workscopeDetails.slice(1).map((detail, index) => (
-                        <tr key={index + 1} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">
-                            {serviceWorkscopeCategories.find(cat => cat.id === detail.workscopeCategoryId)?.workscopeCategoryName || 'N/A'}
-                          </td>
-                          <td className="p-3 text-gray-700">{detail.workscopeDetails}</td>
-                          <td className="p-3 text-gray-700">{detail.extraNote || 'N/A'}</td>
-                          <td className="p-3">
-                            <button
-                              type="button"
-                              onClick={() => onRemoveWorkscopeDetail(index + 1)}
-                              className="text-red-600 hover:text-red-800 font-medium text-sm"
-                            >
-                              Remove
-                            </button>
                           </td>
                         </tr>
                       ))}
@@ -625,21 +623,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </div>
 
-            {formData.workscopeDetails.map((detail, index) => (
-              <div key={detail.id || index} className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Extra Note
-                </label>
-                <input
-                  type="text"
-                  value={detail.extraNote}
-                  onChange={(e) =>
-                    onUpdateWorkscopeDetail(index, 'extraNote', e.target.value)
-                  }
-                  className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white"
-                />
-              </div>
-            ))}
+            
 
             {/* Schedule */}
             <div className="border-t pt-4">
@@ -841,26 +825,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
               )}
 
 
-              {/* Current Form Remarks (excluding the first one used for input) */}
-              {formData.remarks.slice(1).map((remark, index) => (
-                <div key={index + 1} className="p-3 mb-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-800 mb-1">
-                        <strong>Status:</strong> {remark.status}
-                      </div>
-                      <div className="text-gray-700">{remark.remark}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveRemark(index + 1)}
-                      className="text-red-600 hover:text-red-800 text-sm ml-2"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
 
             {/* Form Actions */}
@@ -1647,10 +1611,10 @@ export default function TasksPage() {
     setEditRemarkStatus(remark.status);
 
     // Determine which task we're editing
-    if (showModal) {
-      // We're in the main task modal
+    if (showModal && editingId) {
+      // We're in the main task modal - create a task object from current form data
       setTaskForRemarkEdit({
-        id: editingId || 0,
+        id: editingId,
         taskID: formData.taskID,
         departmentId: formData.departmentId,
         addressBookId: formData.addressBookId,
@@ -1672,17 +1636,37 @@ export default function TasksPage() {
     if (!remarkToEdit || !taskForRemarkEdit) return;
 
     try {
-      // Create updated remarks array - replace only the latest remark
-      const currentRemarks = taskForRemarkEdit.remarks || [];
-      const updatedRemarks = currentRemarks.map((remark, index, array) =>
-        index === array.length - 1 // Only modify the last remark
-          ? {
+      // Determine which remarks array to update based on context
+      let currentRemarks: TasksRemarks[] = [];
+
+      if (showModal) {
+        // We're in the main task modal - use savedRemarks
+        currentRemarks = [...savedRemarks];
+      } else if (showRemarksModal) {
+        // We're in the remarks-only modal
+        currentRemarks = [...savedRemarks];
+      }
+
+      if (currentRemarks.length === 0) {
+        throw new Error("No remarks found to edit");
+      }
+
+      // Update the latest remark (last one in the array)
+      const updatedRemarks = currentRemarks.map((remark, index, array) => {
+        // Check if this is the latest remark (last in array) AND matches the remark we're editing
+        const isLatestRemark = index === array.length - 1;
+        const isTargetRemark = remark.id === remarkToEdit.id;
+
+        if (isLatestRemark && isTargetRemark) {
+          return {
             ...remark,
             remark: editRemarkText,
-            status: editRemarkStatus
-          }
-          : remark
-      );
+            status: editRemarkStatus,
+            createdAt: new Date().toISOString() // Update timestamp
+          };
+        }
+        return remark;
+      });
 
       // Prepare task data for update
       const cleanTask = { ...taskForRemarkEdit } as any;
@@ -1709,16 +1693,20 @@ export default function TasksPage() {
       if (showModal) {
         // Update the saved remarks in task modal
         setSavedRemarks(updatedRemarks);
+        // Also update form data if we're editing the current task
+        if (editingId === taskForRemarkEdit.id) {
+          setFormData(prev => ({
+            ...prev,
+            remarks: updatedRemarks
+          }));
+        }
       } else if (showRemarksModal) {
         // Update the saved remarks in remarks modal
         setSavedRemarks(updatedRemarks);
-        // Also update the tasks list
-        setTasks(prev => prev.map(task =>
-          task.id === taskForRemarkEdit.id
-            ? { ...task, remarks: updatedRemarks }
-            : task
-        ));
       }
+
+      // Refresh tasks list
+      await fetchTasks();
 
       setShowEditRemarkModal(false);
       setRemarkToEdit(null);
@@ -1786,27 +1774,27 @@ export default function TasksPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-blue-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Task ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Department
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Site
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Remarks
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -1849,6 +1837,16 @@ export default function TasksPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
+        <a
+  href={`/tasks/view/${task.id}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-green-600 hover:text-green-900 underline"
+>
+  View
+</a>
+
+
                           <button
                             onClick={() => handleEditTask(task)}
                             className="text-blue-600 hover:text-blue-900 transition-colors"
