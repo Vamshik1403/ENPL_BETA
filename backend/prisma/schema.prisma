@@ -204,6 +204,19 @@ model Task {
   workscopeDetails TasksWorkscopeDetails[]
   schedule         TasksSchedule[]
   remarks          TasksRemarks[]
+  images           TaskImage[]
+}
+
+model TaskImage {
+  id        Int    @id @default(autoincrement())
+  taskId    Int
+  filename  String
+  filepath  String
+  mimeType  String
+  fileSize  Int
+  uploadedAt DateTime @default(now())
+  
+  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model TasksContacts {

@@ -134,7 +134,7 @@ interface TaskModalProps {
   onUpdateRemark: (index: number, field: keyof TasksRemarks, value: string) => void;
   onSaveContact: (index: number) => void;
   onSaveWorkscopeDetail: (index: number) => void;
-  onSaveSchedule: (index: number) => void;
+onSaveSchedule: () => void;
   onSaveRemark: (index: number) => void;
   onRemoveSavedContact: (id: number) => void;
   onRemoveSavedWorkscopeDetail: (id: number) => void;
@@ -153,6 +153,7 @@ interface TaskModalProps {
   onEditLatestRemark: (remark: TasksRemarks) => void;
 }
 
+// TaskModal Component - Updated structure
 const TaskModal: React.FC<TaskModalProps> = ({
   showModal,
   editingId,
@@ -168,33 +169,29 @@ const TaskModal: React.FC<TaskModalProps> = ({
   savedWorkscopeDetails,
   savedSchedule,
   savedRemarks,
-  editingSavedContact,
-  editingSavedWorkscope,
-  editingSavedSchedule,
   onClose,
   onSubmit,
   onCustomerSearchChange,
   onShowCustomerDropdownChange,
   onFormDataChange,
+  onAddContact,
+  onRemoveContact,
   onUpdateContact,
   onAddWorkscopeDetail,
   onRemoveWorkscopeDetail,
   onUpdateWorkscopeDetail,
+  onAddSchedule,
+  onRemoveSchedule,
   onUpdateSchedule,
   onAddRemark,
   onRemoveRemark,
   onUpdateRemark,
+  onSaveContact,
   onSaveWorkscopeDetail,
+  onSaveSchedule,
   onRemoveSavedContact,
   onRemoveSavedWorkscopeDetail,
   onRemoveSavedSchedule,
-  onStartEditSavedContact,
-  onSaveEditedContact,
-  onCancelEditSavedContact,
-  onCancelEditSavedWorkscope,
-  onStartEditSavedSchedule,
-  onSaveEditedSchedule,
-  onCancelEditSavedSchedule,
   isTaskClosed,
   onEditLatestRemark,
 }) => {
@@ -314,180 +311,120 @@ const TaskModal: React.FC<TaskModalProps> = ({
             </div>
 
             {/* Task Contacts */}
-            <div className="border-t pt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Task Contacts</h3>
-              </div>
-
-              {/* Saved Contacts */}
-              {savedContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg shadow-sm"
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Task Contacts</h3>
+                <button
+                  type="button"
+                  onClick={onAddContact}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
-                    {/* Contact Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 w-full">
-                      {/* Contact Name */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contact Name
-                        </label>
-                        {editingSavedContact === contact.id ? (
-                          <input
-                            type="text"
-                            defaultValue={contact.contactName}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
-                            onBlur={(e) => {
-                              const updatedContact = {
-                                ...contact,
-                                contactName: e.target.value,
-                              };
-                              onSaveEditedContact(contact.id!, updatedContact);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-sm text-gray-900 bg-white p-2 rounded border">
-                            {contact.contactName}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Contact Number */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contact Number
-                        </label>
-                        {editingSavedContact === contact.id ? (
-                          <input
-                            type="text"
-                            defaultValue={contact.contactNumber}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
-                            onBlur={(e) => {
-                              const updatedContact = {
-                                ...contact,
-                                contactNumber: e.target.value,
-                              };
-                              onSaveEditedContact(contact.id!, updatedContact);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-sm text-gray-900 bg-white p-2 rounded border">
-                            {contact.contactNumber}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Contact Email */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contact Email
-                        </label>
-                        {editingSavedContact === contact.id ? (
-                          <input
-                            type="email"
-                            defaultValue={contact.contactEmail}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
-                            onBlur={(e) => {
-                              const updatedContact = {
-                                ...contact,
-                                contactEmail: e.target.value,
-                              };
-                              onSaveEditedContact(contact.id!, updatedContact);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-sm text-gray-900 bg-white p-2 rounded border">
-                            {contact.contactEmail || "N/A"}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex md:flex-col gap-2 md:ml-4 mt-2 md:mt-0">
-                      {editingSavedContact === contact.id ? (
-                        <button
-                          type="button"
-                          onClick={onCancelEditSavedContact}
-                          className="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 transition"
-                        >
-                          Cancel
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => onStartEditSavedContact(contact.id!)}
-                            className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onRemoveSavedContact(contact.id!)}
-                            className="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700 transition"
-                          >
-                            Remove
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  + Add Another
+                </button>
+              </div>
 
               {/* Current Form Contacts */}
               {formData.contacts.map((contact, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                >
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact Name
                     </label>
                     <input
                       type="text"
                       value={contact.contactName}
-                      onChange={(e) =>
-                        onUpdateContact(index, "contactName", e.target.value)
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => onUpdateContact(index, "contactName", e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                      placeholder="Enter contact name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact Number
                     </label>
                     <input
                       type="text"
                       value={contact.contactNumber}
-                      onChange={(e) =>
-                        onUpdateContact(index, "contactNumber", e.target.value)
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => onUpdateContact(index, "contactNumber", e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                      placeholder="Enter contact number"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact Email
                     </label>
                     <input
                       type="email"
                       value={contact.contactEmail}
-                      onChange={(e) =>
-                        onUpdateContact(index, "contactEmail", e.target.value)
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => onUpdateContact(index, "contactEmail", e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                      placeholder="Enter contact email"
                     />
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSaveContact(index)}
+                      disabled={!contact.contactName || !contact.contactNumber}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Save Contact
+                    </button>
+                    {formData.contacts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveContact(index)}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
+
+              {/* Saved Contacts Table */}
+              {savedContacts.length > 0 && (
+                <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-50">
+                      <tr>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Name</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Number</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Email</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {savedContacts.map((contact) => (
+                        <tr key={contact.id} className="border-t border-gray-200 hover:bg-gray-50">
+                          <td className="p-3 text-gray-700">{contact.contactName}</td>
+                          <td className="p-3 text-gray-700">{contact.contactNumber}</td>
+                          <td className="p-3 text-gray-700">{contact.contactEmail || "N/A"}</td>
+                          <td className="p-3">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onRemoveSavedContact(contact.id!)}
+                                className="text-red-600 hover:text-red-800 font-medium text-sm"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
+            {/* Workscope Details */}
             <div className="border-t pt-4">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-medium text-gray-900">Workscope Details</h3>
@@ -536,8 +473,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     />
                   </div>
 
-
-
                   {/* Add/Remove Buttons */}
                   <div className="flex items-end gap-2 md:col-span-2">
                     <button
@@ -573,7 +508,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Saved Workscope Details */}
                       {savedWorkscopeDetails.map((workscope) => (
                         <tr key={workscope.id} className="border-t border-gray-200 hover:bg-gray-50">
                           <td className="p-3 text-gray-700">
@@ -597,236 +531,182 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   </table>
                 </div>
               )}
-
-              {/* Edit Modal for Saved Workscope */}
-              {editingSavedWorkscope && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Edit Workscope</h3>
-                    {/* Add your edit form here */}
-                    <div className="flex gap-3 justify-end">
-                      <button
-                        onClick={onCancelEditSavedWorkscope}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {/* Save logic */ }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
-            
+          {/* Schedule */}
+<div className="border-t pt-4">
+  <div className="flex justify-between items-center mb-3">
+    <h3 className="text-lg font-medium text-gray-900">Schedule</h3>
+  </div>
 
-            {/* Schedule */}
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-medium text-gray-900">Schedule</h3>
-              </div>
+  {/* Add New Schedule Form - Keep this for adding new schedules */}
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Proposed Date & Time
+      </label>
+      <input
+        type="datetime-local"
+        value={formData.schedule[0]?.proposedDateTime || ''}
+        onChange={(e) => onUpdateSchedule(0, 'proposedDateTime', e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+      />
+    </div>
+    
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Priority
+      </label>
+      <select
+        value={formData.schedule[0]?.priority || 'Medium'}
+        onChange={(e) => onUpdateSchedule(0, 'priority', e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+      >
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+        <option value="Urgent">Urgent</option>
+      </select>
+    </div>
 
-              {/* Saved Schedule */}
-              {savedSchedule.map((schedule) => (
-                <div key={schedule.id} className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Proposed Date & Time</label>
-                        {editingSavedSchedule === schedule.id ? (
-                          <input
-                            type="datetime-local"
-                            defaultValue={schedule.proposedDateTime}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white"
-                            onChange={(e) => {
-                              const updatedSchedule = { ...schedule, proposedDateTime: e.target.value };
-                              onSaveEditedSchedule(schedule.id!, updatedSchedule);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-sm text-gray-900 bg-white p-2 rounded border">
-                            {new Date(schedule.proposedDateTime).toLocaleString()}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                        {editingSavedSchedule === schedule.id ? (
-                          <select
-                            defaultValue={schedule.priority}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white"
-                            onChange={(e) => {
-                              const updatedSchedule = { ...schedule, priority: e.target.value };
-                              onSaveEditedSchedule(schedule.id!, updatedSchedule);
-                            }}
-                          >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Urgent">Urgent</option>
-                          </select>
-                        ) : (
-                          <div className="text-sm text-gray-900 bg-white p-2 rounded border">{schedule.priority}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 ml-2">
-                      {editingSavedSchedule === schedule.id ? (
-                        <button
-                          type="button"
-                          onClick={onCancelEditSavedSchedule}
-                          className="bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700 transition-colors text-sm"
-                        >
-                          Cancel
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => onStartEditSavedSchedule(schedule.id!)}
-                            className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onRemoveSavedSchedule(schedule.id!)}
-                            className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors text-sm"
-                          >
-                            Remove
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+    <div className="flex items-end gap-2">
+      <button
+        type="button"
+        onClick={onSaveSchedule}
+        disabled={!formData.schedule[0]?.proposedDateTime || !formData.schedule[0]?.priority}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+      >
+        Add Schedule
+      </button>
+    </div>
+  </div>
 
-              {/* Current Form Schedule */}
-              {formData.schedule.map((schedule, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Proposed Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      value={schedule.proposedDateTime}
-                      onChange={(e) => onUpdateSchedule(index, 'proposedDateTime', e.target.value)}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <select
-                      value={schedule.priority}
-                      onChange={(e) => onUpdateSchedule(index, 'priority', e.target.value)}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Task Remarks */}
-            <div className="border-t pt-4">
-              {/* Add New Remark - Single Row */}
-              <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border">
-                {/* Remark Textarea */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Remark
-                  </label>
-                  <textarea
-                    value={formData.remarks[0]?.remark || ''}
-                    onChange={(e) => onUpdateRemark(0, 'remark', e.target.value)}
-                    placeholder="Enter remark..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
-                    rows={2}
-                  />
-                </div>
-
-                {/* Status Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.remarks[0]?.status || 'Open'}
-                    onChange={(e) => onUpdateRemark(0, 'status', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                  >
-                    <option value="Open">Open</option>
-                    <option value="Assigned">Assigned</option>
-                    <option value="Work in Progress">Work in Progress</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </div>
-
-                <div className="flex items-end">
+  {/* Saved Schedule Table */}
+  {savedSchedule.length > 0 && (
+    <div className="bg-white rounded-lg border overflow-hidden mb-4">
+      <table className="w-full text-sm">
+        <thead className="bg-blue-50">
+          <tr>
+            <th className="p-3 text-left text-blue-800 font-semibold">Date & Time</th>
+            <th className="p-3 text-left text-blue-800 font-semibold">Priority</th>
+            <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {savedSchedule.map((schedule) => (
+            <tr key={schedule.id} className="border-t border-gray-200 hover:bg-gray-50">
+              <td className="p-3 text-gray-700">
+                {new Date(schedule.proposedDateTime).toLocaleString()}
+              </td>
+              <td className="p-3 text-gray-700">{schedule.priority}</td>
+              <td className="p-3">
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={onAddRemark}
-                    disabled={isTaskClosed()}
-                    className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    onClick={() => onRemoveSavedSchedule(schedule.id!)}
+                    className="text-red-600 hover:text-red-800 font-medium text-sm"
                   >
-                    Add Remark
+                    Remove
                   </button>
                 </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+            {/* Task Remarks */}
+         {/* Task Remarks */}
+<div className="border-t pt-4">
+  <div className="flex justify-between items-center mb-3">
+    <h3 className="text-lg font-medium text-gray-900">Task Remarks</h3>
+  </div>
+
+  {/* Add New Remark Form - Keep this for adding new remarks */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border">
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        New Remark
+      </label>
+      <textarea
+        value={formData.remarks[0]?.remark || ''}
+        onChange={(e) => onUpdateRemark(0, 'remark', e.target.value)}
+        placeholder="Enter new remark..."
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
+        rows={2}
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Status
+      </label>
+      <select
+        value={formData.remarks[0]?.status || 'Open'}
+        onChange={(e) => onUpdateRemark(0, 'status', e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+      >
+        <option value="Open">Open</option>
+        <option value="Assigned">Assigned</option>
+        <option value="Work in Progress">Work in Progress</option>
+        <option value="Closed">Closed</option>
+      </select>
+    </div>
+
+    <div className="flex items-end gap-2 md:col-span-3">
+      <button
+        type="button"
+        onClick={onAddRemark}
+        disabled={isTaskClosed() || !formData.remarks[0]?.remark || !formData.remarks[0]?.status}
+        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+      >
+        Add Remark
+      </button>
+    </div>
+  </div>
+
+  {/* Saved Remarks Display - Show existing remarks as read-only */}
+  {savedRemarks.length > 0 && (
+    <div className="mb-4">
+      <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
+      <div className="space-y-3">
+        {[...savedRemarks].reverse().map((remark, index) => (
+          <div
+            key={remark.id}
+            className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
+          >
+            <div className="flex-1">
+              <div className="text-sm text-gray-800 mb-1">
+                <strong>Status:</strong> {remark.status}
               </div>
-
-              {/* Saved Remarks Display */}
-              {/* Saved Remarks Display - Latest First */}
-              {savedRemarks.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
-                  <div className="space-y-3">
-                    {[...savedRemarks].reverse().map((remark, index) => (
-                      <div
-                        key={remark.id}
-                        className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
-                      >
-                        <div className="flex-1">
-                          <div className="text-sm text-gray-800 mb-1">
-                            <strong>Status:</strong> {remark.status}
-                          </div>
-                          <div className="text-gray-700">{remark.remark}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
-                          </div>
-                        </div>
-
-                        {/* Edit button for latest remark only - now checking the original array order */}
-                        {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => onEditLatestRemark(remark)}
-                            className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
-                            title="Edit latest remark"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-
+              <div className="text-gray-700">{remark.remark}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
+              </div>
             </div>
 
+            {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+              <button
+                type="button"
+                onClick={() => onEditLatestRemark(remark)}
+                className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
+                title="Edit latest remark"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
             {/* Form Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
@@ -1172,49 +1052,65 @@ export default function TasksPage() {
 
   // Modal handlers
   const handleOpenModal = async () => {
-    const nextTaskId = await fetchNextTaskId();
-    setFormData({
-      taskID: nextTaskId,
-      departmentId: 0,
-      addressBookId: 0,
-      siteId: 0,
-      status: 'Open',
-      createdBy: 'Admin',
-      createdAt: new Date().toISOString(),
-      contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
-      workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
-      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
-      remarks: [{ taskId: 0, remark: '', status: 'Open', createdBy: 'Admin', createdAt: new Date().toISOString() }]
-    });
-    setSavedContacts([]);
-    setSavedWorkscopeDetails([]);
-    setSavedSchedule([]);
-    setSavedRemarks([]);
-    setEditingId(null);
-    setShowModal(true);
-  };
+  const nextTaskId = await fetchNextTaskId();
+  setFormData({
+    taskID: nextTaskId,
+    departmentId: 0,
+    addressBookId: 0,
+    siteId: 0,
+    status: 'Open',
+    createdBy: 'Admin',
+    createdAt: new Date().toISOString(),
+    // Start with one empty contact
+    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+    // Start with one empty workscope detail
+    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+    // Start with one empty schedule
+    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+    // Start with one empty remark
+    remarks: [{ 
+      taskId: 0, 
+      remark: '', 
+      status: 'Open', 
+      createdBy: 'Admin', 
+      createdAt: new Date().toISOString() 
+    }]
+  });
+  setSavedContacts([]);
+  setSavedWorkscopeDetails([]);
+  setSavedSchedule([]);
+  setSavedRemarks([]);
+  setEditingId(null);
+  setShowModal(true);
+};
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingId(null);
-    setFormData({
-      taskID: '',
-      departmentId: 0,
-      addressBookId: 0,
-      siteId: 0,
-      status: 'Open',
-      createdBy: 'Admin',
-      createdAt: new Date().toISOString(),
-      contacts: [],
-      workscopeDetails: [],
-      schedule: [],
-      remarks: []
-    });
-    setSavedContacts([]);
-    setSavedWorkscopeDetails([]);
-    setSavedSchedule([]);
-    setSavedRemarks([]);
-  };
+ const handleCloseModal = () => {
+  setShowModal(false);
+  setEditingId(null);
+  setFormData({
+    taskID: '',
+    departmentId: 0,
+    addressBookId: 0,
+    siteId: 0,
+    status: 'Open',
+    createdBy: 'Admin',
+    createdAt: new Date().toISOString(),
+    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+    remarks: [{ 
+      taskId: 0, 
+      remark: '', 
+      status: 'Open', 
+      createdBy: 'Admin', 
+      createdAt: new Date().toISOString() 
+    }]
+  });
+  setSavedContacts([]);
+  setSavedWorkscopeDetails([]);
+  setSavedSchedule([]);
+  setSavedRemarks([]);
+};
 
   const handleOpenRemarksModal = (task: Task) => {
     setSelectedTask(task);
@@ -1229,57 +1125,65 @@ export default function TasksPage() {
   };
 
   // Form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+// Form submission
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    try {
-      const taskData = {
-        taskID: formData.taskID,
-        departmentId: formData.departmentId,
-        addressBookId: formData.addressBookId,
-        siteId: formData.siteId,
-        status: formData.status,
-        createdBy: formData.createdBy,
-        createdAt: formData.createdAt,
-        contacts: [...savedContacts, ...formData.contacts.filter(contact =>
-          contact.contactName && contact.contactNumber
-        )],
-        workscopeDetails: [...savedWorkscopeDetails, ...formData.workscopeDetails.filter(workscope =>
-          workscope.workscopeDetails && workscope.workscopeCategoryId
-        )],
-        schedule: [...savedSchedule, ...formData.schedule.filter(schedule =>
-          schedule.proposedDateTime && schedule.priority
-        )],
-        remarks: [...savedRemarks, ...formData.remarks.filter(remark =>
-          remark.remark && remark.status
-        )]
-      };
+  try {
+    // Filter out empty form entries and only use saved items
+    const taskData = {
+      taskID: formData.taskID,
+      departmentId: formData.departmentId,
+      addressBookId: formData.addressBookId,
+      siteId: formData.siteId,
+      status: formData.status,
+      createdBy: formData.createdBy,
+      createdAt: formData.createdAt,
+      // Use only savedContacts (form contacts are temporary for adding new ones)
+      contacts: savedContacts.filter(contact => 
+        contact.contactName && contact.contactNumber
+      ),
+      // Use only savedWorkscopeDetails
+      workscopeDetails: savedWorkscopeDetails.filter(workscope => 
+        workscope.workscopeDetails && workscope.workscopeCategoryId
+      ),
+      // Use only savedSchedule
+      schedule: savedSchedule.filter(schedule => 
+        schedule.proposedDateTime && schedule.priority
+      ),
+      // Use only savedRemarks
+      remarks: savedRemarks.filter(remark => 
+        remark.remark && remark.status
+      )
+    };
 
-      const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
-      const method = editingId ? 'PATCH' : 'POST';
+    const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
+    const method = editingId ? 'PATCH' : 'POST';
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData),
-      });
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(taskData),
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to save task');
-      }
-
-      await fetchTasks();
-      handleCloseModal();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save task');
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error('Failed to save task');
     }
-  };
+
+    await fetchTasks();
+    handleCloseModal();
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to save task');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const handleAddRemarkInModal = async (remark: string, status: string) => {
     if (!selectedTask) return;
@@ -1473,13 +1377,17 @@ export default function TasksPage() {
     }));
   };
 
-  const handleSaveSchedule = (index: number) => {
-    const schedule = formData.schedule[index];
-    if (schedule.proposedDateTime && schedule.priority) {
-      setSavedSchedule(prev => [...prev, { ...schedule, id: Date.now() }]);
-      handleRemoveSchedule(index);
-    }
-  };
+const handleSaveSchedule = () => {
+  const schedule = formData.schedule[0];
+  if (schedule.proposedDateTime && schedule.priority) {
+    setSavedSchedule(prev => [...prev, { ...schedule, id: Date.now() }]);
+    // Reset the form to empty values
+    setFormData(prev => ({
+      ...prev,
+      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }]
+    }));
+  }
+};
 
   const handleRemoveSavedSchedule = (id: number) => {
     setSavedSchedule(prev => prev.filter(schedule => schedule.id !== id));
@@ -1582,27 +1490,48 @@ export default function TasksPage() {
   };
 
   // Edit task
-  const handleEditTask = (task: Task) => {
-    setFormData({
-      taskID: task.taskID,
-      departmentId: task.departmentId,
-      addressBookId: task.addressBookId,
-      siteId: task.siteId,
-      status: task.status,
-      createdBy: task.createdBy,
-      createdAt: task.createdAt,
-      contacts: task.contacts || [],
-      workscopeDetails: task.workscopeDetails || [],
-      schedule: task.schedule || [],
-      remarks: task.remarks || []
-    });
-    setSavedContacts(task.contacts || []);
-    setSavedWorkscopeDetails(task.workscopeDetails || []);
-    setSavedSchedule(task.schedule || []);
-    setSavedRemarks(task.remarks || []);
-    setEditingId(task.id || null);
-    setShowModal(true);
-  };
+ // Edit task
+const handleEditTask = (task: Task) => {
+  const formattedSchedule = (task.schedule || []).map(schedule => ({
+    ...schedule,
+    proposedDateTime: schedule.proposedDateTime ? 
+      new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
+  }));
+
+  setFormData({
+    taskID: task.taskID,
+    departmentId: task.departmentId,
+    addressBookId: task.addressBookId,
+    siteId: task.siteId,
+    status: task.status,
+    createdBy: task.createdBy,
+    createdAt: task.createdAt,
+    // Start with one empty contact for adding new ones
+    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+    // Start with one empty workscope detail for adding new ones
+    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+    // Start with one empty schedule for adding new ones
+    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+    // Start with one empty remark for adding new ones
+    remarks: [{ 
+      taskId: 0, 
+      remark: '', 
+      status: 'Open', 
+      createdBy: 'Admin', 
+      createdAt: new Date().toISOString() 
+    }]
+  });
+  
+  // Set saved items with the actual data from the task
+  setSavedContacts(task.contacts || []);
+  setSavedWorkscopeDetails(task.workscopeDetails || []);
+  setSavedSchedule(task.schedule || []);
+  setSavedRemarks(task.remarks || []);
+  setEditingId(task.id || null);
+  setShowModal(true);
+};
+
+
 
   // Remark editing handlers
   const handleOpenEditRemarkModal = (remark: TasksRemarks) => {
@@ -1964,7 +1893,7 @@ export default function TasksPage() {
           onUpdateRemark={handleUpdateRemark}
           onSaveContact={handleSaveContact}
           onSaveWorkscopeDetail={handleSaveWorkscopeDetail}
-          onSaveSchedule={handleSaveSchedule}
+onSaveSchedule={handleSaveSchedule}
           onSaveRemark={handleSaveRemark}
           onRemoveSavedContact={handleRemoveSavedContact}
           onRemoveSavedWorkscopeDetail={handleRemoveSavedWorkscopeDetail}
