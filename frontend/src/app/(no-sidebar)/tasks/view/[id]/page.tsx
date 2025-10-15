@@ -124,73 +124,89 @@ export default function ViewTaskPage() {
   }, [id, isClient]);
 
   const fetchTaskData = async () => {
-    try {
-      setLoading(true);
-      const [taskRes, imagesRes, deptRes, addressRes, sitesRes, workscopeRes] = await Promise.all([
-        fetch(`http://localhost:8000/task/${id}`),
-        fetch(`http://localhost:8000/task-images/${id}`),
-        fetch('http://localhost:8000/department'),
-        fetch('http://localhost:8000/address-book'),
-        fetch('http://localhost:8000/sites'),
-        fetch('http://localhost:8000/workscope-category')
-      ]);
-
-      if (!taskRes.ok) throw new Error('Failed to fetch task');
-
-      const taskData = await taskRes.json();
-      const imagesData = imagesRes.ok ? await imagesRes.json() : [];
-      const deptData = await deptRes.json();
-      const addressData = await addressRes.json();
-      const sitesData = await sitesRes.json();
-      const workscopeData = await workscopeRes.json();
-
-      setTask(taskData);
-      setTaskImages(imagesData);
-      setDepartments(Array.isArray(deptData) ? deptData : []);
-      setAddressBooks(Array.isArray(addressData) ? addressData : []);
-      setSites(Array.isArray(sitesData) ? sitesData : []);
-      setServiceWorkscopeCategories(Array.isArray(workscopeData) ? workscopeData : []);
-
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch task');
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    
+    // Decode the URL-encoded parameter
+    const decodedTaskId = decodeURIComponent(id as string);
+    console.log('Decoded task ID:', decodedTaskId);
+    
+    // Fetch all tasks and find the one with matching taskID
+    const tasksRes = await fetch('http://localhost:8000/task');
+    
+    if (!tasksRes.ok) {
+      throw new Error('Failed to fetch tasks');
     }
-  };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    try {
-      setUploading(true);
-      setError(null);
-
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append('images', files[i]);
-      }
-
-      const response = await fetch(`http://localhost:8000/task-images/${id}/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Failed to upload images');
-
-      // Refresh images
-      await fetchTaskData();
-      
-      // Clear file input
-      event.target.value = '';
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload images');
-    } finally {
-      setUploading(false);
+    const allTasks = await tasksRes.json();
+    const taskData = allTasks.find((task: Task) => task.taskID === decodedTaskId);
+    
+    if (!taskData) {
+      throw new Error(`Task with ID "${decodedTaskId}" not found. Available tasks: ${allTasks.map((t: Task) => t.taskID).join(', ')}`);
     }
-  };
+    
+    // Now fetch related data using the actual task ID from the task data
+    const [imagesRes, deptRes, addressRes, sitesRes, workscopeRes] = await Promise.all([
+      fetch(`http://localhost:8000/task-images/${taskData.id}`),
+      fetch('http://localhost:8000/department'),
+      fetch('http://localhost:8000/address-book'),
+      fetch('http://localhost:8000/sites'),
+      fetch('http://localhost:8000/workscope-category')
+    ]);
+
+    const imagesData = imagesRes.ok ? await imagesRes.json() : [];
+    const deptData = await deptRes.json();
+    const addressData = await addressRes.json();
+    const sitesData = await sitesRes.json();
+    const workscopeData = await workscopeRes.json();
+
+    setTask(taskData);
+    setTaskImages(imagesData);
+    setDepartments(Array.isArray(deptData) ? deptData : []);
+    setAddressBooks(Array.isArray(addressData) ? addressData : []);
+    setSites(Array.isArray(sitesData) ? sitesData : []);
+    setServiceWorkscopeCategories(Array.isArray(workscopeData) ? workscopeData : []);
+
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    setError(err instanceof Error ? err.message : 'Failed to fetch task');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+ const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const files = event.target.files;
+  if (!files || files.length === 0 || !task) return;
+
+  try {
+    setUploading(true);
+    setError(null);
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('images', files[i]);
+    }
+
+    // Use the actual numeric task ID for image upload
+    const response = await fetch(`http://localhost:8000/task-images/${task.id}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error('Failed to upload images');
+
+    await fetchTaskData();
+    event.target.value = '';
+    
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to upload images');
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   const handleDeleteImage = async (imageId: number) => {
     if (!confirm('Are you sure you want to delete this image?')) return;

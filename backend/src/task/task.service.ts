@@ -7,89 +7,90 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateTaskDto) {
-    const { contacts, workscopeDetails, schedule, remarks, ...taskData } = dto as any;
-    
-    // Generate auto Task ID
-    const taskID = await this.generateNextTaskId();
-    
-    // Create the main task first
-    const task = await this.prisma.task.create({
-      data: {
-        ...taskData,
-        taskID,
-        createdBy: 'System User', // TODO: Replace with actual logged-in user
-        createdAt: taskData.createdAt ? new Date(taskData.createdAt) : undefined,
-      },
-    });
+ async create(dto: CreateTaskDto) {
+  const { contacts, workscopeDetails, schedule, remarks, ...taskData } = dto as any;
 
-    // Create related records if they exist
-    if (contacts && contacts.length > 0) {
-      await this.prisma.tasksContacts.createMany({
-        data: contacts.map((contact: any) => ({
-          taskId: task.id,
-          contactName: contact.contactName,
-          contactNumber: contact.contactNumber,
-          contactEmail: contact.contactEmail,
-        }))
-      });
-    }
+  // 🧩 Auto-generate Task ID based on current timestamp
+  const now = new Date();
+  const year = String(now.getFullYear()).slice(-2); // e.g. "25"
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+const taskID = `ENSR${year}${month}${day}${hours}${minutes}${seconds}`;
 
-    if (workscopeDetails && workscopeDetails.length > 0) {
-      await this.prisma.tasksWorkscopeDetails.createMany({
-        data: workscopeDetails.map((detail: any) => ({
-          taskId: task.id,
-          workscopeCategoryId: parseInt(detail.workscopeCategoryId),
-          workscopeDetails: detail.workscopeDetails,
-          extraNote: detail.extraNote,
-        }))
-      });
-    }
+  // 🟢 Create the main task
+  const task = await this.prisma.task.create({
+    data: {
+      ...taskData,
+      taskID,
+      createdBy: 'System User', // TODO: replace with actual user when auth added
+      createdAt: taskData.createdAt ? new Date(taskData.createdAt) : undefined,
+    },
+  });
 
-    if (schedule && schedule.length > 0) {
-      await this.prisma.tasksSchedule.createMany({
-        data: schedule.map((sched: any) => ({
-          taskId: task.id,
-          proposedDateTime: new Date(sched.proposedDateTime),
-          priority: sched.priority,
-        }))
-      });
-    }
-
-    if (remarks && remarks.length > 0) {
-      await this.prisma.tasksRemarks.createMany({
-        data: remarks.map((remark: any) => ({
-          taskId: task.id,
-          remark: remark.remark,
-          status: remark.status || 'Open',
-          createdBy: 'System User', // TODO: Replace with actual logged-in user
-        }))
-      });
-    }
-
-    // Return the task with all related data
-    return this.prisma.task.findUnique({
-      where: { id: task.id },
-      include: {
-        department: true,
-        addressBook: true,
-        site: true,
-        contacts: true,
-        workscopeCat: true,
-        workscopeDetails: true,
-        schedule: true,
-        remarks: true,
-      },
+  // 🧩 Create related records
+  if (contacts?.length) {
+    await this.prisma.tasksContacts.createMany({
+      data: contacts.map((c: any) => ({
+        taskId: task.id,
+        contactName: c.contactName,
+        contactNumber: c.contactNumber,
+        contactEmail: c.contactEmail,
+      })),
     });
   }
 
-  async generateNextTaskId(): Promise<string> {
-    // Count existing tasks
-    const count = await this.prisma.task.count();
-    
-    const nextNumber = String(count + 1).padStart(5, '0');
-    return `EN/SR/${nextNumber}`;
+  if (workscopeDetails?.length) {
+    await this.prisma.tasksWorkscopeDetails.createMany({
+      data: workscopeDetails.map((d: any) => ({
+        taskId: task.id,
+        workscopeCategoryId: parseInt(d.workscopeCategoryId),
+        workscopeDetails: d.workscopeDetails,
+        extraNote: d.extraNote,
+      })),
+    });
   }
+
+  if (schedule?.length) {
+    await this.prisma.tasksSchedule.createMany({
+      data: schedule.map((s: any) => ({
+        taskId: task.id,
+        proposedDateTime: new Date(s.proposedDateTime),
+        priority: s.priority,
+      })),
+    });
+  }
+
+  if (remarks?.length) {
+    await this.prisma.tasksRemarks.createMany({
+      data: remarks.map((r: any) => ({
+        taskId: task.id,
+        remark: r.remark,
+        status: r.status || 'Open',
+        createdBy: 'System User',
+      })),
+    });
+  }
+
+  // 🧠 Return full task with relations
+  return this.prisma.task.findUnique({
+    where: { id: task.id },
+    include: {
+      department: true,
+      addressBook: true,
+      site: true,
+      contacts: true,
+      workscopeCat: true,
+      workscopeDetails: true,
+      schedule: true,
+      remarks: true,
+    },
+  });
+}
+
+ 
 
   async findAll() {
     return this.prisma.task.findMany({

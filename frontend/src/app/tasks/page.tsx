@@ -134,7 +134,7 @@ interface TaskModalProps {
   onUpdateRemark: (index: number, field: keyof TasksRemarks, value: string) => void;
   onSaveContact: (index: number) => void;
   onSaveWorkscopeDetail: (index: number) => void;
-onSaveSchedule: () => void;
+  onSaveSchedule: () => void;
   onSaveRemark: (index: number) => void;
   onRemoveSavedContact: (id: number) => void;
   onRemoveSavedWorkscopeDetail: (id: number) => void;
@@ -216,30 +216,25 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Basic Task Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Task ID
-                </label>
-                <input
-                  type="text"
-                  value={formData.taskID}
-                  readOnly
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   Department
                 </label>
                 <select
-                  value={formData.departmentId || ''}
+                  value={
+                    formData.departmentId ||
+                    (departments.length > 0 ? departments[0].id : '')
+                  }
                   onChange={(e) =>
-                    onFormDataChange({ ...formData, departmentId: parseInt(e.target.value) })
+                    onFormDataChange({
+                      ...formData,
+                      departmentId: parseInt(e.target.value),
+                    })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   required
                 >
-                  <option value="">Select Department</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.departmentName}
@@ -247,6 +242,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   ))}
                 </select>
               </div>
+
 
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -533,180 +529,180 @@ const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </div>
 
-          {/* Schedule */}
-<div className="border-t pt-4">
-  <div className="flex justify-between items-center mb-3">
-    <h3 className="text-lg font-medium text-gray-900">Schedule</h3>
-  </div>
+            {/* Schedule */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Schedule</h3>
+              </div>
 
-  {/* Add New Schedule Form - Keep this for adding new schedules */}
-  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
-    <div className="md:col-span-2">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Proposed Date & Time
-      </label>
-      <input
-        type="datetime-local"
-        value={formData.schedule[0]?.proposedDateTime || ''}
-        onChange={(e) => onUpdateSchedule(0, 'proposedDateTime', e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-      />
-    </div>
-    
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Priority
-      </label>
-      <select
-        value={formData.schedule[0]?.priority || 'Medium'}
-        onChange={(e) => onUpdateSchedule(0, 'priority', e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-      >
-        <option value="Low">Low</option>
-        <option value="Medium">Medium</option>
-        <option value="High">High</option>
-        <option value="Urgent">Urgent</option>
-      </select>
-    </div>
+              {/* Add New Schedule Form - Keep this for adding new schedules */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Proposed Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.schedule[0]?.proposedDateTime || ''}
+                    onChange={(e) => onUpdateSchedule(0, 'proposedDateTime', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  />
+                </div>
 
-    <div className="flex items-end gap-2">
-      <button
-        type="button"
-        onClick={onSaveSchedule}
-        disabled={!formData.schedule[0]?.proposedDateTime || !formData.schedule[0]?.priority}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-      >
-        Add Schedule
-      </button>
-    </div>
-  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority
+                  </label>
+                  <select
+                    value={formData.schedule[0]?.priority || 'Medium'}
+                    onChange={(e) => onUpdateSchedule(0, 'priority', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
 
-  {/* Saved Schedule Table */}
-  {savedSchedule.length > 0 && (
-    <div className="bg-white rounded-lg border overflow-hidden mb-4">
-      <table className="w-full text-sm">
-        <thead className="bg-blue-50">
-          <tr>
-            <th className="p-3 text-left text-blue-800 font-semibold">Date & Time</th>
-            <th className="p-3 text-left text-blue-800 font-semibold">Priority</th>
-            <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {savedSchedule.map((schedule) => (
-            <tr key={schedule.id} className="border-t border-gray-200 hover:bg-gray-50">
-              <td className="p-3 text-gray-700">
-                {new Date(schedule.proposedDateTime).toLocaleString()}
-              </td>
-              <td className="p-3 text-gray-700">{schedule.priority}</td>
-              <td className="p-3">
-                <div className="flex gap-2">
+                <div className="flex items-end gap-2">
                   <button
                     type="button"
-                    onClick={() => onRemoveSavedSchedule(schedule.id!)}
-                    className="text-red-600 hover:text-red-800 font-medium text-sm"
+                    onClick={onSaveSchedule}
+                    disabled={!formData.schedule[0]?.proposedDateTime || !formData.schedule[0]?.priority}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    Remove
+                    Add Schedule
                   </button>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
-            {/* Task Remarks */}
-         {/* Task Remarks */}
-<div className="border-t pt-4">
-  <div className="flex justify-between items-center mb-3">
-    <h3 className="text-lg font-medium text-gray-900">Task Remarks</h3>
-  </div>
-
-  {/* Add New Remark Form - Keep this for adding new remarks */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border">
-    <div className="md:col-span-2">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        New Remark
-      </label>
-      <textarea
-        value={formData.remarks[0]?.remark || ''}
-        onChange={(e) => onUpdateRemark(0, 'remark', e.target.value)}
-        placeholder="Enter new remark..."
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
-        rows={2}
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Status
-      </label>
-      <select
-        value={formData.remarks[0]?.status || 'Open'}
-        onChange={(e) => onUpdateRemark(0, 'status', e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-      >
-        <option value="Open">Open</option>
-        <option value="Assigned">Assigned</option>
-        <option value="Work in Progress">Work in Progress</option>
-        <option value="Closed">Closed</option>
-      </select>
-    </div>
-
-    <div className="flex items-end gap-2 md:col-span-3">
-      <button
-        type="button"
-        onClick={onAddRemark}
-        disabled={isTaskClosed() || !formData.remarks[0]?.remark || !formData.remarks[0]?.status}
-        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-      >
-        Add Remark
-      </button>
-    </div>
-  </div>
-
-  {/* Saved Remarks Display - Show existing remarks as read-only */}
-  {savedRemarks.length > 0 && (
-    <div className="mb-4">
-      <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
-      <div className="space-y-3">
-        {[...savedRemarks].reverse().map((remark, index) => (
-          <div
-            key={remark.id}
-            className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
-          >
-            <div className="flex-1">
-              <div className="text-sm text-gray-800 mb-1">
-                <strong>Status:</strong> {remark.status}
               </div>
-              <div className="text-gray-700">{remark.remark}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
-              </div>
+
+              {/* Saved Schedule Table */}
+              {savedSchedule.length > 0 && (
+                <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-50">
+                      <tr>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Date & Time</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold">Priority</th>
+                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {savedSchedule.map((schedule) => (
+                        <tr key={schedule.id} className="border-t border-gray-200 hover:bg-gray-50">
+                          <td className="p-3 text-gray-700">
+                            {new Date(schedule.proposedDateTime).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-gray-700">{schedule.priority}</td>
+                          <td className="p-3">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onRemoveSavedSchedule(schedule.id!)}
+                                className="text-red-600 hover:text-red-800 font-medium text-sm"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
-            {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
-              <button
-                type="button"
-                onClick={() => onEditLatestRemark(remark)}
-                className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
-                title="Edit latest remark"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
+            {/* Task Remarks */}
+            {/* Task Remarks */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Task Remarks</h3>
+              </div>
+
+              {/* Add New Remark Form - Keep this for adding new remarks */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Remark
+                  </label>
+                  <textarea
+                    value={formData.remarks[0]?.remark || ''}
+                    onChange={(e) => onUpdateRemark(0, 'remark', e.target.value)}
+                    placeholder="Enter new remark..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={formData.remarks[0]?.status || 'Open'}
+                    onChange={(e) => onUpdateRemark(0, 'status', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  >
+                    <option value="Open">Open</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="Work in Progress">Work in Progress</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end gap-2 md:col-span-3">
+                  <button
+                    type="button"
+                    onClick={onAddRemark}
+                    disabled={isTaskClosed() || !formData.remarks[0]?.remark || !formData.remarks[0]?.status}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Add Remark
+                  </button>
+                </div>
+              </div>
+
+              {/* Saved Remarks Display - Show existing remarks as read-only */}
+              {savedRemarks.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-md font-semibold text-gray-900 mb-3">Saved Remarks</h4>
+                  <div className="space-y-3">
+                    {[...savedRemarks].reverse().map((remark, index) => (
+                      <div
+                        key={remark.id}
+                        className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-start"
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-800 mb-1">
+                            <strong>Status:</strong> {remark.status}
+                          </div>
+                          <div className="text-gray-700">{remark.remark}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(remark.createdAt).toLocaleString()} — {remark.createdBy}
+                          </div>
+                        </div>
+
+                        {savedRemarks.indexOf(remark) === savedRemarks.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => onEditLatestRemark(remark)}
+                            className="text-blue-600 hover:text-blue-800 text-sm ml-2 flex items-center gap-1"
+                            title="Edit latest remark"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Form Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
@@ -915,7 +911,7 @@ export default function TasksPage() {
   // Form state
   const [formData, setFormData] = useState<TaskFormData>({
     taskID: '',
-    departmentId: 0,
+    departmentId: departments.length > 0 ? departments[0].id : 0, // ✅ same fix here
     addressBookId: 0,
     siteId: 0,
     status: 'Open',
@@ -1052,65 +1048,65 @@ export default function TasksPage() {
 
   // Modal handlers
   const handleOpenModal = async () => {
-  const nextTaskId = await fetchNextTaskId();
-  setFormData({
-    taskID: nextTaskId,
-    departmentId: 0,
-    addressBookId: 0,
-    siteId: 0,
-    status: 'Open',
-    createdBy: 'Admin',
-    createdAt: new Date().toISOString(),
-    // Start with one empty contact
-    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
-    // Start with one empty workscope detail
-    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
-    // Start with one empty schedule
-    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
-    // Start with one empty remark
-    remarks: [{ 
-      taskId: 0, 
-      remark: '', 
-      status: 'Open', 
-      createdBy: 'Admin', 
-      createdAt: new Date().toISOString() 
-    }]
-  });
-  setSavedContacts([]);
-  setSavedWorkscopeDetails([]);
-  setSavedSchedule([]);
-  setSavedRemarks([]);
-  setEditingId(null);
-  setShowModal(true);
-};
+    const nextTaskId = await fetchNextTaskId();
+    setFormData({
+      taskID: nextTaskId,
+      departmentId: departments.length > 0 ? departments[0].id : 0, // ✅ auto select first
+      addressBookId: 0,
+      siteId: 0,
+      status: 'Open',
+      createdBy: 'Admin',
+      createdAt: new Date().toISOString(),
+      // Start with one empty contact
+      contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+      // Start with one empty workscope detail
+      workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+      // Start with one empty schedule
+      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+      // Start with one empty remark
+      remarks: [{
+        taskId: 0,
+        remark: '',
+        status: 'Open',
+        createdBy: 'Admin',
+        createdAt: new Date().toISOString()
+      }]
+    });
+    setSavedContacts([]);
+    setSavedWorkscopeDetails([]);
+    setSavedSchedule([]);
+    setSavedRemarks([]);
+    setEditingId(null);
+    setShowModal(true);
+  };
 
- const handleCloseModal = () => {
-  setShowModal(false);
-  setEditingId(null);
-  setFormData({
-    taskID: '',
-    departmentId: 0,
-    addressBookId: 0,
-    siteId: 0,
-    status: 'Open',
-    createdBy: 'Admin',
-    createdAt: new Date().toISOString(),
-    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
-    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
-    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
-    remarks: [{ 
-      taskId: 0, 
-      remark: '', 
-      status: 'Open', 
-      createdBy: 'Admin', 
-      createdAt: new Date().toISOString() 
-    }]
-  });
-  setSavedContacts([]);
-  setSavedWorkscopeDetails([]);
-  setSavedSchedule([]);
-  setSavedRemarks([]);
-};
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({
+      taskID: '',
+      departmentId: departments.length > 0 ? departments[0].id : 0, // ✅ same fix here
+      addressBookId: 0,
+      siteId: 0,
+      status: 'Open',
+      createdBy: 'Admin',
+      createdAt: new Date().toISOString(),
+      contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+      workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+      remarks: [{
+        taskId: 0,
+        remark: '',
+        status: 'Open',
+        createdBy: 'Admin',
+        createdAt: new Date().toISOString()
+      }]
+    });
+    setSavedContacts([]);
+    setSavedWorkscopeDetails([]);
+    setSavedSchedule([]);
+    setSavedRemarks([]);
+  };
 
   const handleOpenRemarksModal = (task: Task) => {
     setSelectedTask(task);
@@ -1125,63 +1121,63 @@ export default function TasksPage() {
   };
 
   // Form submission
-// Form submission
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+  // Form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  try {
-    // Filter out empty form entries and only use saved items
-    const taskData = {
-      taskID: formData.taskID,
-      departmentId: formData.departmentId,
-      addressBookId: formData.addressBookId,
-      siteId: formData.siteId,
-      status: formData.status,
-      createdBy: formData.createdBy,
-      createdAt: formData.createdAt,
-      // Use only savedContacts (form contacts are temporary for adding new ones)
-      contacts: savedContacts.filter(contact => 
-        contact.contactName && contact.contactNumber
-      ),
-      // Use only savedWorkscopeDetails
-      workscopeDetails: savedWorkscopeDetails.filter(workscope => 
-        workscope.workscopeDetails && workscope.workscopeCategoryId
-      ),
-      // Use only savedSchedule
-      schedule: savedSchedule.filter(schedule => 
-        schedule.proposedDateTime && schedule.priority
-      ),
-      // Use only savedRemarks
-      remarks: savedRemarks.filter(remark => 
-        remark.remark && remark.status
-      )
-    };
+    try {
+      // Filter out empty form entries and only use saved items
+      const taskData = {
+        taskID: formData.taskID,
+        departmentId: formData.departmentId,
+        addressBookId: formData.addressBookId,
+        siteId: formData.siteId,
+        status: formData.status,
+        createdBy: formData.createdBy,
+        createdAt: formData.createdAt,
+        // Use only savedContacts (form contacts are temporary for adding new ones)
+        contacts: savedContacts.filter(contact =>
+          contact.contactName && contact.contactNumber
+        ),
+        // Use only savedWorkscopeDetails
+        workscopeDetails: savedWorkscopeDetails.filter(workscope =>
+          workscope.workscopeDetails && workscope.workscopeCategoryId
+        ),
+        // Use only savedSchedule
+        schedule: savedSchedule.filter(schedule =>
+          schedule.proposedDateTime && schedule.priority
+        ),
+        // Use only savedRemarks
+        remarks: savedRemarks.filter(remark =>
+          remark.remark && remark.status
+        )
+      };
 
-    const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
-    const method = editingId ? 'PATCH' : 'POST';
+      const url = editingId ? `http://localhost:8000/task/${editingId}` : 'http://localhost:8000/task';
+      const method = editingId ? 'PATCH' : 'POST';
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(taskData),
-    });
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to save task');
+      if (!response.ok) {
+        throw new Error('Failed to save task');
+      }
+
+      await fetchTasks();
+      handleCloseModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task');
+    } finally {
+      setLoading(false);
     }
-
-    await fetchTasks();
-    handleCloseModal();
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to save task');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
 
@@ -1377,17 +1373,17 @@ const handleSubmit = async (e: React.FormEvent) => {
     }));
   };
 
-const handleSaveSchedule = () => {
-  const schedule = formData.schedule[0];
-  if (schedule.proposedDateTime && schedule.priority) {
-    setSavedSchedule(prev => [...prev, { ...schedule, id: Date.now() }]);
-    // Reset the form to empty values
-    setFormData(prev => ({
-      ...prev,
-      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }]
-    }));
-  }
-};
+  const handleSaveSchedule = () => {
+    const schedule = formData.schedule[0];
+    if (schedule.proposedDateTime && schedule.priority) {
+      setSavedSchedule(prev => [...prev, { ...schedule, id: Date.now() }]);
+      // Reset the form to empty values
+      setFormData(prev => ({
+        ...prev,
+        schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }]
+      }));
+    }
+  };
 
   const handleRemoveSavedSchedule = (id: number) => {
     setSavedSchedule(prev => prev.filter(schedule => schedule.id !== id));
@@ -1490,46 +1486,46 @@ const handleSaveSchedule = () => {
   };
 
   // Edit task
- // Edit task
-const handleEditTask = (task: Task) => {
-  const formattedSchedule = (task.schedule || []).map(schedule => ({
-    ...schedule,
-    proposedDateTime: schedule.proposedDateTime ? 
-      new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
-  }));
+  // Edit task
+  const handleEditTask = (task: Task) => {
+    const formattedSchedule = (task.schedule || []).map(schedule => ({
+      ...schedule,
+      proposedDateTime: schedule.proposedDateTime ?
+        new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
+    }));
 
-  setFormData({
-    taskID: task.taskID,
-    departmentId: task.departmentId,
-    addressBookId: task.addressBookId,
-    siteId: task.siteId,
-    status: task.status,
-    createdBy: task.createdBy,
-    createdAt: task.createdAt,
-    // Start with one empty contact for adding new ones
-    contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
-    // Start with one empty workscope detail for adding new ones
-    workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
-    // Start with one empty schedule for adding new ones
-    schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
-    // Start with one empty remark for adding new ones
-    remarks: [{ 
-      taskId: 0, 
-      remark: '', 
-      status: 'Open', 
-      createdBy: 'Admin', 
-      createdAt: new Date().toISOString() 
-    }]
-  });
-  
-  // Set saved items with the actual data from the task
-  setSavedContacts(task.contacts || []);
-  setSavedWorkscopeDetails(task.workscopeDetails || []);
-  setSavedSchedule(task.schedule || []);
-  setSavedRemarks(task.remarks || []);
-  setEditingId(task.id || null);
-  setShowModal(true);
-};
+    setFormData({
+      taskID: task.taskID,
+      departmentId: task.departmentId,
+      addressBookId: task.addressBookId,
+      siteId: task.siteId,
+      status: task.status,
+      createdBy: task.createdBy,
+      createdAt: task.createdAt,
+      // Start with one empty contact for adding new ones
+      contacts: [{ taskId: 0, contactName: '', contactNumber: '', contactEmail: '' }],
+      // Start with one empty workscope detail for adding new ones
+      workscopeDetails: [{ taskId: 0, workscopeCategoryId: 0, workscopeDetails: '', extraNote: '' }],
+      // Start with one empty schedule for adding new ones
+      schedule: [{ taskId: 0, proposedDateTime: '', priority: 'Medium' }],
+      // Start with one empty remark for adding new ones
+      remarks: [{
+        taskId: 0,
+        remark: '',
+        status: 'Open',
+        createdBy: 'Admin',
+        createdAt: new Date().toISOString()
+      }]
+    });
+
+    // Set saved items with the actual data from the task
+    setSavedContacts(task.contacts || []);
+    setSavedWorkscopeDetails(task.workscopeDetails || []);
+    setSavedSchedule(task.schedule || []);
+    setSavedRemarks(task.remarks || []);
+    setEditingId(task.id || null);
+    setShowModal(true);
+  };
 
 
 
@@ -1766,14 +1762,14 @@ const handleEditTask = (task: Task) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
-        <a
-  href={`/tasks/view/${task.id}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-green-600 hover:text-green-900 underline"
->
-  View
-</a>
+                          <a
+                            href={`/tasks/view/${task.taskID}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-900 underline"
+                          >
+                            View
+                          </a>
 
 
                           <button
@@ -1893,7 +1889,7 @@ const handleEditTask = (task: Task) => {
           onUpdateRemark={handleUpdateRemark}
           onSaveContact={handleSaveContact}
           onSaveWorkscopeDetail={handleSaveWorkscopeDetail}
-onSaveSchedule={handleSaveSchedule}
+          onSaveSchedule={handleSaveSchedule}
           onSaveRemark={handleSaveRemark}
           onRemoveSavedContact={handleRemoveSavedContact}
           onRemoveSavedWorkscopeDetail={handleRemoveSavedWorkscopeDetail}
