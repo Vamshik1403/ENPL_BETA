@@ -319,7 +319,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   onClick={onAddContact}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
-                  + Add Another
+                  + Add Contact
                 </button>
               </div>
 
@@ -433,7 +433,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   onClick={onAddWorkscopeDetail}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
-                  + Add Another
+                  + Add WorkScope
                 </button>
               </div>
 

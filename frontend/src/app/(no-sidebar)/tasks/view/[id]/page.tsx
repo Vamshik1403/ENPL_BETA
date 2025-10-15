@@ -105,11 +105,11 @@ export default function ViewTaskPage() {
   
   // Collapsible sections state
   const [openSections, setOpenSections] = useState({
-    basicInfo: true,
-    taskContacts: true,
-    workscopeDetails: true,
-    schedule: true,
-    remarks: true
+    basicInfo: false,
+    taskContacts: false,
+    workscopeDetails: false,
+    schedule: false,
+    remarks: false,
   });
 
   // Fix hydration by ensuring this only runs on client
@@ -449,12 +449,12 @@ export default function ViewTaskPage() {
 
          {/* Image Upload Section - Mobile First Design */}
         <div className="bg-white border-b border-gray-200 px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900">Service Reports</h2>
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {taskImages.length} images
-            </span>
-          </div>
+  <div className="flex items-center justify-between mb-3">
+    <h2 className="text-lg font-semibold text-gray-900">Service Reports & Documents</h2>
+    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+      {taskImages.length} files
+    </span>
+  </div>
           
           {/* Upload Button - Full width on mobile */}
           <div className="mb-4">
@@ -471,7 +471,7 @@ export default function ViewTaskPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className="text-blue-600 font-medium">Choose Images</span>
-                    <span className="text-gray-500 text-sm mt-1">PNG, JPG, JPEG up to 10MB</span>
+                    <span className="text-gray-500 text-sm mt-1">Upload PDFs and PNG, JPG, JPEG up to 10MB</span>
                   </div>
                 )}
               </div>
@@ -487,148 +487,209 @@ export default function ViewTaskPage() {
           </div>
 
           {/* Images Grid - Mobile optimized */}
-          {taskImages.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
-              {taskImages.map((image) => (
-                <div key={image.id} className="relative aspect-square group">
-                  <img
-                    src={`http://localhost:8000/task-images/image/${image.filename}`}
-                    alt={`Task image ${image.id}`}
-                    className="w-full h-full object-cover rounded-lg border border-gray-200 cursor-pointer"
-                    onClick={() => openFullScreenImage(image)}
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openFullScreenImage(image);
-                      }}
-                      className="bg-white bg-opacity-90 rounded-full p-1 mx-1 hover:bg-opacity-100 transition-all"
-                      title="View full screen"
-                    >
-                      <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="absolute top-1 right-1 flex flex-col gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadImage(image);
-                      }}
-                      className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity text-xs shadow-lg"
-                      title="Download image"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteImage(image.id);
-                      }}
-                      className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity text-xs shadow-lg"
-                      title="Delete image"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
-                    {new Date(image.uploadedAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+        {/* Images Grid - Mobile optimized */}
+{taskImages.length > 0 ? (
+  <div className="grid grid-cols-3 gap-2">
+    {taskImages.map((image) => (
+      <div key={image.id} className="relative aspect-square group">
+        {/* Delete Button - Top Left */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteImage(image.id);
+          }}
+          className="absolute top-1 left-1 bg-red-600 text-black rounded-full w-6 h-6 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity text-xs shadow-lg z-10"
+          title="Delete file"
+        >
+          ×
+        </button>
+
+        {/* File Type Indicator */}
+        <div className="absolute top-1 right-1 flex flex-col gap-1">
+          {image.mimeType === 'application/pdf' ? (
+            <div className="bg-red-600 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+              PDF
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-              <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadImage(image);
+              }}
+              className="bg-blue-600 text-black rounded-full w-6 h-6 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity text-xs shadow-lg"
+              title="Download file"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p>No images uploaded yet</p>
-            </div>
+            </button>
           )}
+        </div>
+
+        {/* File Preview */}
+        {image.mimeType === 'application/pdf' ? (
+          <div 
+            className="w-full h-full bg-red-50 border-2 border-red-200 rounded-lg flex flex-col items-center justify-center cursor-pointer p-2"
+            onClick={() => handleDownloadImage(image)}
+          >
+            <svg className="w-8 h-8 text-red-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="text-xs text-red-800 font-medium text-center break-words">
+              PDF Document
+            </span>
+          </div>
+        ) : (
+          <>
+            <img
+              src={`http://localhost:8000/task-images/image/${image.filename}`}
+              alt={`Task image ${image.id}`}
+              className="w-full h-full object-cover rounded-lg border border-gray-200 cursor-pointer"
+              onClick={() => openFullScreenImage(image)}
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openFullScreenImage(image);
+                }}
+                className="bg-white bg-opacity-90 rounded-full p-1 mx-1 hover:bg-opacity-100 transition-all"
+                title="View full screen"
+              >
+                <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* File Info */}
+        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg">
+          <div className="truncate">
+            {image.filename.length > 15 
+              ? `${image.filename.substring(0, 12)}...${image.filename.split('.').pop()}`
+              : image.filename
+            }
+          </div>
+          <div className="flex justify-between text-xs opacity-75">
+            <span>{new Date(image.uploadedAt).toLocaleDateString()}</span>
+            <span>{(image.fileSize / 1024 / 1024).toFixed(1)}MB</span>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+    <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    <p>No files uploaded yet</p>
+  </div>
+)}
         </div>
 
       
       </div>
 
       {/* Full Screen Image Modal */}
-      {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center">
-            {/* Close Button */}
-            <button
-              onClick={closeFullScreenImage}
-              className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    {/* Full Screen File Modal */}
+{selectedImage && (
+  <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+    <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center">
+      {/* Close Button */}
+      <button
+        onClick={closeFullScreenImage}
+        className="absolute top-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
 
-            {/* Download Button */}
+      {/* Download Button */}
+      <button
+        onClick={() => handleDownloadImage(selectedImage)}
+        className="absolute top-4 right-16 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
+        title="Download file"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </button>
+
+      {/* File Content */}
+      {selectedImage.mimeType === 'application/pdf' ? (
+        <div className="w-full h-full flex flex-col items-center justify-center">
+          <div className="bg-red-50 border-4 border-red-200 rounded-lg p-8 max-w-md text-center">
+            <svg className="w-16 h-16 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="text-xl font-bold text-red-800 mb-2">PDF Document</h3>
+            <p className="text-red-700 mb-4">{selectedImage.filename}</p>
             <button
               onClick={() => handleDownloadImage(selectedImage)}
-              className="absolute top-4 right-16 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
-              title="Download image"
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              Download PDF
             </button>
-
-            {/* Image */}
-            <img
-              src={`http://localhost:8000/task-images/image/${selectedImage.filename}`}
-              alt={`Task image ${selectedImage.id}`}
-              className="max-w-full max-h-full object-contain rounded-lg"
-            />
-
-            {/* Image Info */}
-            <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white p-3 rounded-lg">
-              <div className="text-sm">
-                <div>Uploaded: {new Date(selectedImage.uploadedAt).toLocaleString()}</div>
-                <div>Size: {(selectedImage.fileSize / 1024 / 1024).toFixed(2)} MB</div>
-                <div>Type: {selectedImage.mimeType}</div>
-              </div>
-            </div>
-
-            {/* Navigation Arrows if multiple images */}
-            {taskImages.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIndex = taskImages.findIndex(img => img.id === selectedImage.id);
-                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : taskImages.length - 1;
-                    setSelectedImage(taskImages[prevIndex]);
-                  }}
-                  className="absolute left-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIndex = taskImages.findIndex(img => img.id === selectedImage.id);
-                    const nextIndex = currentIndex < taskImages.length - 1 ? currentIndex + 1 : 0;
-                    setSelectedImage(taskImages[nextIndex]);
-                  }}
-                  className="absolute right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </>
-            )}
           </div>
         </div>
+      ) : (
+        <img
+          src={`http://localhost:8000/task-images/image/${selectedImage.filename}`}
+          alt={`Task image ${selectedImage.id}`}
+          className="max-w-full max-h-full object-contain rounded-lg"
+        />
       )}
+
+      {/* File Info */}
+      <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white p-3 rounded-lg">
+        <div className="text-sm">
+          <div className="font-medium truncate">{selectedImage.filename}</div>
+          <div className="flex justify-between text-xs opacity-75 mt-1">
+            <span>Uploaded: {new Date(selectedImage.uploadedAt).toLocaleString()}</span>
+            <span>Size: {(selectedImage.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+          </div>
+          <div className="text-xs opacity-75 mt-1">Type: {selectedImage.mimeType}</div>
+        </div>
+      </div>
+
+      {/* Navigation Arrows if multiple files and it's an image */}
+      {taskImages.length > 1 && selectedImage.mimeType.startsWith('image/') && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const currentIndex = taskImages.findIndex(img => img.id === selectedImage.id);
+              const prevIndex = currentIndex > 0 ? currentIndex - 1 : taskImages.length - 1;
+              setSelectedImage(taskImages[prevIndex]);
+            }}
+            className="absolute left-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const currentIndex = taskImages.findIndex(img => img.id === selectedImage.id);
+              const nextIndex = currentIndex < taskImages.length - 1 ? currentIndex + 1 : 0;
+              setSelectedImage(taskImages[nextIndex]);
+            }}
+            className="absolute right-4 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 transition-all"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
