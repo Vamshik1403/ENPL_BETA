@@ -35,4 +35,9 @@ export class ServiceContractController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.serviceContractService.remove(id);
   }
+  @Delete('contract/:contractId')
+removeByContract(@Param('contractId', ParseIntPipe) contractId: number) {
+  return this.serviceContractService.removeByContractId(contractId);
+}
+
 }

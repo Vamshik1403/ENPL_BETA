@@ -44,6 +44,7 @@ interface ServiceContract {
   maxOnSiteVisits: string;
   maxPreventiveMaintenanceVisit: string;
   inclusiveInOnSiteVisitCounts: boolean;
+  serviceContractTypeId?: number;
   preventiveMaintenanceCycle: string;
   contractDescription: string;
   contractType?: string;       // "Free" or "Paid"
@@ -91,6 +92,8 @@ interface ServiceContractHistory {
   startTime: string;
   endTime: string;
   serviceDetails: string;
+  _delete?: boolean; // for marking deletions
+  _hidden?: boolean; // for hiding deleted items from UI
   serviceContract?: {
     id: number;
     serviceContractID: string;
@@ -188,8 +191,20 @@ const itemsPerPage = 10; // 👈 adjust how many contracts per page
   };
 
   const removeHistory = (index: number) => {
-    setServiceHistoryList(serviceHistoryList.filter((_, i) => i !== index));
-  };
+  setServiceHistoryList(prev => {
+    const item = prev[index];
+
+    // If it exists in DB, mark it for delete but hide from UI
+    if (item.id) {
+      return prev.map((h, i) =>
+        i === index ? { ...h, _delete: true, _hidden: true } : h
+      );
+    }
+
+    // If it's a new (unsaved) row → remove completely
+    return prev.filter((_, i) => i !== index);
+  });
+};
 
   // 🔍 Filter + paginate contracts
 const filteredContracts = serviceContracts.filter((item) => {
@@ -423,6 +438,7 @@ const paginatedContracts = filteredContracts.slice(
       startDate: '',
       endDate: '',
       nextPMVisitDate: '',
+       contractType: 'Free',
       maxOnSiteVisits: '',
       maxPreventiveMaintenanceVisit: '',
       inclusiveInOnSiteVisitCounts: false,
@@ -535,7 +551,7 @@ const paginatedContracts = filteredContracts.slice(
         });
 
         // ✅ Update ServiceContractType and BillingSchedule by contractId
-        await apiFetch(`/service-contract-type/${editingId}`, 'PATCH', {
+await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATCH', {
           serviceContractType: formData.contractType,
           serviceContractId: editingId,
           billingType: formData.billingType,
@@ -622,15 +638,34 @@ const paginatedContracts = filteredContracts.slice(
       }
 
       // ✅ Add All Service Histories
-      if (serviceHistoryList.length > 0) {
-        for (const hist of serviceHistoryList) {
-          await apiFetch('/service-contract-history', 'POST', {
-            ...hist,
-            serviceContractId: serviceContractId || editingId,
-            serviceDate: new Date(hist.serviceDate).toISOString(),
-          });
-        }
-      }
+     // SERVICE HISTORY SYNC
+for (const hist of serviceHistoryList) {
+  // delete
+  if (hist._delete && hist.id) {
+    await apiFetch(`/service-contract-history/${hist.id}`, "DELETE");
+    continue;
+  }
+
+  // update
+  if (hist.id && !hist._delete) {
+    await apiFetch(`/service-contract-history/${hist.id}`, "PATCH", {
+      ...hist,
+      serviceContractId,
+      serviceDate: new Date(hist.serviceDate).toISOString(),
+    });
+    continue;
+  }
+
+  // create
+  if (!hist.id && !hist._delete) {
+    await apiFetch(`/service-contract-history`, "POST", {
+      ...hist,
+      serviceContractId,
+      serviceDate: new Date(hist.serviceDate).toISOString(),
+    });
+  }
+}
+
 
 
       alert(editingId ? '✅ Service Contract updated!' : '✅ Service Contract created!');
@@ -705,6 +740,7 @@ const paginatedContracts = filteredContracts.slice(
       const historiesData = main.histories || [];
       if (historiesData.length > 0) {
         const mappedHistories = historiesData.map((h: any) => ({
+          id: h.id,
           serviceContractId: id,
           taskId: h.taskId || '',
           serviceType: h.serviceType || 'On-Site Visit',
@@ -721,6 +757,15 @@ const paginatedContracts = filteredContracts.slice(
       try {
         const typeResArr = await apiFetch(`/service-contract-type?contractId=${id}`);
         const contractTypeRes = Array.isArray(typeResArr) ? typeResArr[0] : typeResArr;
+
+        // Store the correct ServiceContractType ID for update/delete operations
+if (contractTypeRes) {
+  setFormData(prev => ({
+    ...prev,
+    serviceContractTypeId: contractTypeRes.id,  // ✅ store correct ID
+  }));
+}
+
 
         if (contractTypeRes) {
           const billingRes = await apiFetch(`/service-contract-billing/type/${contractTypeRes.id}`);
@@ -749,12 +794,17 @@ const paginatedContracts = filteredContracts.slice(
 
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this service contract?')) return;
-    await apiFetch(`/service-contract/${id}`, 'DELETE');
-    await apiFetch(`/service-contract-type/${id}`, 'DELETE'); // delete contract type
-    await apiFetch(`/service-contract-billing/${id}`, 'DELETE'); // optional cleanup
-    await loadContracts();
-  };
+  if (!confirm("Delete this service contract?")) return;
+
+  // 1️⃣ delete billing & type by contractId
+  await apiFetch(`/service-contract-type/contract/${id}`, "DELETE");
+
+  // 2️⃣ delete main contract
+  await apiFetch(`/service-contract/${id}`, "DELETE");
+
+  await loadContracts();
+};
+
 
   const handleAddService = () => {
     if (serviceForm.serviceName.trim()) {
@@ -978,7 +1028,6 @@ const paginatedContracts = filteredContracts.slice(
                       className="text-black  bg-white"
                       icon={<Icons.Calendar />}
                     />
-
                   </div>
                 </div>
 
@@ -994,14 +1043,15 @@ const paginatedContracts = filteredContracts.slice(
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                       Contract Type
                     </label>
-                    <select
-                      value={formData.contractType}
-                      onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
-                    >
-                      <option value="Free">Free</option>
-                      <option value="Paid">Paid</option>
-                    </select>
+                   <select
+  value={formData.contractType || 'Free'}
+  onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
+  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+>
+  <option value="Free">Free</option>
+  <option value="Paid">Paid</option>
+</select>
+
                   </div>
 
                   {/* Billing Fields - only for Paid */}
@@ -1355,7 +1405,9 @@ const paginatedContracts = filteredContracts.slice(
                           </tr>
                         </thead>
                         <tbody>
-                          {serviceHistoryList.map((hist, i) => (
+{serviceHistoryList
+  .filter(h => !h._hidden)   // ⬅️ FIX
+  .map((hist, i) => (
                             <tr key={i} className="border-t border-gray-200 hover:bg-gray-50">
                               <td className="p-3 text-gray-700">{hist.taskId}</td>
                               <td className="p-3 text-gray-700">{hist.serviceType}</td>

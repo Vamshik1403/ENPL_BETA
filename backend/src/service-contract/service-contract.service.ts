@@ -56,6 +56,17 @@ async getNextContractId() {
   return { nextID };
 }
 
+async removeByContractId(contractId: number) {
+  await this.prisma.serviceContractBilling.deleteMany({
+    where: { serviceContractType: { serviceContractId: contractId } },
+  });
+
+  await this.prisma.serviceContractType.deleteMany({
+    where: { serviceContractId: contractId },
+  });
+
+  return { message: 'Deleted all contract-type and billing linked items.' };
+}
 
 
   async findAll() {
