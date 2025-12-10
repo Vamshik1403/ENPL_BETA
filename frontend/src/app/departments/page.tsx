@@ -146,7 +146,7 @@ export default function DepartmentsPage() {
     setFormData({ departmentName: '' });
   };
 
-  // 🔹 Handle Add New
+  // 🔹 Handle Add
   const handleAddNew = () => {
     setFormData({ departmentName: '' });
     setEditingId(null);
@@ -160,7 +160,7 @@ export default function DepartmentsPage() {
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Department' : 'Add New Department'}
+              {editingId ? 'Edit Department' : 'Add Department'}
             </h2>
             <button
               onClick={resetForm}
@@ -208,10 +208,9 @@ export default function DepartmentsPage() {
   );
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Departments</h1>
-        <p className="text-gray-600">Manage organizational departments</p>
       </div>
 
       {/* Search and Controls Section */}
@@ -222,7 +221,7 @@ export default function DepartmentsPage() {
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
           >
             <Icons.Plus />
-            Add New Department
+            Add Department
           </button>
         </div>
 

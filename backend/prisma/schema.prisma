@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+ // url      = env("DATABASE_URL")
 }
 
 model AddressBook {
@@ -93,6 +93,7 @@ model ServiceContract {
   customerId        Int
   branchId          Int
   salesManagerName  String
+  amcType           String?
   serviceContractType ServiceContractType[]
   periods           ServiceContractPeriod[]
   terms             ServiceContractTerms[]
@@ -194,6 +195,7 @@ model Task {
   addressBookId    Int
   siteId           Int
   status           String                   @default("Open")
+  description      String?
   createdBy        String
   createdAt        DateTime                 @default(now())
   department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
@@ -304,4 +306,14 @@ model SupportTicket{
   updatedAt DateTime @updatedAt
   site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  password   String
+  fullName   String?  
+  userType   String?
+  department String?
+  createdAt  DateTime @default(now())
 }

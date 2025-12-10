@@ -8,6 +8,8 @@ export class CreateServiceContractDto {
   branchId: number;
 
   @IsString()
-  @IsNotEmpty()
   salesManagerName: string;
+
+  @IsString()
+  amcType: string;
 }

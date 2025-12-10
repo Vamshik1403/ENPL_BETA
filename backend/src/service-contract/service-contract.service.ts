@@ -33,6 +33,7 @@ export class ServiceContractService {
       customerId: createDto.customerId,
       branchId: createDto.branchId,
       salesManagerName: createDto.salesManagerName,
+      amcType: createDto.amcType,
     },
   });
 }

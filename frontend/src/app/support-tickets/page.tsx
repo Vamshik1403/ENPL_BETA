@@ -83,7 +83,7 @@ function SupportTicketModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Support Ticket' : 'Add New Support Ticket'}
+              {editingId ? 'Edit Support Ticket' : 'Add Support Ticket'}
             </h2>
             <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 text-2xl" disabled={loading}>
               ×

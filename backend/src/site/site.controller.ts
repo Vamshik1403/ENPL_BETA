@@ -24,6 +24,12 @@ export class SiteController {
     return this.siteService.findAll();
   }
 
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+      return this.siteService.findOne(Number(id));
+    }
+  
+
   // Contact endpoints
   @Get(':id/contacts')
   getContacts(@Param('id') id: string) {

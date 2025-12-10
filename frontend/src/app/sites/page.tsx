@@ -24,6 +24,7 @@ interface Site {
   state?: string;
   pinCode?: string;
   gstNo?: string;
+  useCustomerData?: boolean;
 }
 
 interface SiteContact {
@@ -37,7 +38,6 @@ interface SiteContact {
 
 export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
-  const [contacts, setContacts] = useState<SiteContact[]>([]);
   const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -54,6 +54,7 @@ export default function SitesPage() {
     state: '',
     pinCode: '',
     gstNo: '',
+    useCustomerData: false
   });
 
   // Search and Pagination states
@@ -67,6 +68,8 @@ export default function SitesPage() {
     fetchAddressBooks();
     fetchSites();
   }, []);
+
+
 
   const fetchSites = async () => {
     try {
@@ -89,6 +92,34 @@ export default function SitesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const pin = formData.pinCode;
+
+    if (!pin || pin.length !== 6) return; // Only lookup when 6 digits
+
+    const fetchCityState = async () => {
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const data = await res.json();
+
+        if (data[0].Status === "Success") {
+          const office = data[0].PostOffice[0];
+
+          setFormData(prev => ({
+            ...prev,
+            city: office.District,
+            state: office.State
+          }));
+        }
+      } catch (err) {
+        console.error("PIN lookup error:", err);
+      }
+    };
+
+    fetchCityState();
+  }, [formData.pinCode]);
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -183,10 +214,19 @@ export default function SitesPage() {
   console.log('Filtered results:', filteredAddressBooks.length);
 
   const handleAddressBookSelect = (addressBook: AddressBook) => {
-    setFormData({ ...formData, addressBookId: addressBook.id });
+    setFormData(prev => ({
+      ...prev,
+      addressBookId: addressBook.id
+    }));
+
     setAddressBookSearch(`${addressBook.addressBookID} - ${addressBook.customerName}`);
     setShowAddressBookDropdown(false);
+
+    if (formData.useCustomerData) {
+      fetchCustomerFullData(addressBook.id);
+    }
   };
+
 
   // Site Contact management functions
   const addContact = () => {
@@ -363,6 +403,41 @@ export default function SitesPage() {
     }
   };
 
+  const fetchCustomerFullData = async (id: number) => {
+    try {
+      const res = await fetch(`http://localhost:8000/address-book/${id}`);
+      const data = await res.json();
+
+      if (!data) return;
+
+      const bestSite = data.sites?.length ? data.sites[0] : null;
+
+      setFormData(prev => ({
+        ...prev,
+        siteAddress: bestSite?.siteAddress || data.regdAddress || '',
+        city: bestSite?.city || data.city || '',
+        state: bestSite?.state || data.state || '',
+        pinCode: bestSite?.pinCode || data.pinCode || '',
+        gstNo: bestSite?.gstNo || data.gstNo || '',
+      }));
+
+      if (data.contacts?.length > 0) {
+        const converted = data.contacts.map((c: any) => ({
+          siteId: 0,
+          contactPerson: c.contactPerson,
+          designation: c.designation,
+          contactNumber: c.contactNumber,
+          emailAddress: c.emailAddress,
+        }));
+        setFormContacts(converted);
+      }
+
+    } catch (err) {
+      console.error("Auto-fill error:", err);
+    }
+  };
+
+
   const closeModal = () => {
     setShowForm(false);
     setEditingId(null);
@@ -386,10 +461,9 @@ export default function SitesPage() {
   }, [searchTerm]);
 
   return (
-    <div className="p-8">
+    <div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Sites</h1>
-        <p className="text-black">Manage customer sites and locations</p>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -400,7 +474,7 @@ export default function SitesPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add New Site
+          Add Site
         </button>
 
         {/* Search Bar */}
@@ -437,7 +511,7 @@ export default function SitesPage() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {editingId ? 'Edit Site' : 'Add New Site'}
+                  {editingId ? 'Edit Site' : 'Add Site'}
                 </h2>
                 <button
                   onClick={closeModal}
@@ -455,13 +529,57 @@ export default function SitesPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Customer Name
                     </label>
+
+                    {/* NEW CHECKBOX */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        id="sameCustomer"
+                        checked={formData.useCustomerData || false}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+
+                          setFormData(prev => ({
+                            ...prev,
+                            useCustomerData: checked,
+
+                            // When unchecked → clear the fetched values
+                            ...(checked === false
+                              ? {
+                                siteAddress: '',
+                                city: '',
+                                state: '',
+                                pinCode: '',
+                                gstNo: '',
+                              }
+                              : {})
+                          }));
+
+                          // Clear contacts when unticked
+                          if (!checked) {
+                            setFormContacts([]);
+                          }
+
+                          // If checked → autofill now
+                          if (checked && formData.addressBookId) {
+                            fetchCustomerFullData(formData.addressBookId);
+                          }
+                        }}
+
+                        className="h-4 w-4"
+                      />
+                      <label htmlFor="sameCustomer" className="text-sm text-gray-700">
+                        Same as selected customer
+                      </label>
+                    </div>
+
                     <div className="relative address-book-dropdown">
                       <input
                         type="text"
                         value={addressBookSearch}
                         onChange={(e) => {
                           setAddressBookSearch(e.target.value);
-                          // Only show dropdown if there's meaningful input (at least 1 character)
+
                           if (e.target.value.trim().length > 0) {
                             setShowAddressBookDropdown(true);
                           } else {
@@ -470,25 +588,21 @@ export default function SitesPage() {
                           }
                         }}
                         onFocus={() => {
-                          console.log('Input focused, showing dropdown');
-                          // Only show dropdown if there's some search text
                           if (addressBookSearch.trim().length > 0) {
                             setShowAddressBookDropdown(true);
                           }
                         }}
                         placeholder="Search customer..."
-                        className="w-full border text-black border-gray-300 rounded-lg px-4 py-3  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full border text-black border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       />
+
                       {showAddressBookDropdown && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                           {isLoadingAddressBooks ? (
                             <div className="px-3 py-2 text-gray-500 flex items-center justify-between">
                               <span>Loading customers/vendors...</span>
                               <button
-                                onClick={() => {
-                                  console.log('Manual retry clicked');
-                                  fetchAddressBooks();
-                                }}
+                                onClick={() => fetchAddressBooks()}
                                 className="text-black hover:text-blue-800 text-sm"
                               >
                                 Retry
@@ -511,7 +625,7 @@ export default function SitesPage() {
                             ))
                           ) : addressBooks.length === 0 ? (
                             <div className="px-3 py-2 text-gray-500">
-                              No customers/vendors found in database. Please add some in the Address Book section first.
+                              No customers/vendors found in database.
                             </div>
                           ) : addressBookSearch.trim().length === 0 ? (
                             <div className="px-3 py-2 text-gray-500">
@@ -525,10 +639,14 @@ export default function SitesPage() {
                         </div>
                       )}
                     </div>
+
                     {formData.addressBookId === 0 && addressBookSearch && (
-                      <p className="text-red-500 text-sm mt-1">Please select a customer/vendor from the dropdown</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        Please select a customer/vendor from the dropdown
+                      </p>
                     )}
                   </div>
+
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -556,9 +674,40 @@ export default function SitesPage() {
                     />
                   </div>
 
+
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
+                      Pin Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.pinCode}
+                      maxLength={6}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // digits only
+                        setFormData({ ...formData, pinCode: value });
+                      }}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GST Number
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.gstNo}
+                      onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City(filled automatically by pincode)
                     </label>
                     <input
                       type="text"
@@ -570,36 +719,12 @@ export default function SitesPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      State
+                      State(filled automatically by pincode)
                     </label>
                     <input
                       type="text"
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pin Code
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.pinCode}
-                      onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      GST Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.gstNo}
-                      onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -804,7 +929,7 @@ export default function SitesPage() {
               ))}
             </tbody>
           </table>
-          
+
           {/* Show message when no results found */}
           {currentItems.length === 0 && (
             <div className="text-center py-8 text-gray-500">
@@ -834,24 +959,23 @@ export default function SitesPage() {
                 >
                   Previous
                 </button>
-                
+
                 {/* Page Numbers */}
                 <div className="flex gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
                       onClick={() => paginate(page)}
-                      className={`px-3 py-1 border text-sm rounded transition-colors ${
-                        currentPage === page
+                      className={`px-3 py-1 border text-sm rounded transition-colors ${currentPage === page
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
                   ))}
                 </div>
-                
+
                 <button
                   onClick={nextPage}
                   disabled={currentPage === totalPages}

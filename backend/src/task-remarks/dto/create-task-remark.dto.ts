@@ -9,6 +9,9 @@ export class CreateTasksRemarksDto {
   remark: string;
 
   @IsString()
+  status: string;
+
+  @IsString()
   @IsNotEmpty()
   createdBy: string;
 }

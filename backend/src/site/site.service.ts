@@ -46,7 +46,10 @@ export class SitesService {
   }
 
   findOne(id: number): Promise<Site | null> {
-    return this.prisma.site.findUnique({ where: { id }, include: { contacts: true } });
+    return this.prisma.site.findUnique({
+      where: { id },
+      include: { contacts: true, addressBook:true, tasks: true },
+    });
   }
 
   async update(id: number, data: UpdateSiteDto) {

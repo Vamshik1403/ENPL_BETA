@@ -38,6 +38,7 @@ interface ServiceContract {
   customerId: number;
   branchId: number;
   salesManagerName: string;
+  amcType: string;
   startDate: string;
   endDate: string;
   nextPMVisitDate: string;
@@ -100,6 +101,7 @@ interface ServiceContractHistory {
     customerId: number;
     branchId: number;
     salesManagerName: string;
+    amcType: string;
     // Add other fields you need from service contract
   };
 }
@@ -144,10 +146,10 @@ export default function ServiceContractPage() {
   const [filteredProductTypes, setFilteredProductTypes] = useState<any[]>([]);
   const [serviceCategorySearch, setServiceCategorySearch] = useState('');
   const [productTypeSearch, setProductTypeSearch] = useState('');
-// 🔍 Search + Pagination
-const [searchTerm, setSearchTerm] = useState('');
-const [currentPage, setCurrentPage] = useState(1);
-const itemsPerPage = 10; // 👈 adjust how many contracts per page
+  // 🔍 Search + Pagination
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 👈 adjust how many contracts per page
 
   const [billingSchedule, setBillingSchedule] = useState<
     { dueDate: string; paymentStatus: string; overdueDays: number }[]
@@ -191,37 +193,38 @@ const itemsPerPage = 10; // 👈 adjust how many contracts per page
   };
 
   const removeHistory = (index: number) => {
-  setServiceHistoryList(prev => {
-    const item = prev[index];
+    setServiceHistoryList(prev => {
+      const item = prev[index];
 
-    // If it exists in DB, mark it for delete but hide from UI
-    if (item.id) {
-      return prev.map((h, i) =>
-        i === index ? { ...h, _delete: true, _hidden: true } : h
-      );
-    }
+      // If it exists in DB, mark it for delete but hide from UI
+      if (item.id) {
+        return prev.map((h, i) =>
+          i === index ? { ...h, _delete: true, _hidden: true } : h
+        );
+      }
 
-    // If it's a new (unsaved) row → remove completely
-    return prev.filter((_, i) => i !== index);
-  });
-};
+      // If it's a new (unsaved) row → remove completely
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   // 🔍 Filter + paginate contracts
-const filteredContracts = serviceContracts.filter((item) => {
-  const term = searchTerm.toLowerCase();
-  return (
-    item.serviceContractID?.toLowerCase().includes(term) ||
-    item.customerName?.toLowerCase().includes(term) ||
-    item.branchName?.toLowerCase().includes(term) ||
-    item.salesManagerName?.toLowerCase().includes(term)
-  );
-});
+  const filteredContracts = serviceContracts.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      item.serviceContractID?.toLowerCase().includes(term) ||
+      item.customerName?.toLowerCase().includes(term) ||
+      item.branchName?.toLowerCase().includes(term) ||
+      item.salesManagerName?.toLowerCase().includes(term) ||
+      item.amcType?.toLowerCase().includes(term)
+    );
+  });
 
-const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
-const paginatedContracts = filteredContracts.slice(
-  (currentPage - 1) * itemsPerPage,
-  currentPage * itemsPerPage
-);
+  const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
+  const paginatedContracts = filteredContracts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
 
 
@@ -230,6 +233,7 @@ const paginatedContracts = filteredContracts.slice(
     customerId: 0,
     branchId: 0,
     salesManagerName: '',
+    amcType: '',
     startDate: '',
     endDate: '',
     nextPMVisitDate: '',
@@ -427,7 +431,7 @@ const paginatedContracts = filteredContracts.slice(
     fetchTasks();
   }, []);
 
-  // ⬇️ when Add New button clicked → prefill next ID
+  // ⬇️ when Add button clicked → prefill next ID
   const handleAddNew = async () => {
     const res = await apiFetch('/service-contract/next/id');
     setFormData({
@@ -435,10 +439,11 @@ const paginatedContracts = filteredContracts.slice(
       customerId: 0,
       branchId: 0,
       salesManagerName: '',
+      amcType: '',
       startDate: '',
       endDate: '',
       nextPMVisitDate: '',
-       contractType: 'Free',
+      contractType: 'Free',
       maxOnSiteVisits: '',
       maxPreventiveMaintenanceVisit: '',
       inclusiveInOnSiteVisitCounts: false,
@@ -530,6 +535,7 @@ const paginatedContracts = filteredContracts.slice(
           customerId: formData.customerId,
           branchId: formData.branchId,
           salesManagerName: formData.salesManagerName,
+          amcType: formData.amcType,
         });
 
         // 🔹 Update or create period
@@ -551,7 +557,7 @@ const paginatedContracts = filteredContracts.slice(
         });
 
         // ✅ Update ServiceContractType and BillingSchedule by contractId
-await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATCH', {
+        await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATCH', {
           serviceContractType: formData.contractType,
           serviceContractId: editingId,
           billingType: formData.billingType,
@@ -570,6 +576,7 @@ await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATC
           customerId: formData.customerId,
           branchId: formData.branchId,
           salesManagerName: formData.salesManagerName,
+          amcType: formData.amcType,
         });
 
         serviceContractId = main.id;
@@ -638,33 +645,33 @@ await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATC
       }
 
       // ✅ Add All Service Histories
-     // SERVICE HISTORY SYNC
-for (const hist of serviceHistoryList) {
-  // delete
-  if (hist._delete && hist.id) {
-    await apiFetch(`/service-contract-history/${hist.id}`, "DELETE");
-    continue;
-  }
+      // SERVICE HISTORY SYNC
+      for (const hist of serviceHistoryList) {
+        // delete
+        if (hist._delete && hist.id) {
+          await apiFetch(`/service-contract-history/${hist.id}`, "DELETE");
+          continue;
+        }
 
-  // update
-  if (hist.id && !hist._delete) {
-    await apiFetch(`/service-contract-history/${hist.id}`, "PATCH", {
-      ...hist,
-      serviceContractId,
-      serviceDate: new Date(hist.serviceDate).toISOString(),
-    });
-    continue;
-  }
+        // update
+        if (hist.id && !hist._delete) {
+          await apiFetch(`/service-contract-history/${hist.id}`, "PATCH", {
+            ...hist,
+            serviceContractId,
+            serviceDate: new Date(hist.serviceDate).toISOString(),
+          });
+          continue;
+        }
 
-  // create
-  if (!hist.id && !hist._delete) {
-    await apiFetch(`/service-contract-history`, "POST", {
-      ...hist,
-      serviceContractId,
-      serviceDate: new Date(hist.serviceDate).toISOString(),
-    });
-  }
-}
+        // create
+        if (!hist.id && !hist._delete) {
+          await apiFetch(`/service-contract-history`, "POST", {
+            ...hist,
+            serviceContractId,
+            serviceDate: new Date(hist.serviceDate).toISOString(),
+          });
+        }
+      }
 
 
 
@@ -759,12 +766,12 @@ for (const hist of serviceHistoryList) {
         const contractTypeRes = Array.isArray(typeResArr) ? typeResArr[0] : typeResArr;
 
         // Store the correct ServiceContractType ID for update/delete operations
-if (contractTypeRes) {
-  setFormData(prev => ({
-    ...prev,
-    serviceContractTypeId: contractTypeRes.id,  // ✅ store correct ID
-  }));
-}
+        if (contractTypeRes) {
+          setFormData(prev => ({
+            ...prev,
+            serviceContractTypeId: contractTypeRes.id,  // ✅ store correct ID
+          }));
+        }
 
 
         if (contractTypeRes) {
@@ -794,16 +801,16 @@ if (contractTypeRes) {
 
 
   const handleDelete = async (id: number) => {
-  if (!confirm("Delete this service contract?")) return;
+    if (!confirm("Delete this service contract?")) return;
 
-  // 1️⃣ delete billing & type by contractId
-  await apiFetch(`/service-contract-type/contract/${id}`, "DELETE");
+    // 1️⃣ delete billing & type by contractId
+    await apiFetch(`/service-contract-type/contract/${id}`, "DELETE");
 
-  // 2️⃣ delete main contract
-  await apiFetch(`/service-contract/${id}`, "DELETE");
+    // 2️⃣ delete main contract
+    await apiFetch(`/service-contract/${id}`, "DELETE");
 
-  await loadContracts();
-};
+    await loadContracts();
+  };
 
 
   const handleAddService = () => {
@@ -866,10 +873,9 @@ if (contractTypeRes) {
 
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Service Contract Management</h1>
-        <p className="text-gray-600">Manage service contracts, terms, inventory, and service histories</p>
       </div>
 
       <div className="mb-6">
@@ -878,7 +884,7 @@ if (contractTypeRes) {
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
         >
           <Icons.Plus />
-          Add New Service Contract
+          Add Service Contract
         </button>
       </div>
 
@@ -1000,6 +1006,25 @@ if (contractTypeRes) {
                         icon={<Icons.User />}
                       />
                     </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Icons.Building />
+                        AMC Type
+                      </label>
+                      <select
+                        className="w-full p-2 border rounded text-black bg-white"
+                        value={formData.amcType}
+                        onChange={e => setFormData({ ...formData, amcType: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Select AMC Type</option>
+                        <option value="Comprehensive">Comprehensive</option>
+                        <option value="Non-Comprehensive">Non-Comprehensive</option>
+                      </select>
+                    </div>
+
+
                   </div>
                 </div>
 
@@ -1043,14 +1068,14 @@ if (contractTypeRes) {
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                       Contract Type
                     </label>
-                   <select
-  value={formData.contractType || 'Free'}
-  onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
-  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
->
-  <option value="Free">Free</option>
-  <option value="Paid">Paid</option>
-</select>
+                    <select
+                      value={formData.contractType || 'Free'}
+                      onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+                    >
+                      <option value="Free">Free</option>
+                      <option value="Paid">Paid</option>
+                    </select>
 
                   </div>
 
@@ -1137,8 +1162,8 @@ if (contractTypeRes) {
                                 </td>
                                 <td
                                   className={`p-3 font-medium ${bill.paymentStatus === 'Unpaid' && bill.overdueDays > 0
-                                      ? 'text-red-600'
-                                      : 'text-gray-700'
+                                    ? 'text-red-600'
+                                    : 'text-gray-700'
                                     }`}
                                 >
                                   {bill.paymentStatus === 'Unpaid' && bill.overdueDays > 0
@@ -1405,29 +1430,29 @@ if (contractTypeRes) {
                           </tr>
                         </thead>
                         <tbody>
-{serviceHistoryList
-  .filter(h => !h._hidden)   // ⬅️ FIX
-  .map((hist, i) => (
-                            <tr key={i} className="border-t border-gray-200 hover:bg-gray-50">
-                              <td className="p-3 text-gray-700">{hist.taskId}</td>
-                              <td className="p-3 text-gray-700">{hist.serviceType}</td>
-                              <td className="p-3 text-gray-700">{hist.serviceDate}</td>
-                              <td className="p-3 text-gray-700">
-                                {hist.startTime} - {hist.endTime}
-                              </td>
-                              <td className="p-3 text-gray-700">{hist.serviceDetails}</td>
-                              <td className="p-3">
-                                <button
-                                  type="button"
-                                  onClick={() => removeHistory(i)}
-                                  className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1"
-                                >
-                                  <Icons.Delete />
-                                  Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {serviceHistoryList
+                            .filter(h => !h._hidden)   // ⬅️ FIX
+                            .map((hist, i) => (
+                              <tr key={i} className="border-t border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-gray-700">{hist.taskId}</td>
+                                <td className="p-3 text-gray-700">{hist.serviceType}</td>
+                                <td className="p-3 text-gray-700">{hist.serviceDate}</td>
+                                <td className="p-3 text-gray-700">
+                                  {hist.startTime} - {hist.endTime}
+                                </td>
+                                <td className="p-3 text-gray-700">{hist.serviceDetails}</td>
+                                <td className="p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeHistory(i)}
+                                    className="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1"
+                                  >
+                                    <Icons.Delete />
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -1747,24 +1772,24 @@ if (contractTypeRes) {
       )}
 
       {/* Contracts List Table */}
-   <div className="bg-white rounded-xl shadow-md overflow-hidden">
-    
-  <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 flex justify-between items-center">
-    
-    <h2 className="text-xl font-semibold text-white">Service Contracts</h2>
-{/* 🔍 Search bar */}
-    <input
-      type="text"
-      placeholder="Search contracts..."
-      value={searchTerm}
-      onChange={(e) => {
-        setSearchTerm(e.target.value);
-        setCurrentPage(1); // reset to first page on search
-      }}
-      className="ml-4 px-3 py-2 rounded-lg text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 border border-gray-300"
-    />
-    
-  </div>
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 flex justify-between items-center">
+
+          <h2 className="text-xl font-semibold text-white">Service Contracts</h2>
+          {/* 🔍 Search bar */}
+          <input
+            type="text"
+            placeholder="Search contracts..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // reset to first page on search
+            }}
+            className="ml-4 px-3 py-2 rounded-lg text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 border border-gray-300"
+          />
+
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-blue-50">
@@ -1779,7 +1804,7 @@ if (contractTypeRes) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-{paginatedContracts.map(item => (
+              {paginatedContracts.map(item => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-gray-700 font-medium">{item.serviceContractID}</td>
                   <td className="px-6 py-4 text-gray-700">{item.customerName}</td>
@@ -1821,28 +1846,28 @@ if (contractTypeRes) {
             </tbody>
           </table>
           {/* Pagination Controls */}
-<div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
-  <span className="text-sm text-gray-600">
-    Page {currentPage} of {totalPages || 1}
-  </span>
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages || 1}
+            </span>
 
-  <div className="flex gap-2">
-    <button
-      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-      disabled={currentPage === 1}
-      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-    >
-      ← Prev
-    </button>
-    <button
-      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-      disabled={currentPage === totalPages || totalPages === 0}
-      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-    >
-      Next →
-    </button>
-  </div>
-</div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
 
         </div>
       </div>

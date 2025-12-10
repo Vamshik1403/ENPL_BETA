@@ -143,7 +143,7 @@ export default function ServiceWorkPage() {
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Service Work Category' : 'Add New Service Work Category'}
+              {editingId ? 'Edit Service Work Category' : 'Add Service Work Category'}
             </h2>
             <button
               onClick={resetForm}
@@ -204,7 +204,7 @@ export default function ServiceWorkPage() {
           onClick={handleAddNew}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Add New Service Work Category
+          Add Service Work Category
         </button>
       </div>
 

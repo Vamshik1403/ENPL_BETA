@@ -51,6 +51,33 @@ export default function AddressBookPage() {
     fetchAddressBooks();
   }, []);
 
+  useEffect(() => {
+  const pin = formData.pinCode;
+
+  if (!pin || pin.length !== 6) return; // Only lookup when 6 digits
+
+  const fetchCityState = async () => {
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const data = await res.json();
+
+      if (data[0].Status === "Success") {
+        const office = data[0].PostOffice[0];
+
+        setFormData(prev => ({
+          ...prev,
+          city: office.District,
+          state: office.State
+        }));
+      }
+    } catch (err) {
+      console.error("PIN lookup error:", err);
+    }
+  };
+
+  fetchCityState();
+}, [formData.pinCode]);
+
   const fetchAddressBooks = async () => {
     try {
       const response = await fetch('http://localhost:8000/address-book');
@@ -328,10 +355,9 @@ export default function AddressBookPage() {
   }, [searchTerm]);
 
   return (
-    <div className="p-8">
+<div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
-        <p className="text-gray-600">Manage customers</p>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -357,7 +383,7 @@ export default function AddressBookPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add New Customer
+          Add Customer
         </button>
 
         {/* Search Bar */}
@@ -454,38 +480,22 @@ export default function AddressBookPage() {
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
+                 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Pin Code
                     </label>
-                    <input
-                      type="text"
-                      value={formData.pinCode}
-                      onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
+                  <input
+  type="text"
+  value={formData.pinCode}
+  maxLength={6}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, ''); // digits only
+    setFormData({ ...formData, pinCode: value });
+  }}
+  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+/>
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -496,6 +506,30 @@ export default function AddressBookPage() {
                       value={formData.gstNo}
                       onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City(filled automatically by pincode)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State(filled automatically by pincode)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      readOnly
                     />
                   </div>
                 </div>

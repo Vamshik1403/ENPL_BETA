@@ -87,7 +87,7 @@ function SupportTicketUserModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Support Ticket User' : 'Add New Support Ticket User'}
+              {editingId ? 'Edit Support Ticket User' : 'Add Support Ticket User'}
             </h2>
             <button
               onClick={onClose}
@@ -387,7 +387,7 @@ export default function SupportTicketUsersPage() {
           onClick={() => setShowModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          Add New
+          Add
         </button>
       </div>
 

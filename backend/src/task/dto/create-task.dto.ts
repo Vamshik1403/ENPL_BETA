@@ -63,6 +63,15 @@ export class CreateTaskDto {
   @IsNotEmpty()
   status: string;
 
+  @IsString()
+@IsOptional()
+description?: string;
+
+
+  @IsString()
+  @IsNotEmpty()
+  createdBy: string;
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

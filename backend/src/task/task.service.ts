@@ -63,16 +63,19 @@ const taskID = `ENSR${year}${month}${day}${hours}${minutes}${seconds}`;
     });
   }
 
-  if (remarks?.length) {
-    await this.prisma.tasksRemarks.createMany({
-      data: remarks.map((r: any) => ({
-        taskId: task.id,
-        remark: r.remark,
-        status: r.status || 'Open',
-        createdBy: 'System User',
-      })),
-    });
-  }
+if (remarks?.length === 1) {
+  await this.prisma.tasksRemarks.create({
+    data: {
+      taskId: task.id,
+      remark: remarks[0].remark,
+      status: remarks[0].status,
+      createdBy: remarks[0].createdBy || "System User",
+      createdAt: remarks[0].createdAt ? new Date(remarks[0].createdAt) : new Date()
+    }
+  });
+}
+
+
 
   // 🧠 Return full task with relations
   return this.prisma.task.findUnique({
@@ -128,82 +131,73 @@ const taskID = `ENSR${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
   async update(id: number, dto: UpdateTaskDto) {
-    await this.findOne(id);
-    
-    // Extract only the nested fields that should be handled separately
-    const { contacts, workscopeDetails, schedule, remarks, ...updateData } = dto as any;
-    
-    // Update the main task first (including status)
-    const task = await this.prisma.task.update({
-      where: { id },
-      data: updateData,
-    });
+  await this.findOne(id);
 
-    // Delete existing nested records
-    await this.prisma.tasksContacts.deleteMany({ where: { taskId: id } });
-    await this.prisma.tasksWorkscopeDetails.deleteMany({ where: { taskId: id } });
-    await this.prisma.tasksSchedule.deleteMany({ where: { taskId: id } });
-    await this.prisma.tasksRemarks.deleteMany({ where: { taskId: id } });
+  // Extract nested arrays (remarks MUST NOT be handled here)
+  const { contacts, workscopeDetails, schedule, remarks, ...updateData } = dto as any;
 
-    // Create new nested records if they exist
-    if (contacts && contacts.length > 0) {
-      await this.prisma.tasksContacts.createMany({
-        data: contacts.map((contact: any) => ({
-          taskId: id,
-          contactName: contact.contactName,
-          contactNumber: contact.contactNumber,
-          contactEmail: contact.contactEmail,
-        }))
-      });
-    }
+  // Update only main task fields
+  await this.prisma.task.update({
+    where: { id },
+    data: updateData,
+  });
 
-    if (workscopeDetails && workscopeDetails.length > 0) {
-      await this.prisma.tasksWorkscopeDetails.createMany({
-        data: workscopeDetails.map((detail: any) => ({
-          taskId: id,
-          workscopeCategoryId: parseInt(detail.workscopeCategoryId),
-          workscopeDetails: detail.workscopeDetails,
-          extraNote: detail.extraNote,
-        }))
-      });
-    }
-
-    if (schedule && schedule.length > 0) {
-      await this.prisma.tasksSchedule.createMany({
-        data: schedule.map((sched: any) => ({
-          taskId: id,
-          proposedDateTime: new Date(sched.proposedDateTime),
-          priority: sched.priority,
-        }))
-      });
-    }
-
-    if (remarks && remarks.length > 0) {
-      await this.prisma.tasksRemarks.createMany({
-        data: remarks.map((remark: any) => ({
-          taskId: id,
-          remark: remark.remark,
-          status: remark.status || 'Open',
-          createdBy: 'System User', // TODO: Replace with actual logged-in user
-        }))
-      });
-    }
-
-    // Return the updated task with all related data
-    return this.prisma.task.findUnique({
-      where: { id },
-      include: {
-        department: true,
-        addressBook: true,
-        site: true,
-        contacts: true,
-        workscopeCat: true,
-        workscopeDetails: true,
-        schedule: true,
-        remarks: true,
-      },
+  // --- UPDATE CONTACTS ---
+  await this.prisma.tasksContacts.deleteMany({ where: { taskId: id } });
+  if (contacts?.length > 0) {
+    await this.prisma.tasksContacts.createMany({
+      data: contacts.map((c: any) => ({
+        taskId: id,
+        contactName: c.contactName,
+        contactNumber: c.contactNumber,
+        contactEmail: c.contactEmail,
+      })),
     });
   }
+
+  // --- UPDATE WORKSCOPE DETAILS ---
+  await this.prisma.tasksWorkscopeDetails.deleteMany({ where: { taskId: id } });
+  if (workscopeDetails?.length > 0) {
+    await this.prisma.tasksWorkscopeDetails.createMany({
+      data: workscopeDetails.map((d: any) => ({
+        taskId: id,
+        workscopeCategoryId: parseInt(d.workscopeCategoryId),
+        workscopeDetails: d.workscopeDetails,
+        extraNote: d.extraNote,
+      })),
+    });
+  }
+
+  // --- UPDATE SCHEDULE ---
+  await this.prisma.tasksSchedule.deleteMany({ where: { taskId: id } });
+  if (schedule?.length > 0) {
+    await this.prisma.tasksSchedule.createMany({
+      data: schedule.map((s: any) => ({
+        taskId: id,
+        proposedDateTime: new Date(s.proposedDateTime),
+        priority: s.priority,
+      })),
+    });
+  }
+
+  // --- 🚫 DO NOT TOUCH REMARKS HERE ---
+  // remarks array is intentionally ignored
+  // remarks are handled ONLY through TasksRemarksService (create/update)
+  
+  return this.prisma.task.findUnique({
+    where: { id },
+    include: {
+      department: true,
+      addressBook: true,
+      site: true,
+      contacts: true,
+      workscopeCat: true,
+      workscopeDetails: true,
+      schedule: true,
+      remarks: true, // remarks preserved correctly
+    },
+  });
+}
 
   async remove(id: number) {
     await this.findOne(id);
