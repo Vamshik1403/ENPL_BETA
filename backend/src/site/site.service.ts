@@ -52,6 +52,16 @@ export class SitesService {
     });
   }
 
+findAllBasedOnCust(addressBookId?: string) {
+  return this.prisma.site.findMany({
+    where: addressBookId
+      ? { addressBookId: Number(addressBookId) }
+      : undefined,
+    orderBy: { siteName: 'asc' },
+  });
+}
+
+
   async update(id: number, data: UpdateSiteDto) {
     // Remove any nested relations from the data
     const { contacts, ...siteData } = data as any;

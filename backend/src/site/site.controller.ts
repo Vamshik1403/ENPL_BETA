@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { CreateSiteContactDto } from './dto/create-site-contact.dto';
 import { UpdateSiteContactDto } from './dto/update-site-contact.dto';
@@ -14,6 +14,8 @@ export class SiteController {
     return this.siteService.create(dto);
   }
 
+  
+
   @Put(':id')
   update(@Param('id') id: string, @Body() updateSiteDto: UpdateSiteDto) {
     return this.siteService.update(+id, updateSiteDto);
@@ -24,6 +26,11 @@ export class SiteController {
     return this.siteService.findAll();
   }
 
+  @Get('based-on-cust')
+  findAllBasedOnCust(@Query('addressBookId') addressBookId?: string) {
+    return this.siteService.findAllBasedOnCust(addressBookId);
+  }
+  
     @Get(':id')
     findOne(@Param('id') id: string) {
       return this.siteService.findOne(Number(id));

@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsInt, IsNotEmpty, IsString, IsOptional, IsArray, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateTaskContactDto {
@@ -49,6 +49,35 @@ export class CreateTaskRemarkDto {
   status: string;
 }
 
+class TaskInventoryDto {
+  @IsInt()
+  serviceContractId: number;
+
+  @IsInt()
+  productTypeId: number;
+
+  @IsString()
+  makeModel: string;
+
+  @IsString()
+  snMac: string;
+
+  @IsString()
+  description: string;
+
+  @IsString()
+  purchaseDate: string;
+
+  @IsString()
+  warrantyPeriod: string;
+
+  @IsString()
+  warrantyStatus: string;
+
+  @IsBoolean()
+  thirdPartyPurchase: boolean;
+}
+
 export class CreateTaskDto {
   @IsInt()
   departmentId: number;
@@ -67,6 +96,10 @@ export class CreateTaskDto {
 @IsOptional()
 description?: string;
 
+  @IsString()
+@IsOptional()
+title?: string;
+
 
   @IsString()
   @IsNotEmpty()
@@ -83,6 +116,10 @@ description?: string;
   @ValidateNested({ each: true })
   @Type(() => CreateTaskWorkscopeDetailDto)
   workscopeDetails?: CreateTaskWorkscopeDetailDto[];
+
+    @IsOptional()
+  @IsArray()
+  taskInventories?: TaskInventoryDto[];
 
   @IsOptional()
   @IsArray()

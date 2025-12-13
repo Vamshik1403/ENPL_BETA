@@ -8,6 +8,20 @@ import { JwtGuard } from 'src/auth/jwt.guard';
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
+  @Get('by-customer/:customerId')
+findByCustomer(
+  @Param('customerId', ParseIntPipe) customerId: number,
+) {
+  return this.taskService.findByCustomer(customerId);
+}
+
+@Post('by-customers')
+findByCustomers(@Body('customerIds') customerIds: number[]) {
+  return this.taskService.findByCustomers(customerIds);
+}
+
+
+
   @Post()
   create(@Request() req, @Body() dto: CreateTaskDto) {
     return this.taskService.create(dto);
@@ -23,6 +37,15 @@ export class TaskController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.taskService.findOne(id);
   }
+
+  @Post(':id/customer-remark')
+addCustomerRemark(
+  @Param('id', ParseIntPipe) taskId: number,
+  @Body() body: { remark: string; status?: string; createdBy: string },
+) {
+  return this.taskService.addCustomerRemark(taskId, body);
+}
+
 
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Request() req, @Body() dto: UpdateTaskDto) {

@@ -16,7 +16,9 @@ import {
   ClipboardList,
   BarChart3,
   Settings,
-  ChevronRight
+  ChevronRight,
+  User2,
+  UserCheckIcon
 } from 'lucide-react';
 
 /* -------------------- Types -------------------- */
@@ -209,6 +211,20 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         >
           <User className="w-4 h-4 mr-2" />
           {!isCollapsed && <span>Users</span>}
+        </Link>
+
+
+         <Link
+          href="/customer-registration"
+          className={`
+            flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
+            ${pathname === "/customer-registration"
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+              : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
+          `}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          {!isCollapsed && <span>Customer Registration</span>}
         </Link>
 
         {/* Setup Section */}

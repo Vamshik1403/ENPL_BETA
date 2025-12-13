@@ -30,9 +30,11 @@ import { ServiceContractTypeModule } from './service-contract-type/service-contr
 import { ServiceContractBillingModule } from './service-contract-billing/service-contract-billing.module';
 import { TaskImagesModule } from './task-images/task-images.module';
 import { AuthModule } from './auth/auth.module';
+import { ComplaintRegistrationModule } from './complaint-registration/complaint-registration.module';
+import { CustomerContactModule } from './customer-contact/customer-contact.module';
 
 @Module({
-  imports: [AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule, CreateSupportTicketUserModule, ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule],
+  imports: [AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule, CreateSupportTicketUserModule, ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule,ComplaintRegistrationModule, CustomerContactModule],
   controllers: [
     AppController,
     AddressBookController,
