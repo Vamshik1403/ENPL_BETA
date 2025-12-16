@@ -1,5 +1,6 @@
 'use client';
 
+import { PlusIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface Department {
@@ -1079,6 +1080,33 @@ export default function TasksPage() {
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [productTypes, setProductTypes] = useState<any[]>([]);
 
+type CrudPerm = {
+  read: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+};
+
+type PermissionsJson = Record<string, CrudPerm>;
+
+const [userId, setUserId] = useState<number | null>(null);
+const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+
+const taskPermissions: CrudPerm = {
+  read: permissions?.TASKS?.read ?? false,
+  create: permissions?.TASKS?.create ?? false,
+  edit: permissions?.TASKS?.edit ?? false,
+  delete: permissions?.TASKS?.delete ?? false,
+};
+
+useEffect(() => {
+  const storedUserId = localStorage.getItem("userId");
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
+
+
   const fetchProductTypes = async () => {
     try {
       const res = await fetch("http://localhost:8000/producttype");
@@ -1250,19 +1278,71 @@ const getAllowedStatuses = (currentStatusRaw: string) => {
       }
     };
 
+    
+
     fetchSiteContacts();
   }, [formData.siteId]);
 
+  const fetchUserPermissions = async (uid: number) => {
+  try {
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token");
+
+    const res = await fetch(
+      `http://localhost:8000/user-permissions/${uid}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {},
+      }
+    );
+
+    if (!res.ok) throw new Error("Permission fetch failed");
+
+    const data = await res.json();
+
+    let perms = null;
+
+    if (data?.permissions?.permissions) {
+      perms = data.permissions.permissions;
+    } else if (data?.permissions) {
+      perms = data.permissions;
+    } else {
+      perms = data;
+    }
+
+    setPermissions(perms);
+    localStorage.setItem("userPermissions", JSON.stringify(perms));
+  } catch (err) {
+    console.error(err);
+    const stored = localStorage.getItem("userPermissions");
+    if (stored) {
+      setPermissions(JSON.parse(stored));
+    } else {
+      setPermissions({});
+    }
+  }
+};
+
+
   // Fetch data
-  useEffect(() => {
-    fetchTasks();
-    fetchDepartments();
-    fetchAddressBooks();
-    fetchSites();
-    fetchNextTaskId();
-    fetchServiceWorkscopeCategories();
-    fetchProductTypes();
-  }, []);
+useEffect(() => {
+  fetchTasks();
+  fetchDepartments();
+  fetchAddressBooks();
+  fetchSites();
+  fetchNextTaskId();
+  fetchServiceWorkscopeCategories();
+  fetchProductTypes();
+}, []);
+
+useEffect(() => {
+  if (userId) {
+    fetchUserPermissions(userId);
+  }
+}, [userId]);
+
 
   const fetchDepartments = async () => {
     try {
@@ -2379,13 +2459,18 @@ warrantyStatus: inv.warrantyStatus
         {/* Actions Bar */}
         <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="flex gap-4">
-            <button
-              onClick={handleOpenModal}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <span>+</span>
-              Add Task
-            </button>
+      <button
+  onClick={handleOpenModal}
+  disabled={!taskPermissions.create}
+  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+    taskPermissions.create
+      ? "bg-blue-600 text-white hover:bg-blue-700"
+      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+  }`}
+>
+  <PlusIcon className="h-5 w-5" />
+  Create Task
+</button>
           </div>
 
           {/* 🔍 Search Bar */}
@@ -2517,37 +2602,82 @@ warrantyStatus: inv.warrantyStatus
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
-                          <a
-                            href={`/tasks/view/${task.taskID}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-900 underline"
-                          >
+                      <button
+  onClick={() =>
+    taskPermissions.create && handleOpenRemarksModal(task)
+  }
+  disabled={!taskPermissions.create}
+  className={`transition-colors
+    ${
+      taskPermissions.create
+        ? "text-green-600 hover:text-green-900"
+        : "text-gray-400 cursor-not-allowed"
+    }`}
+  title={
+    taskPermissions.create
+      ? "View / Add Remarks"
+      : "No permission to add remarks"
+  }
+>
+
                             View
-                          </a>
-                          <button
-                            onClick={() => handleEditTask(task)}
-                            className="text-blue-600 hover:text-blue-900 transition-colors"
-                            title="Edit Task"
-                          >
+                            </button>
+                            
+                         <button
+                         
+  onClick={() => taskPermissions.edit && handleEditTask(task)}
+  disabled={!taskPermissions.edit}
+  className={`transition-colors
+    ${
+      taskPermissions.edit
+        ? "text-blue-600 hover:text-blue-900"
+        : "text-gray-400 cursor-not-allowed"
+    }`}
+  title={
+    taskPermissions.edit ? "Edit Task" : "No permission to edit"
+  }
+>
+
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
-                          <button
-                            onClick={() => handleOpenRemarksModal(task)}
-                            className="text-green-600 hover:text-green-900 transition-colors"
-                            title="View/Add Remarks"
-                          >
+                         <button
+  onClick={() =>
+    taskPermissions.create && handleOpenRemarksModal(task)
+  }
+  disabled={!taskPermissions.create}
+  className={`transition-colors
+    ${
+      taskPermissions.create
+        ? "text-green-600 hover:text-green-900"
+        : "text-gray-400 cursor-not-allowed"
+    }`}
+  title={
+    taskPermissions.create
+      ? "View / Add Remarks"
+      : "No permission to add remarks"
+  }
+>
+
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                             </svg>
                           </button>
-                          <button
-                            onClick={() => handleDeleteTask(task.id!)}
-                            className="text-red-600 hover:text-red-900 transition-colors"
-                            title="Delete Task"
-                          >
+                         <button
+  onClick={() => taskPermissions.delete && handleDeleteTask(task.id!)}
+  disabled={!taskPermissions.delete}
+  className={`transition-colors
+    ${
+      taskPermissions.delete
+        ? "text-red-600 hover:text-red-900"
+        : "text-gray-400 cursor-not-allowed"
+    }`}
+  title={
+    taskPermissions.delete ? "Delete Task" : "No permission to delete"
+  }
+>
+
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>

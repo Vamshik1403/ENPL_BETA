@@ -44,6 +44,21 @@ async getAllUsers() {
   });
 }
 
+async getUserById(id: number) {
+  return this.prisma.user.findUnique({
+    where: { id: Number(id) },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      userType: true,
+      department: true,
+      createdAt: true,
+    },
+  });
+}
+
+
 async updateUser(id: number, data: any) {
   const { password, ...rest } = data;
 

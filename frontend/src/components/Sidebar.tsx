@@ -28,6 +28,28 @@ interface NavigationItem {
   href: string;
   icon: React.ReactNode;
   nested?: NavigationItem[];
+  permissionKey: string; // 对应API中的权限键
+}
+
+interface PermissionSet {
+  edit: boolean;
+  read: boolean;
+  create: boolean;
+  delete: boolean;
+}
+
+interface AllPermissions {
+  [key: string]: PermissionSet;
+}
+
+interface UserPermissionResponse {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: AllPermissions;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ExpandedSections {
@@ -41,32 +63,89 @@ interface SidebarProps {
   setIsCollapsed: (collapsed: boolean) => void;
 }
 
-/* -------------------- Menu Items -------------------- */
+/* -------------------- Menu Items Configuration -------------------- */
 
 const mainNavigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
     href: '/dashboard',
-    icon: <LayoutDashboard className="w-4 h-4" />
+    icon: <LayoutDashboard className="w-4 h-4" />,
+    permissionKey: 'DASHBOARD'
   },
   {
     name: 'Address Book',
     href: '/addressbook',
     icon: <Users className="w-4 h-4" />,
+    permissionKey: 'ADDRESSBOOK',
     nested: [
-      { name: 'Customers', href: '/addressbook', icon: <User className="w-4 h-4" /> },
-      { name: 'Sites', href: '/sites', icon: <MapPin className="w-4 h-4" /> }
+      { 
+        name: 'Customers', 
+        href: '/addressbook', 
+        icon: <User className="w-4 h-4" />,
+        permissionKey: 'CUSTOMERS'
+      },
+      { 
+        name: 'Sites', 
+        href: '/sites', 
+        icon: <MapPin className="w-4 h-4" />,
+        permissionKey: 'SITES'
+      }
     ]
   },
-  { name: 'Service Contracts', href: '/service-contract', icon: <FileText className="w-4 h-4" /> },
-  { name: 'Tasks', href: '/tasks', icon: <CheckSquare className="w-4 h-4" /> }
+  { 
+    name: 'Service Contracts', 
+    href: '/service-contract', 
+    icon: <FileText className="w-4 h-4" />,
+    permissionKey: 'SERVICE_CONTRACTS'
+  },
+  { 
+    name: 'Tasks', 
+    href: '/tasks', 
+    icon: <CheckSquare className="w-4 h-4" />,
+    permissionKey: 'TASKS'
+  }
 ];
 
 const setupItems: NavigationItem[] = [
-  { name: 'Departments', href: '/departments', icon: <Building className="w-4 h-4" /> },
-  { name: 'Products Category', href: '/products', icon: <Package className="w-4 h-4" /> },
-  { name: 'Service Category', href: '/contract-work', icon: <ClipboardList className="w-4 h-4" /> },
-  { name: 'WorkScope Category', href: '/workscope', icon: <BarChart3 className="w-4 h-4" /> }
+  { 
+    name: 'Departments', 
+    href: '/departments', 
+    icon: <Building className="w-4 h-4" />,
+    permissionKey: 'DEPARTMENTS'
+  },
+  { 
+    name: 'Products Category', 
+    href: '/products', 
+    icon: <Package className="w-4 h-4" />,
+    permissionKey: 'PRODUCTS_CATEGORY'
+  },
+  { 
+    name: 'Service Category', 
+    href: '/contract-work', 
+    icon: <ClipboardList className="w-4 h-4" />,
+    permissionKey: 'SERVICE_CATEGORY'
+  },
+  { 
+    name: 'WorkScope Category', 
+    href: '/workscope', 
+    icon: <BarChart3 className="w-4 h-4" />,
+    permissionKey: 'WORKSCOPE_CATEGORY'
+  }
+];
+
+const additionalLinks = [
+  { 
+    name: 'Users Permission', 
+    href: '/userpermission', 
+    icon: <UserCheckIcon className="w-4 h-4" />,
+    permissionKey: 'USERS'
+  },
+  { 
+    name: 'Customer Registration', 
+    href: '/customer-registration', 
+    icon: <Users className="w-4 h-4" />,
+    permissionKey: 'CUSTOMER_REGISTRATION'
+  }
 ];
 
 /* -------------------- Component -------------------- */
@@ -77,20 +156,75 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // User info
   const [clientFullName, setClientFullName] = useState("User");
   const [clientUserType, setClientUserType] = useState("");
-
-  useEffect(() => {
-    const name = localStorage.getItem("fullName");
-    const type = localStorage.getItem("userType");
-
-    if (name) setClientFullName(name);
-    if (type) setClientUserType(type);
-  }, []);
+  const [userId, setUserId] = useState<number | null>(null);
+  
+  // Permissions state
+  const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   // Collapse Sections
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
     addressbook: true,
     setup: true
   });
+
+  useEffect(() => {
+    const name = localStorage.getItem("fullName");
+    const type = localStorage.getItem("userType");
+    const storedUserId = localStorage.getItem("userId");
+
+    if (name) setClientFullName(name);
+    if (type) setClientUserType(type);
+    if (storedUserId) {
+      setUserId(parseInt(storedUserId));
+    }
+  }, []);
+
+  // 🔹 Fetch permissions with dynamic userId
+  const fetchPermissions = async () => {
+    try {
+      const storedUserId = localStorage.getItem("userId");
+      
+      if (!storedUserId) {
+        console.warn('No user ID found in localStorage');
+        setLoadingPermissions(false);
+        return;
+      }
+
+      // Convert to number for API call
+      const userId = parseInt(storedUserId);
+      
+      // Fetch permissions for specific user
+      const res = await fetch(`http://localhost:8000/user-permissions/${userId}`);
+      
+      if (!res.ok) {
+        console.warn(`Failed to fetch permissions for user ${userId}, using default`);
+        setAllPermissions({});
+        return;
+      }
+
+      const data: UserPermissionResponse = await res.json();
+
+      // Extract permissions from response
+      if (data && data.permissions && data.permissions.permissions) {
+        const perms = data.permissions.permissions;
+        setAllPermissions(perms);
+        console.log(`✅ Sidebar permissions loaded for user ${userId}:`, perms);
+      } else {
+        console.warn('Invalid permissions data structure:', data);
+        setAllPermissions({});
+      }
+    } catch (err) {
+      console.error('❌ Error fetching sidebar permissions:', err);
+      setAllPermissions({});
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [userId]); // Re-fetch when userId changes
 
   const toggleSection = (section: keyof ExpandedSections) => {
     setExpandedSections(prev => ({
@@ -106,8 +240,42 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const isActiveParent = (nested?: NavigationItem[]) =>
     nested?.some(item => pathname === item.href);
 
-  /* -------------------- Render Menu Item -------------------- */
+  // 🔹 Check if user has read permission for a menu item
+  const hasReadPermission = (permissionKey: string): boolean => {
+    if (loadingPermissions) return false; // 加载中不显示任何项目
+    
+    const permission = allPermissions[permissionKey];
+    if (!permission) {
+      // 如果没有找到权限配置，默认为false（安全起见）
+      console.warn(`No permission found for key: ${permissionKey}`);
+      return false;
+    }
+    
+    return permission.read === true;
+  };
 
+  // 🔹 Filter navigation items based on read permission
+  const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
+    return items.filter(item => {
+      // 检查主项目的权限
+      if (!hasReadPermission(item.permissionKey)) return false;
+      
+      // 如果有嵌套项目，过滤嵌套项目
+      if (item.nested && item.nested.length > 0) {
+        const filteredNested = filterNavigationItems(item.nested);
+        if (filteredNested.length === 0) {
+          // 如果所有嵌套项目都没有权限，也不显示主项目
+          return false;
+        }
+        // 更新过滤后的嵌套项目
+        item.nested = filteredNested;
+      }
+      
+      return true;
+    });
+  };
+
+  // 🔹 Render filtered navigation items
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
     const hasNested = !!item.nested?.length;
     const isActiveItem = isActive(item.href);
@@ -115,7 +283,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     const sectionKey = getSectionKey(item.name);
 
     return (
-      <div key={item.href} className={`${level > 0 ? "ml-3" : ""}`}>
+      <div key={`${item.href}-${level}`} className={`${level > 0 ? "ml-3" : ""}`}>
         {hasNested ? (
           <>
             <button
@@ -168,6 +336,38 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     );
   };
 
+  // 🔹 Filter all menu items based on permissions
+  const filteredMainItems = filterNavigationItems(mainNavigationItems);
+  const filteredSetupItems = filterNavigationItems(setupItems);
+  const filteredAdditionalLinks = additionalLinks.filter(link => 
+    hasReadPermission(link.permissionKey)
+  );
+
+  // 🔹 Check if any Setup items are visible
+  const hasVisibleSetupItems = filteredSetupItems.length > 0;
+
+  // 🔹 Show loading state while fetching permissions
+  if (loadingPermissions) {
+    return (
+      <div className={`
+        bg-gradient-to-b from-gray-900 to-gray-800 text-white
+        ${isCollapsed ? "w-16" : "w-64"}
+        h-screen fixed left-0 top-0 z-50 border-r border-gray-700
+        transition-all duration-300 shadow-xl
+      `}>
+        <div className="p-4 border-b border-gray-700 bg-gray-900/80 sticky top-0">
+          <h1 className="font-extrabold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            ENPL ERP
+          </h1>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <span className="ml-3 text-sm">Loading permissions...</span>
+        </div>
+      </div>
+    );
+  }
+
   /* -------------------- Sidebar Layout -------------------- */
 
   return (
@@ -196,72 +396,73 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       {/* Scrollable Menu */}
       <div className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
 
-        {/* Main Section */}
-        {mainNavigationItems.map(item => renderNavigationItem(item))}
+        {/* Main Section - Only show if items exist */}
+        {filteredMainItems.length > 0 && (
+          <>
+            {filteredMainItems.map(item => renderNavigationItem(item))}
+          </>
+        )}
 
-        {/* Users (NEW MAIN LINK) */}
-        <Link
-          href="/users"
-          className={`
-            flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
-            ${pathname === "/users"
-              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-              : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
-          `}
-        >
-          <User className="w-4 h-4 mr-2" />
-          {!isCollapsed && <span>Users</span>}
-        </Link>
+        {/* Additional Links - Only show if items exist */}
+        {filteredAdditionalLinks.length > 0 && (
+          <>
+            {filteredAdditionalLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`
+                  flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
+                  ${pathname === link.href
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                    : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
+                `}
+              >
+                {link.icon}
+                {!isCollapsed && <span className="ml-2">{link.name}</span>}
+              </Link>
+            ))}
+          </>
+        )}
 
-
-         <Link
-          href="/customer-registration"
-          className={`
-            flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
-            ${pathname === "/customer-registration"
-              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-              : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
-          `}
-        >
-          <Users className="w-4 h-4 mr-2" />
-          {!isCollapsed && <span>Customer Registration</span>}
-        </Link>
-
-        {/* Setup Section */}
-        <div className="mt-4 pt-3 border-t border-gray-700">
-          <button
-            onClick={() => toggleSection("setup")}
-            className={`
-              flex items-center w-full py-2 px-2 rounded-md text-sm transition-all duration-300
-              ${setupItems.some(it => isActive(it.href))
-                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
-                : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
-            `}
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            {!isCollapsed && <span className="flex-1">Setup</span>}
-            {!isCollapsed && (
-              <ChevronRight
-                className={`w-3 h-3 transition-transform ${
-                  expandedSections.setup ? "rotate-90" : ""
-                }`}
-              />
-            )}
-          </button>
-
-          {!isCollapsed && (
-            <div
+        {/* Setup Section - Only show if items exist */}
+        {hasVisibleSetupItems && (
+          <div className="mt-4 pt-3 border-t border-gray-700">
+            <button
+              onClick={() => toggleSection("setup")}
               className={`
-                ml-4 overflow-hidden transition-all duration-300
-                ${expandedSections.setup ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}
+                flex items-center w-full py-2 px-2 rounded-md text-sm transition-all duration-300
+                ${filteredSetupItems.some(it => isActive(it.href))
+                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
+                  : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
               `}
             >
-              <div className="space-y-1 border-l border-purple-500 pl-3 mt-1">
-                {setupItems.map(item => renderNavigationItem(item, 1))}
+              <Settings className="w-4 h-4 mr-2" />
+              {!isCollapsed && <span className="flex-1">Setup</span>}
+              {!isCollapsed && (
+                <ChevronRight
+                  className={`w-3 h-3 transition-transform ${
+                    expandedSections.setup ? "rotate-90" : ""
+                  }`}
+                />
+              )}
+            </button>
+
+            {!isCollapsed && (
+              <div
+                className={`
+                  ml-4 overflow-hidden transition-all duration-300
+                  ${expandedSections.setup ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}
+                `}
+              >
+                <div className="space-y-1 border-l border-purple-500 pl-3 mt-1">
+                  {filteredSetupItems.map(item => renderNavigationItem(item, 1))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+      
       </div>
 
       {/* User Footer */}
@@ -285,6 +486,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             <div className="leading-tight">
               <div className="font-medium text-xs text-white">{clientFullName}</div>
               <div className="text-[10px] text-gray-400 capitalize">{clientUserType}</div>
+              <div className="text-[9px] text-gray-500">ID: {userId}</div>
             </div>
           )}
         </div>

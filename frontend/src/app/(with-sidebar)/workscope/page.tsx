@@ -7,7 +7,27 @@ interface WorkscopeCategory {
   workscopeCategoryName: string;
 }
 
-// Icons
+interface PermissionSet {
+  edit: boolean;
+  read: boolean;
+  create: boolean;
+  delete: boolean;
+}
+
+interface AllPermissions {
+  [key: string]: PermissionSet;
+}
+
+interface UserPermissionResponse {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: AllPermissions;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 const Icons = {
   Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
   Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
@@ -15,6 +35,8 @@ const Icons = {
   Search: () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>),
   ChevronLeft: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>),
   ChevronRight: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>),
+  NoAccess: () => (<svg className="h-12 w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>),
+  Loading: () => (<svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)
 };
 
 export default function WorkscopeCategoryPage() {
@@ -24,6 +46,17 @@ export default function WorkscopeCategoryPage() {
   const [formData, setFormData] = useState<WorkscopeCategory>({ workscopeCategoryName: '' });
   const [loading, setLoading] = useState(false);
 
+  const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const [workscopePermissions, setWorkscopePermissions] = useState<PermissionSet>({
+    edit: false,
+    read: false,
+    create: false,
+    delete: false
+  });
+
   // Pagination and Search States
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,16 +64,47 @@ export default function WorkscopeCategoryPage() {
   const [filteredCategories, setFilteredCategories] = useState<WorkscopeCategory[]>([]);
 
   const API_URL = 'http://localhost:8000/workscope-category';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
 
-  // Filter categories based on search term
+const fetchPermissions = async (uid: number) => {
+    try {
+const res = await fetch(`${PERMISSIONS_API}/${uid}`);
+      if (!res.ok) throw new Error('Failed to fetch permissions');
+
+      const data: UserPermissionResponse = await res.json();
+      const perms = data?.permissions?.permissions ?? {};
+
+      setAllPermissions(perms);
+      
+      const workscopePerms = perms.WORKSCOPE_CATEGORY ?? {
+        edit: false,
+        read: false,
+        create: false,
+        delete: false,
+      };
+      
+      setWorkscopePermissions(workscopePerms);
+      console.log('✅ WORKSCOPE_CATEGORY permissions loaded:', workscopePerms);
+    } catch (err) {
+      console.error('❌ Error fetching permissions:', err);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
   useEffect(() => {
+    if (!workscopePermissions.read && !loadingPermissions) {
+      setFilteredCategories([]);
+      return;
+    }
+    
     const filtered = workscopeCategories.filter(category =>
       category.workscopeCategoryName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       category.id?.toString().includes(searchTerm)
     );
     setFilteredCategories(filtered);
-    setCurrentPage(1); // Reset to first page when search changes
-  }, [searchTerm, workscopeCategories]);
+    setCurrentPage(1); 
+  }, [searchTerm, workscopeCategories, workscopePermissions.read, loadingPermissions]);
 
   // Calculate pagination values
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -66,6 +130,11 @@ export default function WorkscopeCategoryPage() {
 
   // 🔹 Fetch all categories
   const fetchCategories = async () => {
+    if (!workscopePermissions.read) {
+      console.log('No read permission for WORKSCOPE_CATEGORY');
+      return;
+    }
+    
     try {
       setLoading(true);
       const res = await fetch(API_URL);
@@ -79,16 +148,42 @@ export default function WorkscopeCategoryPage() {
     }
   };
 
+useEffect(() => {
+  if (userId) {
+    fetchPermissions(userId);
+  }
+}, [userId]);
+
   useEffect(() => {
-    fetchCategories();
-  }, []);
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
+
+
+  useEffect(() => {
+    if (!loadingPermissions && workscopePermissions.read) {
+      fetchCategories();
+    }
+  }, [loadingPermissions, workscopePermissions.read]);
 
   // 🔹 Submit (Add or Update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (editingId && !workscopePermissions.edit) {
+      alert('You do not have permission to edit workscope categories');
+      return;
+    }
+    
+    if (!editingId && !workscopePermissions.create) {
+      alert('You do not have permission to create workscope categories');
+      return;
+    }
+
     try {
       if (editingId) {
-        // Update existing - only send the fields that should be updated
         const updateData = {
           workscopeCategoryName: formData.workscopeCategoryName,
         };
@@ -118,6 +213,11 @@ export default function WorkscopeCategoryPage() {
 
   // 🔹 Edit
   const handleEdit = (id: number) => {
+    if (!workscopePermissions.edit) {
+      alert('You do not have permission to edit workscope categories');
+      return;
+    }
+    
     const item = workscopeCategories.find((w) => w.id === id);
     if (item) {
       setFormData(item);
@@ -128,6 +228,12 @@ export default function WorkscopeCategoryPage() {
 
   // 🔹 Delete
   const handleDelete = async (id: number) => {
+ 
+    if (!workscopePermissions.delete) {
+      alert('You do not have permission to delete workscope categories');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this category?')) return;
     try {
       const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
@@ -138,19 +244,54 @@ export default function WorkscopeCategoryPage() {
     }
   };
 
-  // 🔹 Reset form
   const resetForm = () => {
     setShowModal(false);
     setEditingId(null);
     setFormData({ workscopeCategoryName: '' });
   };
 
-  // 🔹 Handle Add
   const handleAddNew = () => {
+    
+    if (!workscopePermissions.create) {
+      alert('You do not have permission to create workscope categories');
+      return;
+    }
+    
     setFormData({ workscopeCategoryName: '' });
     setEditingId(null);
     setShowModal(true);
   };
+
+  if (loadingPermissions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!workscopePermissions.read) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <Icons.NoAccess />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-500 mb-4">You don't have permission to view workscope categories.</p>
+          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
+            <p className="text-sm text-gray-600">Permission Debug Info:</p>
+            <p className="text-xs text-gray-500">Available permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
+            <p className="text-xs text-gray-500">WORKSCOPE_CATEGORY exists: {'WORKSCOPE_CATEGORY' in allPermissions ? 'Yes' : 'No'}</p>
+            <p className="text-xs text-gray-500">Current permissions: {JSON.stringify(workscopePermissions)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Modal component
   const WorkscopeModal = () => (
@@ -188,7 +329,20 @@ export default function WorkscopeCategoryPage() {
             <div className="flex gap-2 pt-4">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1"
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  editingId 
+                    ? (workscopePermissions.edit 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                    : (workscopePermissions.create 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                }`}
+                disabled={editingId ? !workscopePermissions.edit : !workscopePermissions.create}
+                title={editingId 
+                  ? (workscopePermissions.edit ? "Update category" : "No edit permission") 
+                  : (workscopePermissions.create ? "Create category" : "No create permission")
+                }
               >
                 {editingId ? 'Update' : 'Add'}
               </button>
@@ -209,7 +363,8 @@ export default function WorkscopeCategoryPage() {
   return (
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">Task Service List</h1>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">Workscope category</h1>
+       
       </div>
 
       {/* Search and Controls Section */}
@@ -217,7 +372,13 @@ export default function WorkscopeCategoryPage() {
         <div className="flex gap-4 items-center">
           <button
             onClick={handleAddNew}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
+            disabled={!workscopePermissions.create}
+            className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+              workscopePermissions.create
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+            }`}
+            title={workscopePermissions.create ? "Add new category" : "No create permission"}
           >
             <Icons.Plus />
             Add Category
@@ -239,7 +400,6 @@ export default function WorkscopeCategoryPage() {
         </div>
       </div>
 
-      {/* Results Count */}
       <div className="mb-4 text-sm text-gray-600">
         Showing {currentCategories.length} of {filteredCategories.length} categories
         {searchTerm && (
@@ -247,7 +407,6 @@ export default function WorkscopeCategoryPage() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && <WorkscopeModal />}
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -283,17 +442,27 @@ export default function WorkscopeCategoryPage() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => handleEdit(item.id!)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
+                          disabled={!workscopePermissions.edit}
+                          className={`p-2 rounded transition-colors ${
+                            workscopePermissions.edit
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
                           aria-label="Edit"
-                          title="Edit"
+                          title={workscopePermissions.edit ? "Edit category" : "No edit permission"}
                         >
                           <Icons.Edit />
                         </button>
                         <button
                           onClick={() => handleDelete(item.id!)}
-                          className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
+                          disabled={!workscopePermissions.delete}
+                          className={`p-2 rounded transition-colors ${
+                            workscopePermissions.delete
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
                           aria-label="Delete"
-                          title="Delete"
+                          title={workscopePermissions.delete ? "Delete category" : "No delete permission"}
                         >
                           <Icons.Delete />
                         </button>
@@ -305,13 +474,23 @@ export default function WorkscopeCategoryPage() {
                 <tr>
                   <td colSpan={3} className="text-center text-gray-500 py-8">
                     {searchTerm ? 'No categories found matching your search' : 'No categories found'}
+                    {!searchTerm && workscopePermissions.create && (
+                      <div className="mt-4">
+                        <button
+                          onClick={handleAddNew}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm"
+                        >
+                          <Icons.Plus />
+                          Add Your First Category
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
 
-          {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">

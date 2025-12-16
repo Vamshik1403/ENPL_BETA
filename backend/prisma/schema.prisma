@@ -340,6 +340,7 @@ model User {
   userType   String?
   department String?
   createdAt  DateTime @default(now())
+  userPermission UserPermission?
 }
 
 model CustomerContact {
@@ -380,4 +381,14 @@ model ComplaintRegistration {
  site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
   addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
   department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+}
+
+model UserPermission {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique
+  permissions Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

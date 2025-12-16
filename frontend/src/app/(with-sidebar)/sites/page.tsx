@@ -14,6 +14,21 @@ interface AddressBook {
   gstNo?: string;
 }
 
+interface UserPermissions {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: {
+      [key: string]: {
+        edit: boolean;
+        read: boolean;
+        create: boolean;
+        delete: boolean;
+      };
+    };
+  };
+}
+
 interface Site {
   id?: number;
   addressBookId: number;
@@ -36,6 +51,10 @@ interface SiteContact {
   emailAddress: string;
 }
 
+// Permission types
+type CrudPerm = { read: boolean; create: boolean; edit: boolean; delete: boolean };
+type PermissionsJson = Record<string, CrudPerm>;
+
 export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
@@ -46,6 +65,120 @@ export default function SitesPage() {
   const [showAddressBookDropdown, setShowAddressBookDropdown] = useState(false);
   const [isLoadingAddressBooks, setIsLoadingAddressBooks] = useState(true);
   const [formContacts, setFormContacts] = useState<SiteContact[]>([]);
+  const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  // Search and Pagination states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
+  // Get userId from localStorage on component mount
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(parseInt(storedUserId));
+    }
+  }, []);
+
+  // Load address books, sites and permissions on component mount
+  useEffect(() => {
+    console.log('Component mounted, fetching address books and sites...');
+    fetchAddressBooks();
+    fetchSites();
+    if (userId) {
+      fetchUserPermissions(userId);
+    }
+  }, [userId]);
+
+  // Fetch user permissions with dynamic userId
+  const fetchUserPermissions = async (userId: number) => {
+    try {
+      console.log('Fetching permissions for userId:', userId);
+      
+      // Try to get token from localStorage
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:8000/user-permissions/${userId}`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Full permissions API response:', data);
+        
+        // EXTRACTION LOGIC FOR YOUR API STRUCTURE:
+        // Your API returns: { id: 1, userId: 1, permissions: { permissions: { SITES: {...} } } }
+        let permissionsData = null;
+        
+        if (data && data.permissions) {
+          // First level: data.permissions
+          console.log('data.permissions:', data.permissions);
+          
+          if (data.permissions.permissions) {
+            // Second level: data.permissions.permissions
+            permissionsData = data.permissions.permissions;
+            console.log('Extracted permissions from data.permissions.permissions:', permissionsData);
+          } else {
+            // If permissions is directly the object
+            permissionsData = data.permissions;
+            console.log('Extracted permissions from data.permissions:', permissionsData);
+          }
+        } else {
+          // If data is directly the permissions object
+          permissionsData = data;
+          console.log('Using data directly as permissions:', permissionsData);
+        }
+        
+        if (permissionsData) {
+          setPermissions(permissionsData);
+          console.log('SITES permissions set to:', permissionsData.SITES);
+          
+          // Store in localStorage for persistence
+          localStorage.setItem('userPermissions', JSON.stringify(permissionsData));
+        } else {
+          console.error('No permissions data found in response');
+          // Set default permissions
+          setPermissions({});
+        }
+      } else {
+        console.error('Failed to fetch permissions:', response.status, response.statusText);
+        // Fallback to localStorage if API fails
+        const stored = localStorage.getItem('userPermissions');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            console.log('Using stored permissions from localStorage:', parsed);
+            setPermissions(parsed);
+          } catch (e) {
+            console.error('Error parsing stored permissions:', e);
+            setPermissions({});
+          }
+        } else {
+          setPermissions({});
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+      // Fallback to localStorage if API fails
+      const stored = localStorage.getItem('userPermissions');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          console.log('Error fallback - Using stored permissions:', parsed);
+          setPermissions(parsed);
+        } catch (e) {
+          console.error('Error parsing stored permissions:', e);
+          setPermissions({});
+        }
+      } else {
+        setPermissions({});
+      }
+    }
+  };
+
   const [formData, setFormData] = useState<Site>({
     addressBookId: 0,
     siteName: '',
@@ -56,20 +189,6 @@ export default function SitesPage() {
     gstNo: '',
     useCustomerData: false
   });
-
-  // Search and Pagination states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-
-  // Load address books and sites on component mount
-  useEffect(() => {
-    console.log('Component mounted, fetching address books and sites...');
-    fetchAddressBooks();
-    fetchSites();
-  }, []);
-
-
 
   const fetchSites = async () => {
     try {
@@ -119,7 +238,6 @@ export default function SitesPage() {
 
     fetchCityState();
   }, [formData.pinCode]);
-
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -208,6 +326,16 @@ export default function SitesPage() {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
+  // Get SITES permissions with safe defaults
+  const sitesPerm = {
+    read: permissions?.SITES?.read ?? false,
+    create: permissions?.SITES?.create ?? false,
+    edit: permissions?.SITES?.edit ?? false,
+    delete: permissions?.SITES?.delete ?? false,
+  };
+
+  console.log('Current sitesPerm:', sitesPerm);
+
   // Debug logging
   console.log('Search term:', addressBookSearch);
   console.log('Total address books:', addressBooks.length);
@@ -226,7 +354,6 @@ export default function SitesPage() {
       fetchCustomerFullData(addressBook.id);
     }
   };
-
 
   // Site Contact management functions
   const addContact = () => {
@@ -252,6 +379,13 @@ export default function SitesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user has create/edit permission - USING SITES PERMISSIONS
+    if ((!editingId && !sitesPerm.create) || (editingId && !sitesPerm.edit)) {
+      alert('You do not have permission to perform this action');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -351,8 +485,13 @@ export default function SitesPage() {
     }
   };
 
-
   const handleEdit = async (id: number) => {
+    // Check edit permission - USING SITES PERMISSION
+    if (!sitesPerm.edit) {
+      alert('You do not have permission to edit sites');
+      return;
+    }
+    
     const item = sites.find(s => s.id === id);
     if (item) {
       setFormData(item);
@@ -382,6 +521,12 @@ export default function SitesPage() {
   };
 
   const handleDelete = async (id: number) => {
+    // Check delete permission - USING SITES PERMISSION
+    if (!sitesPerm.delete) {
+      alert('You do not have permission to delete sites');
+      return;
+    }
+    
     if (confirm('Are you sure you want to delete this site?')) {
       try {
         setLoading(true);
@@ -437,7 +582,6 @@ export default function SitesPage() {
     }
   };
 
-
   const closeModal = () => {
     setShowForm(false);
     setEditingId(null);
@@ -464,12 +608,43 @@ export default function SitesPage() {
     <div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Sites</h1>
+        {permissions && (
+          <div className="text-sm text-gray-600 mb-2">
+            <div className="mb-2">
+              User ID: <span className="font-semibold">{userId || 'Not logged in'}</span>
+            </div>
+            <div className="mb-1">
+              <span className="font-medium">SITES Permissions:</span>
+              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.read ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Read: {sitesPerm.read ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.create ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Create: {sitesPerm.create ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.edit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Edit: {sitesPerm.edit ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.delete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Delete: {sitesPerm.delete ? 'Yes' : 'No'}
+              </span>
+            </div>
+          </div>
+        )}
+        <div className="text-xs text-gray-500">
+          API Endpoint: http://localhost:8000/user-permissions/{userId}
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
           onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
+          disabled={!sitesPerm.create}
+          className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+            sitesPerm.create
+              ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          title={sitesPerm.create ? 'Add new site' : 'No permission to create'}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -647,7 +822,6 @@ export default function SitesPage() {
                     )}
                   </div>
 
-
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Site/Branch Name *
@@ -671,10 +845,8 @@ export default function SitesPage() {
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[100px]"
                       rows={3}
                       required
-                    />
+                    ></textarea>
                   </div>
-
-
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -690,7 +862,6 @@ export default function SitesPage() {
                       }}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
-
                   </div>
 
                   <div>
@@ -843,8 +1014,12 @@ export default function SitesPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium shadow-md flex items-center gap-2"
+                    disabled={loading || (editingId ? !sitesPerm.edit : !sitesPerm.create)}
+                    className={`px-8 py-3 rounded-lg font-medium shadow-md flex items-center gap-2 ${
+                      loading || (editingId ? !sitesPerm.edit : !sitesPerm.create)
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }`}
                   >
                     {loading ? (
                       <>
@@ -905,9 +1080,15 @@ export default function SitesPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={() => handleEdit(item.id!)}
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
+                        disabled={!sitesPerm.edit}
+                        className={`transition-colors p-2 rounded
+                          ${
+                            sitesPerm.edit
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-50'
+                          }`}
                         aria-label="Edit"
-                        title="Edit"
+                        title={sitesPerm.edit ? 'Edit' : 'No permission to edit'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -915,9 +1096,15 @@ export default function SitesPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(item.id!)}
-                        className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
+                        disabled={!sitesPerm.delete}
+                        className={`transition-colors p-2 rounded
+                          ${
+                            sitesPerm.delete
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-50'
+                          }`}
                         aria-label="Delete"
-                        title="Delete"
+                        title={sitesPerm.delete ? 'Delete' : 'No permission to delete'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

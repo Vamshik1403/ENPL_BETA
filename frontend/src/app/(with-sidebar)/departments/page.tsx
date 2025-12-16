@@ -7,6 +7,28 @@ interface Department {
   departmentName: string;
 }
 
+// Permission types
+interface PermissionSet {
+  edit: boolean;
+  read: boolean;
+  create: boolean;
+  delete: boolean;
+}
+
+interface AllPermissions {
+  [key: string]: PermissionSet;
+}
+
+interface UserPermissionResponse {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: AllPermissions;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Icons
 const Icons = {
   Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
@@ -15,6 +37,8 @@ const Icons = {
   Search: () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>),
   ChevronLeft: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>),
   ChevronRight: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>),
+  NoAccess: () => (<svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-6a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
+  Loading: () => (<svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)
 };
 
 export default function DepartmentsPage() {
@@ -23,6 +47,18 @@ export default function DepartmentsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Department>({ departmentName: '' });
   const [loading, setLoading] = useState(false);
+  
+  // Permissions state
+  const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const [departmentPermissions, setDepartmentPermissions] = useState<PermissionSet>({
+    edit: false,
+    read: false,
+    create: false,
+    delete: false
+  });
 
   // Pagination and Search States
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,16 +67,51 @@ export default function DepartmentsPage() {
   const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
 
   const API_URL = 'http://localhost:8000/department';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
 
-  // Filter departments based on search term
+  // Fetch permissions
+const fetchPermissions = async (uid: number) => {
+    try {
+const res = await fetch(`${PERMISSIONS_API}/${uid}`);
+      if (!res.ok) throw new Error('Failed to fetch permissions');
+
+      const data: UserPermissionResponse = await res.json();
+      const perms = data?.permissions?.permissions ?? {};
+
+      setAllPermissions(perms);
+      localStorage.setItem('userPermissions', JSON.stringify(perms));
+
+      setDepartmentPermissions(
+        perms.DEPARTMENTS ?? {
+          read: false,
+          create: false,
+          edit: false,
+          delete: false,
+        }
+      );
+      
+      console.log('✅ Department permissions loaded:', perms.DEPARTMENTS);
+    } catch (err) {
+      console.error('❌ Error fetching permissions:', err);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  // Filter departments based on search term and read permission
   useEffect(() => {
+    if (!departmentPermissions.read && !loadingPermissions) {
+      setFilteredDepartments([]);
+      return;
+    }
+    
     const filtered = departments.filter(dept =>
       dept.departmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dept.id?.toString().includes(searchTerm)
     );
     setFilteredDepartments(filtered);
     setCurrentPage(1); // Reset to first page when search changes
-  }, [searchTerm, departments]);
+  }, [searchTerm, departments, departmentPermissions.read, loadingPermissions]);
 
   // Calculate pagination values
   const totalPages = Math.ceil(filteredDepartments.length / itemsPerPage);
@@ -66,6 +137,12 @@ export default function DepartmentsPage() {
 
   // 🔹 Fetch departments
   const fetchDepartments = async () => {
+    // Check read permission before fetching
+    if (!departmentPermissions.read) {
+      console.log('No read permission for DEPARTMENTS');
+      return;
+    }
+    
     try {
       setLoading(true);
       const res = await fetch(API_URL);
@@ -79,13 +156,41 @@ export default function DepartmentsPage() {
     }
   };
 
+useEffect(() => {
+  if (userId) {
+    fetchPermissions(userId);
+  }
+}, [userId]);
+
+
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
+
+
+  useEffect(() => {
+    if (!loadingPermissions && departmentPermissions.read) {
+      fetchDepartments();
+    }
+  }, [loadingPermissions, departmentPermissions.read]);
 
   // 🔹 Create or Update
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check permissions before submitting
+    if (editingId && !departmentPermissions.edit) {
+      alert('You do not have permission to edit departments');
+      return;
+    }
+    
+    if (!editingId && !departmentPermissions.create) {
+      alert('You do not have permission to create departments');
+      return;
+    }
 
     try {
       if (editingId) {
@@ -119,6 +224,11 @@ export default function DepartmentsPage() {
 
   // 🔹 Edit
   const handleEdit = (id: number) => {
+    if (!departmentPermissions.edit) {
+      alert('You do not have permission to edit departments');
+      return;
+    }
+    
     const dept = departments.find((d) => d.id === id);
     if (dept) {
       setFormData(dept);
@@ -129,6 +239,11 @@ export default function DepartmentsPage() {
 
   // 🔹 Delete
   const handleDelete = async (id: number) => {
+    if (!departmentPermissions.delete) {
+      alert('You do not have permission to delete departments');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this department?')) return;
     try {
       const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
@@ -148,10 +263,48 @@ export default function DepartmentsPage() {
 
   // 🔹 Handle Add
   const handleAddNew = () => {
+    if (!departmentPermissions.create) {
+      alert('You do not have permission to create departments');
+      return;
+    }
+    
     setFormData({ departmentName: '' });
     setEditingId(null);
     setShowModal(true);
   };
+
+  // Show loading state while permissions are being fetched
+  if (loadingPermissions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user doesn't have read permission, show access denied
+  if (!departmentPermissions.read) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <Icons.NoAccess />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-500">You don't have permission to view departments.</p>
+          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
+            <p className="text-sm text-gray-600">Debug info:</p>
+            <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
+            <p className="text-xs text-gray-500">DEPARTMENTS exists: {'DEPARTMENTS' in allPermissions ? 'Yes' : 'No'}</p>
+            <p className="text-xs text-gray-500">DEPARTMENTS permissions: {JSON.stringify(departmentPermissions)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Modal component
   const DepartmentModal = () => (
@@ -189,7 +342,20 @@ export default function DepartmentsPage() {
             <div className="flex gap-2 pt-4">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1"
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  editingId 
+                    ? (departmentPermissions.edit 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                    : (departmentPermissions.create 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                }`}
+                disabled={editingId ? !departmentPermissions.edit : !departmentPermissions.create}
+                title={editingId 
+                  ? (departmentPermissions.edit ? "Update department" : "No edit permission") 
+                  : (departmentPermissions.create ? "Create department" : "No create permission")
+                }
               >
                 {editingId ? 'Update' : 'Add'}
               </button>
@@ -211,14 +377,28 @@ export default function DepartmentsPage() {
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Departments</h1>
+        {/* Permission status display */}
+        <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
+          Permissions: {departmentPermissions.create ? 'Create ✓' : 'Create ✗'} | 
+          {departmentPermissions.read ? ' Read ✓' : ' Read ✗'} | 
+          {departmentPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
+          {departmentPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
+        </div>
       </div>
 
       {/* Search and Controls Section */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex gap-4 items-center">
+          {/* ADD BUTTON - controlled by create permission */}
           <button
             onClick={handleAddNew}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
+            disabled={!departmentPermissions.create}
+            className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+              departmentPermissions.create
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+            }`}
+            title={departmentPermissions.create ? "Add new department" : "No create permission"}
           >
             <Icons.Plus />
             Add Department
@@ -276,19 +456,32 @@ export default function DepartmentsPage() {
                     <td className="px-6 py-4 text-gray-700">{item.departmentName}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-3">
+                        {/* EDIT BUTTON - controlled by edit permission */}
                         <button
                           onClick={() => handleEdit(item.id!)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
+                          disabled={!departmentPermissions.edit}
+                          className={`p-2 rounded transition-colors ${
+                            departmentPermissions.edit
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
                           aria-label="Edit"
-                          title="Edit"
+                          title={departmentPermissions.edit ? "Edit department" : "No edit permission"}
                         >
                           <Icons.Edit />
                         </button>
+                        
+                        {/* DELETE BUTTON - controlled by delete permission */}
                         <button
                           onClick={() => handleDelete(item.id!)}
-                          className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
+                          disabled={!departmentPermissions.delete}
+                          className={`p-2 rounded transition-colors ${
+                            departmentPermissions.delete
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
                           aria-label="Delete"
-                          title="Delete"
+                          title={departmentPermissions.delete ? "Delete department" : "No delete permission"}
                         >
                           <Icons.Delete />
                         </button>
@@ -300,6 +493,17 @@ export default function DepartmentsPage() {
                 <tr>
                   <td colSpan={3} className="text-center text-gray-500 py-8">
                     {searchTerm ? 'No departments found matching your search' : 'No departments found'}
+                    {!searchTerm && departmentPermissions.create && (
+                      <div className="mt-4">
+                        <button
+                          onClick={handleAddNew}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm"
+                        >
+                          <Icons.Plus />
+                          Add Your First Department
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}

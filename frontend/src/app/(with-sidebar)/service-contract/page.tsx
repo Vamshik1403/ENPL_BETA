@@ -61,6 +61,31 @@ interface ServiceContract {
   inventories?: any[];
   histories?: any[];
 }
+type CrudPerm = {
+  read: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+};
+
+
+
+
+interface UserPermissions {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: {
+      SERVICE_CONTRACTS: {
+        edit: boolean;
+        read: boolean;
+        create: boolean;
+        delete: boolean;
+      };
+      // Add other modules if needed
+    };
+  };
+}
 
 interface ContractService {
   id?: number;
@@ -150,12 +175,24 @@ export default function ServiceContractPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // 👈 adjust how many contracts per page
+  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
 
   const [billingSchedule, setBillingSchedule] = useState<
     { dueDate: string; paymentStatus: string; overdueDays: number }[]
   >([]);
   const [showBillingSchedule, setShowBillingSchedule] = useState(true);
 
+  type PermissionsJson = Record<string, CrudPerm>;
+
+const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+const [userId, setUserId] = useState<number | null>(null);
+
+useEffect(() => {
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
 
 
   const [showManagerSuggestions, setShowManagerSuggestions] = useState(false);
@@ -173,6 +210,8 @@ export default function ServiceContractPage() {
     endTime: '',
     serviceDetails: '',
   });
+
+  
 
   const handleAddHistory = () => {
     if (historyFormModal.taskId && historyFormModal.serviceDate) {
@@ -301,6 +340,55 @@ export default function ServiceContractPage() {
     return schedule;
   }
 
+useEffect(() => {
+  if (userId) {
+    fetchUserPermissions(userId);
+  }
+}, [userId]);
+
+const fetchUserPermissions = async (userId: number) => {
+  try {
+    const token =
+      localStorage.getItem('access_token') ||
+      localStorage.getItem('token');
+
+    const res = await fetch(
+      `http://localhost:8000/user-permissions/${userId}`,
+      {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {},
+      }
+    );
+
+    if (!res.ok) throw new Error('Permission fetch failed');
+
+    const data = await res.json();
+
+    let perms = null;
+
+    if (data?.permissions?.permissions) {
+      perms = data.permissions.permissions;
+    } else if (data?.permissions) {
+      perms = data.permissions;
+    } else {
+      perms = data;
+    }
+
+    setPermissions(perms);
+    localStorage.setItem('userPermissions', JSON.stringify(perms));
+  } catch (err) {
+    console.error(err);
+    const stored = localStorage.getItem('userPermissions');
+    if (stored) {
+      setPermissions(JSON.parse(stored));
+    } else {
+      setPermissions({});
+    }
+  }
+};
+
+
   useEffect(() => {
     if (
       formData.contractType === 'Paid' &&
@@ -353,8 +441,21 @@ export default function ServiceContractPage() {
   }, []);
 
 
+const serviceContractPerm = {
+  read: permissions?.SERVICE_CONTRACTS?.read ?? false,
+  create: permissions?.SERVICE_CONTRACTS?.create ?? false,
+  edit: permissions?.SERVICE_CONTRACTS?.edit ?? false,
+  delete: permissions?.SERVICE_CONTRACTS?.delete ?? false,
+};
 
+console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
 
+  // Add to the useEffect that loads data
+  useEffect(() => {
+    if (userId) {
+      fetchUserPermissions(userId);
+    }
+  }, [userId]);
 
   // ⬇️ fetch customers (only addressType = "Customer")
   useEffect(() => {
@@ -880,12 +981,16 @@ export default function ServiceContractPage() {
 
       <div className="mb-6">
         <button
-          onClick={handleAddNew}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
-        >
-          <Icons.Plus />
-          Add Service Contract
-        </button>
+  disabled={!serviceContractPerm.create}
+  className={`px-6 py-3 rounded ${
+    serviceContractPerm.create
+      ? 'bg-blue-600 text-white'
+      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+  }`}
+>
+  Add Service Contract
+</button>
+
       </div>
 
       {/* Main Form Modal */}
@@ -1823,22 +1928,29 @@ export default function ServiceContractPage() {
 
                   <td className="px-6 py-4">
                     <div className="flex gap-3">
-                      <button
-                        onClick={() => handleEdit(item.id!)}
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
-                        aria-label="Edit"
-                        title="Edit"
-                      >
+                     <button
+  onClick={() => handleEdit(item.id || 0)}
+  disabled={!serviceContractPerm.edit}
+  className={`p-2 rounded ${
+    serviceContractPerm.edit
+      ? 'text-blue-600 hover:bg-blue-50'
+      : 'text-gray-400 cursor-not-allowed'
+  }`}
+>
                         <Icons.Edit />
                       </button>
-                      <button
-                        onClick={() => handleDelete(item.id!)}
-                        className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
-                        aria-label="Delete"
-                        title="Delete"
-                      >
+                     <button
+  onClick={() => handleDelete(item.id || 0)}
+  disabled={!serviceContractPerm.delete}
+  className={`p-2 rounded ${
+    serviceContractPerm.delete
+      ? 'text-red-600 hover:bg-red-50'
+      : 'text-gray-400 cursor-not-allowed'
+  }`}
+>
                         <Icons.Delete />
-                      </button>
+</button>
+
                     </div>
                   </td>
                 </tr>

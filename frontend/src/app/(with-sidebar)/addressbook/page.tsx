@@ -23,6 +23,10 @@ interface AddressBookContact {
   emailAddress: string;
 }
 
+// Permission types
+type CrudPerm = { read: boolean; create: boolean; edit: boolean; delete: boolean };
+type PermissionsJson = Record<string, CrudPerm>;
+
 export default function AddressBookPage() {
   const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -40,43 +44,144 @@ export default function AddressBookPage() {
   });
   const [generatedId, setGeneratedId] = useState<string>('');
   const [formContacts, setFormContacts] = useState<AddressBookContact[]>([]);
+  const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
   // Search and Pagination states
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Get userId from localStorage on component mount
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(parseInt(storedUserId));
+    }
+  }, []);
+
   // Load data from backend on component mount
   useEffect(() => {
     fetchAddressBooks();
-  }, []);
+    if (userId) {
+      fetchUserPermissions(userId);
+    }
+  }, [userId]);
 
-  useEffect(() => {
-  const pin = formData.pinCode;
-
-  if (!pin || pin.length !== 6) return; // Only lookup when 6 digits
-
-  const fetchCityState = async () => {
+  // Fetch user permissions with dynamic userId
+  const fetchUserPermissions = async (userId: number) => {
     try {
-      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
-      const data = await res.json();
+      console.log('Fetching permissions for userId:', userId);
+      
+      // Try to get token from localStorage
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:8000/user-permissions/${userId}`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
 
-      if (data[0].Status === "Success") {
-        const office = data[0].PostOffice[0];
-
-        setFormData(prev => ({
-          ...prev,
-          city: office.District,
-          state: office.State
-        }));
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Full permissions API response:', data);
+        
+        // EXTRACTION LOGIC FOR YOUR API STRUCTURE:
+        // Your API returns: { id: 1, userId: 1, permissions: { permissions: { CUSTOMERS: {...} } } }
+        let permissionsData = null;
+        
+        if (data && data.permissions) {
+          // First level: data.permissions
+          console.log('data.permissions:', data.permissions);
+          
+          if (data.permissions.permissions) {
+            // Second level: data.permissions.permissions
+            permissionsData = data.permissions.permissions;
+            console.log('Extracted permissions from data.permissions.permissions:', permissionsData);
+          } else {
+            // If permissions is directly the object
+            permissionsData = data.permissions;
+            console.log('Extracted permissions from data.permissions:', permissionsData);
+          }
+        } else {
+          // If data is directly the permissions object
+          permissionsData = data;
+          console.log('Using data directly as permissions:', permissionsData);
+        }
+        
+        if (permissionsData) {
+          setPermissions(permissionsData);
+          console.log('CUSTOMERS permissions set to:', permissionsData.CUSTOMERS);
+          
+          // Store in localStorage for persistence
+          localStorage.setItem('userPermissions', JSON.stringify(permissionsData));
+        } else {
+          console.error('No permissions data found in response');
+          // Set default permissions
+          setPermissions({});
+        }
+      } else {
+        console.error('Failed to fetch permissions:', response.status, response.statusText);
+        // Fallback to localStorage if API fails
+        const stored = localStorage.getItem('userPermissions');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            console.log('Using stored permissions from localStorage:', parsed);
+            setPermissions(parsed);
+          } catch (e) {
+            console.error('Error parsing stored permissions:', e);
+            setPermissions({});
+          }
+        } else {
+          setPermissions({});
+        }
       }
-    } catch (err) {
-      console.error("PIN lookup error:", err);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+      // Fallback to localStorage if API fails
+      const stored = localStorage.getItem('userPermissions');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          console.log('Error fallback - Using stored permissions:', parsed);
+          setPermissions(parsed);
+        } catch (e) {
+          console.error('Error parsing stored permissions:', e);
+          setPermissions({});
+        }
+      } else {
+        setPermissions({});
+      }
     }
   };
 
-  fetchCityState();
-}, [formData.pinCode]);
+  useEffect(() => {
+    const pin = formData.pinCode;
+
+    if (!pin || pin.length !== 6) return; // Only lookup when 6 digits
+
+    const fetchCityState = async () => {
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const data = await res.json();
+
+        if (data[0].Status === "Success") {
+          const office = data[0].PostOffice[0];
+
+          setFormData(prev => ({
+            ...prev,
+            city: office.District,
+            state: office.State
+          }));
+        }
+      } catch (err) {
+        console.error("PIN lookup error:", err);
+      }
+    };
+
+    fetchCityState();
+  }, [formData.pinCode]);
 
   const fetchAddressBooks = async () => {
     try {
@@ -112,6 +217,16 @@ export default function AddressBookPage() {
   const prevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
+
+  // Get CUSTOMERS permissions with safe defaults
+  const customersPerm = {
+    read: permissions?.CUSTOMERS?.read ?? false,
+    create: permissions?.CUSTOMERS?.create ?? false,
+    edit: permissions?.CUSTOMERS?.edit ?? false,
+    delete: permissions?.CUSTOMERS?.delete ?? false,
+  };
+
+  console.log('Current customersPerm:', customersPerm);
 
   const generateAddressBookId = async (addressType: string) => {
     try {
@@ -156,10 +271,15 @@ export default function AddressBookPage() {
     setFormContacts(updatedContacts);
   };
 
-  
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user has create/edit permission - USING CUSTOMERS PERMISSIONS
+    if ((!editingId && !customersPerm.create) || (editingId && !customersPerm.edit)) {
+      alert('You do not have permission to perform this action');
+      return;
+    }
+    
     setLoading(true);
 
     console.log('Form submission started:', { editingId, formData, formContacts });
@@ -304,6 +424,12 @@ export default function AddressBookPage() {
   };
 
   const handleEdit = async (id: number) => {
+    // Check edit permission - USING CUSTOMERS PERMISSION
+    if (!customersPerm.edit) {
+      alert('You do not have permission to edit customers');
+      return;
+    }
+    
     const item = addressBooks.find(a => a.id === id);
     if (item) {
       setFormData(item);
@@ -328,7 +454,13 @@ export default function AddressBookPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this address book entry?')) {
+    // Check delete permission - USING CUSTOMERS PERMISSION
+    if (!customersPerm.delete) {
+      alert('You do not have permission to delete customers');
+      return;
+    }
+    
+    if (confirm('Are you sure you want to delete this customer?')) {
       try {
         const response = await fetch(`http://localhost:8000/address-book/${id}`, {
           method: 'DELETE',
@@ -338,7 +470,7 @@ export default function AddressBookPage() {
           await fetchAddressBooks(); // Refresh the list
         }
       } catch (error) {
-        console.error('Error deleting address book:', error);
+        console.error('Error deleting customer:', error);
       }
     }
   };
@@ -355,14 +487,45 @@ export default function AddressBookPage() {
   }, [searchTerm]);
 
   return (
-<div className="p-8 -mt-10">
+    <div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
+        {permissions && (
+          <div className="text-sm text-gray-600 mb-2">
+            <div className="mb-2">
+              User ID: <span className="font-semibold">{userId || 'Not logged in'}</span>
+            </div>
+            <div className="mb-1">
+              <span className="font-medium">CUSTOMERS Permissions:</span>
+              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.read ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Read: {customersPerm.read ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.create ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Create: {customersPerm.create ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.edit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Edit: {customersPerm.edit ? 'Yes' : 'No'}
+              </span>
+              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.delete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                Delete: {customersPerm.delete ? 'Yes' : 'No'}
+              </span>
+            </div>
+          </div>
+        )}
+        <div className="text-xs text-gray-500">
+          API Endpoint: http://localhost:8000/user-permissions/{userId}
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
           onClick={async () => {
+            // Check create permission - USING CUSTOMERS PERMISSION
+            if (!customersPerm.create) {
+              alert('You do not have permission to add new customers');
+              return;
+            }
+            
             setEditingId(null);
             const generatedId = await generateAddressBookId('Customer');
             setGeneratedId(generatedId);
@@ -378,7 +541,13 @@ export default function AddressBookPage() {
             });
             setShowForm(true);
           }}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
+          disabled={!customersPerm.create}
+          className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+            customersPerm.create
+              ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          title={customersPerm.create ? 'Add new customer' : 'No permission to create'}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -478,25 +647,24 @@ export default function AddressBookPage() {
                       onChange={(e) => setFormData({ ...formData, regdAddress: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[100px]"
                       required
-                    />
+                    ></textarea>
                   </div>
                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pin Code
-                    </label>
-                  <input
-  type="text"
-  value={formData.pinCode}
-  maxLength={6}
-  onChange={(e) => {
-    const value = e.target.value.replace(/\D/g, ''); // digits only
-    setFormData({ ...formData, pinCode: value });
-  }}
-  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-/>
-
-                  </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Pin Code
+  </label>
+  <input
+    type="text"
+    value={formData.pinCode}
+    maxLength={6}
+    onChange={(e) => {
+      const value = e.target.value.replace(/\D/g, '');
+      setFormData({ ...formData, pinCode: value });
+    }}
+    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+  />
+</div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       GST Number
@@ -640,8 +808,12 @@ export default function AddressBookPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium shadow-md flex items-center gap-2"
+                    disabled={loading || (editingId ? !customersPerm.edit : !customersPerm.create)}
+                    className={`px-8 py-3 rounded-lg font-medium shadow-md flex items-center gap-2 ${
+                      loading || (editingId ? !customersPerm.edit : !customersPerm.create)
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    }`}
                   >
                     {loading ? (
                       <>
@@ -698,24 +870,59 @@ export default function AddressBookPage() {
                   <td className="px-6 py-4 text-gray-700 font-mono">{item.gstNo || '-'}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-3">
+                      {/* EDIT */}
                       <button
                         onClick={() => handleEdit(item.id!)}
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50"
+                        disabled={!customersPerm.edit}
+                        className={`transition-colors p-2 rounded
+                          ${
+                            customersPerm.edit
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-50'
+                          }`}
                         aria-label="Edit"
-                        title="Edit"
+                        title={customersPerm.edit ? 'Edit' : 'No permission to edit'}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
                         </svg>
                       </button>
+
+                      {/* DELETE */}
                       <button
                         onClick={() => handleDelete(item.id!)}
-                        className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50"
+                        disabled={!customersPerm.delete}
+                        className={`transition-colors p-2 rounded
+                          ${
+                            customersPerm.delete
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-50'
+                          }`}
                         aria-label="Delete"
-                        title="Delete"
+                        title={customersPerm.delete ? 'Delete' : 'No permission to delete'}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     </div>

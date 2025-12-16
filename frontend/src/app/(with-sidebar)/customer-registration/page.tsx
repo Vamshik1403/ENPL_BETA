@@ -37,6 +37,27 @@ interface CustomerContact {
   }[];
 }
 
+interface PermissionSet {
+  edit: boolean;
+  read: boolean;
+  create: boolean;
+  delete: boolean;
+}
+
+interface AllPermissions {
+  [key: string]: PermissionSet;
+}
+
+interface UserPermissionResponse {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: AllPermissions;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 /* ---------------- Icons ---------------- */
 
 const PlusIcon = () => (
@@ -47,7 +68,7 @@ const PlusIcon = () => (
 
 const EditIcon = () => (
   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
   </svg>
 );
 
@@ -79,6 +100,7 @@ const RemoveIcon = () => (
 
 export default function CustomerContactPage() {
   const API = 'http://localhost:8000/customer-contact';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
 
   const [records, setRecords] = useState<CustomerContact[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -90,6 +112,19 @@ export default function CustomerContactPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
+
+  // Permissions state
+  const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+  
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const [customerRegPermissions, setCustomerRegPermissions] = useState<PermissionSet>({
+    edit: false,
+    read: false,
+    create: false,
+    delete: false
+  });
 
   /* -------- Person Form -------- */
 
@@ -129,14 +164,72 @@ export default function CustomerContactPage() {
     setSites(await res.json());
   };
 
+const fetchPermissions = async (uid: number) => {
+    try {
+
+const res = await fetch(`${PERMISSIONS_API}/${uid}`);
+      if (!res.ok) throw new Error('Failed to fetch permissions');
+
+      const data: UserPermissionResponse = await res.json();
+
+      // 🔥 THIS is the real permissions object
+      const perms = data?.permissions?.permissions ?? {};
+
+      setAllPermissions(perms);
+localStorage.setItem('userPermissions', JSON.stringify(perms));
+
+      setCustomerRegPermissions(
+        perms.CUSTOMER_REGISTRATION ?? {
+          read: false,
+          create: false,
+          edit: false,
+          delete: false,
+        }
+      );
+      
+      console.log('✅ Permissions loaded successfully:', {
+        allPermissions: perms,
+        customerRegPermissions: perms.CUSTOMER_REGISTRATION,
+        hasCreate: perms.CUSTOMER_REGISTRATION?.create,
+        hasRead: perms.CUSTOMER_REGISTRATION?.read,
+        hasEdit: perms.CUSTOMER_REGISTRATION?.edit,
+        hasDelete: perms.CUSTOMER_REGISTRATION?.delete
+      });
+    } catch (err) {
+      console.error('❌ Error fetching permissions:', err);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+useEffect(() => {
+  fetchAll();
+  fetchCustomers();
+}, []);
+
+useEffect(() => {
+  if (userId) {
+    fetchPermissions(userId);
+  }
+}, [userId]);
+
+
   useEffect(() => {
-    fetchAll();
-    fetchCustomers();
-  }, []);
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
 
   /* ---------------- Search & Pagination ---------------- */
 
   const filteredRecords = useMemo(() => {
+    console.log('Checking read permission for filtering:', customerRegPermissions.read);
+    
+    if (!customerRegPermissions.read && !loadingPermissions) {
+      return [];
+    }
+    
     return records.filter(record => {
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -149,7 +242,7 @@ export default function CustomerContactPage() {
         )
       );
     });
-  }, [records, searchTerm]);
+  }, [records, searchTerm, customerRegPermissions.read, loadingPermissions]);
 
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
   const paginatedRecords = useMemo(() => {
@@ -230,6 +323,17 @@ export default function CustomerContactPage() {
     const url = editingId ? `${API}/${editingId}` : API;
     const method = editingId ? 'PATCH' : 'POST';
 
+    // Check permissions before submitting
+    if (editingId && !customerRegPermissions.edit) {
+      alert('You do not have permission to edit contacts');
+      return;
+    }
+    
+    if (!editingId && !customerRegPermissions.create) {
+      alert('You do not have permission to create contacts');
+      return;
+    }
+
     await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
@@ -243,6 +347,11 @@ export default function CustomerContactPage() {
   /* ---------------- Edit ---------------- */
 
   const handleEdit = (item: CustomerContact) => {
+    if (!customerRegPermissions.edit) {
+      alert('You do not have permission to edit contacts');
+      return;
+    }
+    
     setEditingId(item.id);
     setShowModal(true);
 
@@ -263,9 +372,28 @@ export default function CustomerContactPage() {
     );
   };
 
+  /* ---------------- Delete Contact ---------------- */
+
+  const deleteContact = async (contactId: number) => {
+    if (!customerRegPermissions.delete) {
+      alert('You do not have permission to delete contacts');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this contact?')) return;
+    
+    await fetch(`${API}/${contactId}`, { method: 'DELETE' });
+    fetchAll();
+  };
+
   /* ---------------- Delete Mapping ---------------- */
 
   const deleteMappedSite = async (mappingId: number) => {
+    if (!customerRegPermissions.delete) {
+      alert('You do not have permission to delete site mappings');
+      return;
+    }
+    
     if (!confirm('Remove this site from contact?')) return;
     await fetch(
       `http://localhost:8000/customer-contact/site/${mappingId}`,
@@ -276,6 +404,59 @@ export default function CustomerContactPage() {
 
   /* ========================================================= */
 
+  // Show loading state while permissions are being fetched
+  if (loadingPermissions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user doesn't have read permission, show access denied
+  if (!customerRegPermissions.read) {
+    console.log('Access Denied - Current state:', {
+      allPermissions,
+      customerRegPermissions,
+      keys: Object.keys(allPermissions),
+      hasPermission: 'CUSTOMER_REGISTRATION' in allPermissions,
+      loading: loadingPermissions
+    });
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-6a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-500">You don't have permission to view customer contacts.</p>
+          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
+            <p className="text-sm text-gray-600">Debug info:</p>
+            <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
+            <p className="text-xs text-gray-500">CUSTOMER_REGISTRATION exists: {'CUSTOMER_REGISTRATION' in allPermissions ? 'Yes' : 'No'}</p>
+            <p className="text-xs text-gray-500">CUSTOMER_REGISTRATION permissions: {JSON.stringify(customerRegPermissions)}</p>
+            <p className="text-xs text-gray-500">All permissions: {JSON.stringify(allPermissions)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('Permissions loaded successfully:', {
+    allPermissions,
+    customerRegPermissions,
+    hasCreate: customerRegPermissions.create,
+    hasRead: customerRegPermissions.read,
+    hasEdit: customerRegPermissions.edit,
+    hasDelete: customerRegPermissions.delete
+  });
+
   return (
     <div className="min-h-screen -mt-10 text-black bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -284,6 +465,12 @@ export default function CustomerContactPage() {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Customer Contact Management
           </h1>
+          <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
+            Permissions: {customerRegPermissions.create ? 'Create ✓' : 'Create ✗'} | 
+            {customerRegPermissions.read ? ' Read ✓' : ' Read ✗'} | 
+            {customerRegPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
+            {customerRegPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
+          </div>
         </div>
 
         {/* Action Bar */}
@@ -305,9 +492,22 @@ export default function CustomerContactPage() {
               />
             </div>
             
+            {/* ADD BUTTON - controlled by create permission */}
             <button
-              onClick={() => setShowModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition duration-200 font-medium shadow-sm hover:shadow-md"
+              onClick={() => {
+                if (customerRegPermissions.create) {
+                  setShowModal(true);
+                } else {
+                  alert('You do not have permission to create contacts');
+                }
+              }}
+              disabled={!customerRegPermissions.create}
+              className={`px-6 py-3 rounded-lg flex items-center gap-2 transition duration-200 font-medium shadow-sm hover:shadow-md ${
+                customerRegPermissions.create
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+              }`}
+              title={customerRegPermissions.create ? "Add new contact" : "No create permission"}
             >
               <PlusIcon />
               Add New Contact
@@ -317,7 +517,7 @@ export default function CustomerContactPage() {
 
         {/* ================= MODAL ================= */}
         {showModal && (
-          <div className="fixed inset-0  bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
             <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl animate-fadeIn">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -490,7 +690,20 @@ export default function CustomerContactPage() {
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 shadow-sm hover:shadow-md"
+                    className={`flex-1 px-6 py-3 rounded-lg font-medium transition duration-200 shadow-sm hover:shadow-md ${
+                      editingId 
+                        ? (customerRegPermissions.edit 
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                        : (customerRegPermissions.create 
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                    }`}
+                    disabled={editingId ? !customerRegPermissions.edit : !customerRegPermissions.create}
+                    title={editingId 
+                      ? (customerRegPermissions.edit ? "Update contact" : "No edit permission") 
+                      : (customerRegPermissions.create ? "Create contact" : "No create permission")
+                    }
                   >
                     {editingId ? 'Update Contact' : 'Create Contact'}
                   </button>
@@ -579,28 +792,42 @@ export default function CustomerContactPage() {
                             className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                           >
                             {s.site.siteName}
-                         
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
+                        {/* EDIT ICON - controlled by edit permission */}
                         <button
                           onClick={() => handleEdit(r)}
-                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition"
-                          title="Edit contact"
+                          disabled={!customerRegPermissions.edit}
+                          className={`p-2 rounded-lg transition ${
+                            customerRegPermissions.edit
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
+                          title={customerRegPermissions.edit ? "Edit contact" : "No edit permission"}
                         >
                           <EditIcon />
                         </button>
+                        
+                        {/* DELETE ICON - controlled by delete permission */}
                         <button
                           onClick={async () => {
-                            if (!confirm('Are you sure you want to delete this contact?')) return;
-                            await fetch(`${API}/${r.id}`, { method: 'DELETE' });
-                            fetchAll();
+                            if (customerRegPermissions.delete) {
+                              deleteContact(r.id);
+                            } else {
+                              alert('You do not have permission to delete contacts');
+                            }
                           }}
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition"
-                          title="Delete contact"
+                          disabled={!customerRegPermissions.delete}
+                          className={`p-2 rounded-lg transition ${
+                            customerRegPermissions.delete
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                              : 'text-gray-400 cursor-not-allowed opacity-70'
+                          }`}
+                          title={customerRegPermissions.delete ? "Delete contact" : "No delete permission"}
                         >
                           <TrashIcon />
                         </button>
@@ -621,7 +848,7 @@ export default function CustomerContactPage() {
                       <p className="text-gray-500 mb-4">
                         {searchTerm ? 'Try adjusting your search terms' : 'Get started by creating your first contact'}
                       </p>
-                      {!searchTerm && (
+                      {!searchTerm && customerRegPermissions.create && (
                         <button
                           onClick={() => setShowModal(true)}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"

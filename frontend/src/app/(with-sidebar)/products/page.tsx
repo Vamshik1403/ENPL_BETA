@@ -7,6 +7,28 @@ interface ProductType {
   productTypeName: string;
 }
 
+// Permission types
+interface PermissionSet {
+  edit: boolean;
+  read: boolean;
+  create: boolean;
+  delete: boolean;
+}
+
+interface AllPermissions {
+  [key: string]: PermissionSet;
+}
+
+interface UserPermissionResponse {
+  id: number;
+  userId: number;
+  permissions: {
+    permissions: AllPermissions;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Icons
 const Icons = {
   Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
@@ -15,6 +37,8 @@ const Icons = {
   Search: () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>),
   ChevronLeft: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>),
   ChevronRight: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>),
+  NoAccess: () => (<svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-6a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
+  Loading: () => (<svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)
 };
 
 export default function ProductsPage() {
@@ -26,21 +50,70 @@ export default function ProductsPage() {
     productTypeName: '',
   });
 
+  // Permissions state
+  const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const [productCategoryPermissions, setProductCategoryPermissions] = useState<PermissionSet>({
+    edit: false,
+    read: false,
+    create: false,
+    delete: false
+  });
+
   // Pagination and Search States
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [filteredProducts, setFilteredProducts] = useState<ProductType[]>([]);
 
-  // Filter products based on search term
+  const API_URL = 'http://localhost:8000/producttype';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
+
+  // Fetch permissions
+const fetchPermissions = async (uid: number) => {
+    try {
+const res = await fetch(`${PERMISSIONS_API}/${uid}`);
+      if (!res.ok) throw new Error('Failed to fetch permissions');
+
+      const data: UserPermissionResponse = await res.json();
+      const perms = data?.permissions?.permissions ?? {};
+
+      setAllPermissions(perms);
+      localStorage.setItem('userPermissions', JSON.stringify(perms));
+
+      setProductCategoryPermissions(
+        perms.PRODUCTS_CATEGORY ?? {
+          read: false,
+          create: false,
+          edit: false,
+          delete: false,
+        }
+      );
+      
+      console.log('✅ Product Category permissions loaded:', perms.PRODUCTS_CATEGORY);
+    } catch (err) {
+      console.error('❌ Error fetching permissions:', err);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  // Filter products based on search term and read permission
   useEffect(() => {
+    if (!productCategoryPermissions.read && !loadingPermissions) {
+      setFilteredProducts([]);
+      return;
+    }
+    
     const filtered = products.filter(product =>
       product.productTypeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.id?.toString().includes(searchTerm)
     );
     setFilteredProducts(filtered);
     setCurrentPage(1); // Reset to first page when search changes
-  }, [searchTerm, products]);
+  }, [searchTerm, products, productCategoryPermissions.read, loadingPermissions]);
 
   // Calculate pagination values
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -66,9 +139,15 @@ export default function ProductsPage() {
 
   // Fetch products from backend API
   const fetchProducts = async () => {
+    // Check read permission before fetching
+    if (!productCategoryPermissions.read) {
+      console.log('No read permission for PRODUCTS_CATEGORY');
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/producttype');
+      const response = await fetch(API_URL);
       if (response.ok) {
         const data = await response.json();
         setProducts(Array.isArray(data) ? data : []);
@@ -84,13 +163,43 @@ export default function ProductsPage() {
     }
   };
 
-  // Load products on component mount
+  // Load permissions on component mount
+ useEffect(() => {
+  if (userId) {
+    fetchPermissions(userId);
+  }
+}, [userId]);
+
+
   useEffect(() => {
-    fetchProducts();
-  }, []);
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) {
+    setUserId(Number(storedUserId));
+  }
+}, []);
+
+
+  // Load products after permissions are loaded
+  useEffect(() => {
+    if (!loadingPermissions && productCategoryPermissions.read) {
+      fetchProducts();
+    }
+  }, [loadingPermissions, productCategoryPermissions.read]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check permissions before submitting
+    if (editingId && !productCategoryPermissions.edit) {
+      alert('You do not have permission to edit product types');
+      return;
+    }
+    
+    if (!editingId && !productCategoryPermissions.create) {
+      alert('You do not have permission to create product types');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -100,7 +209,7 @@ export default function ProductsPage() {
           productTypeName: formData.productTypeName,
         };
         
-        const response = await fetch(`http://localhost:8000/producttype/${editingId}`, {
+        const response = await fetch(`${API_URL}/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -116,7 +225,7 @@ export default function ProductsPage() {
         }
       } else {
         // Create new product
-        const response = await fetch('http://localhost:8000/producttype', {
+        const response = await fetch(API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -139,6 +248,11 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (id: number) => {
+    if (!productCategoryPermissions.edit) {
+      alert('You do not have permission to edit product types');
+      return;
+    }
+    
     const item = products.find(p => p.id === id);
     if (item) {
       setFormData(item);
@@ -148,10 +262,15 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!productCategoryPermissions.delete) {
+      alert('You do not have permission to delete product types');
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete this product type?')) {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:8000/producttype/${id}`, {
+        const response = await fetch(`${API_URL}/${id}`, {
           method: 'DELETE',
         });
         
@@ -177,12 +296,50 @@ export default function ProductsPage() {
   };
 
   const handleAddNew = () => {
+    if (!productCategoryPermissions.create) {
+      alert('You do not have permission to create product types');
+      return;
+    }
+    
     setFormData({
       productTypeName: '',
     });
     setEditingId(null);
     setShowModal(true);
   };
+
+  // Show loading state while permissions are being fetched
+  if (loadingPermissions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user doesn't have read permission, show access denied
+  if (!productCategoryPermissions.read) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <Icons.NoAccess />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-500">You don't have permission to view product types.</p>
+          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
+            <p className="text-sm text-gray-600">Debug info:</p>
+            <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
+            <p className="text-xs text-gray-500">PRODUCTS_CATEGORY exists: {'PRODUCTS_CATEGORY' in allPermissions ? 'Yes' : 'No'}</p>
+            <p className="text-xs text-gray-500">PRODUCTS_CATEGORY permissions: {JSON.stringify(productCategoryPermissions)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Modal component
   const ProductModal = () => (
@@ -220,8 +377,22 @@ export default function ProductsPage() {
             <div className="flex gap-2 pt-4">
               <button
                 type="submit"
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || (editingId ? !productCategoryPermissions.edit : !productCategoryPermissions.create)}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  loading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+                    : editingId 
+                      ? (productCategoryPermissions.edit 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                      : (productCategoryPermissions.create 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                }`}
+                title={editingId 
+                  ? (productCategoryPermissions.edit ? "Update product type" : "No edit permission") 
+                  : (productCategoryPermissions.create ? "Create product type" : "No create permission")
+                }
               >
                 {loading ? 'Saving...' : (editingId ? 'Update' : 'Add')} Product Type
               </button>
@@ -244,14 +415,28 @@ export default function ProductsPage() {
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Product Types</h1>
+        {/* Permission status display */}
+        <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
+          Permissions: {productCategoryPermissions.create ? 'Create ✓' : 'Create ✗'} | 
+          {productCategoryPermissions.read ? ' Read ✓' : ' Read ✗'} | 
+          {productCategoryPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
+          {productCategoryPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
+        </div>
       </div>
 
       {/* Search and Controls Section */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex gap-4 items-center">
+          {/* ADD BUTTON - controlled by create permission */}
           <button
             onClick={handleAddNew}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center gap-2"
+            disabled={!productCategoryPermissions.create}
+            className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+              productCategoryPermissions.create
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+            }`}
+            title={productCategoryPermissions.create ? "Add new product type" : "No create permission"}
           >
             <Icons.Plus />
             Add Product Type
@@ -316,6 +501,17 @@ export default function ProductsPage() {
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? 'No product types found matching your search' : 'No product types found. Add one to get started.'}
+                    {!searchTerm && productCategoryPermissions.create && (
+                      <div className="mt-4">
+                        <button
+                          onClick={handleAddNew}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm"
+                        >
+                          <Icons.Plus />
+                          Add Your First Product Type
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -329,21 +525,32 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-3">
+                        {/* EDIT BUTTON - controlled by edit permission */}
                         <button
                           onClick={() => handleEdit(item.id!)}
-                          disabled={loading}
-                          className="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={loading || !productCategoryPermissions.edit}
+                          className={`p-2 rounded transition-colors ${
+                            loading || !productCategoryPermissions.edit
+                              ? 'text-gray-400 cursor-not-allowed opacity-70'
+                              : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                          }`}
                           aria-label="Edit"
-                          title="Edit"
+                          title={productCategoryPermissions.edit ? "Edit product type" : "No edit permission"}
                         >
                           <Icons.Edit />
                         </button>
+                        
+                        {/* DELETE BUTTON - controlled by delete permission */}
                         <button
                           onClick={() => handleDelete(item.id!)}
-                          disabled={loading}
-                          className="text-red-600 hover:text-red-800 transition-colors p-2 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={loading || !productCategoryPermissions.delete}
+                          className={`p-2 rounded transition-colors ${
+                            loading || !productCategoryPermissions.delete
+                              ? 'text-gray-400 cursor-not-allowed opacity-70'
+                              : 'text-red-600 hover:text-red-800 hover:bg-red-50 cursor-pointer'
+                          }`}
                           aria-label="Delete"
-                          title="Delete"
+                          title={productCategoryPermissions.delete ? "Delete product type" : "No delete permission"}
                         >
                           <Icons.Delete />
                         </button>
