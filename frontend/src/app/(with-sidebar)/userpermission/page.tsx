@@ -87,6 +87,7 @@ const API = {
 const MODULES: { key: string; label: string }[] = [
   { key: 'DASHBOARD', label: 'Dashboard' },
   { key: 'CUSTOMERS', label: 'Customers' },
+
   { key: 'SITES', label: 'Sites' },
   { key: 'SERVICE_CONTRACTS', label: 'Service Contracts' },
   { key: 'TASKS', label: 'Tasks' },

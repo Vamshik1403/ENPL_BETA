@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { nanoid } from 'nanoid';
+import React from 'react';
 
 interface Department {
   id?: number;
   departmentName: string;
+  emails?: DepartmentEmail[];
 }
 
 // Permission types
@@ -14,6 +17,12 @@ interface PermissionSet {
   create: boolean;
   delete: boolean;
 }
+
+interface DepartmentEmail {
+  id?: string;
+  email: string;
+}
+
 
 interface AllPermissions {
   [key: string]: PermissionSet;
@@ -41,11 +50,166 @@ const Icons = {
   Loading: () => (<svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)
 };
 
+
+interface DepartmentModalProps {
+  show: boolean;
+  editingId: number | null;
+  formData: Department;
+  setFormData: React.Dispatch<React.SetStateAction<Department>>;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+  departmentPermissions: PermissionSet;
+}
+
+const DepartmentModal = React.memo(function DepartmentModal({
+  show,
+  editingId,
+  formData,
+  setFormData,
+  onSubmit,
+  onClose,
+  departmentPermissions,
+}: DepartmentModalProps) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {editingId ? 'Edit Department' : 'Add Department'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={onSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Department Name
+              </label>
+              <input
+                type="text"
+                value={formData.departmentName}
+                onChange={(e) => {
+                  if (!editingId) {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      departmentName: e.target.value 
+                    }));
+                  }
+                }}
+                readOnly={!!editingId}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Department Emails
+              </label>
+
+              {formData.emails?.map(item => (
+                <div key={item.id} className="flex gap-2 mb-2">
+                  <input
+                    type="email"
+                    value={item.email}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        emails: prev.emails?.map(em =>
+                          em.id === item.id ? { ...em, email: value } : em
+                        ),
+                      }));
+                    }}
+                    placeholder="email@company.com"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        emails: prev.emails?.filter(e => e.id !== item.id),
+                      }))
+                    }
+                    disabled={(formData.emails?.length || 0) === 1}
+                    className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData(prev => ({
+                    ...prev,
+                    emails: [...(prev.emails || []), { id: nanoid(), email: '' }],
+                  }))
+                }
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline mt-1 flex items-center gap-1"
+              >
+                <Icons.Plus />
+                Add another email
+              </button>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <button
+                type="submit"
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  editingId 
+                    ? (departmentPermissions.edit 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                    : (departmentPermissions.create 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
+                }`}
+                disabled={editingId ? !departmentPermissions.edit : !departmentPermissions.create}
+                title={editingId 
+                  ? (departmentPermissions.edit ? "Update department" : "No edit permission") 
+                  : (departmentPermissions.create ? "Create department" : "No create permission")
+                }
+              >
+                {editingId ? 'Update' : 'Add'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Department>({ departmentName: '' });
+  const [formData, setFormData] = useState<Department>({
+  departmentName: '',
+emails: [{ id: nanoid(), email: '' }]
+});
+
   const [loading, setLoading] = useState(false);
   
   // Permissions state
@@ -195,22 +359,40 @@ useEffect(() => {
     try {
       if (editingId) {
         // Update department - only send the fields that should be updated
-        const updateData = {
-          departmentName: formData.departmentName,
-        };
+
+
+const emails = formData.emails
+  ?.map(e => e.email.trim())
+  .filter(Boolean);
+
+const payload = {
+  departmentName: formData.departmentName.trim(),
+  emails,
+};
 
         const res = await fetch(`${API_URL}/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData),
+          body: JSON.stringify(payload),
         });
+        
         if (!res.ok) throw new Error('Failed to update department');
+        
       } else {
         // Add department
+const emails = formData.emails
+  ?.map(e => e.email.trim())
+  .filter(Boolean);
+
+const payload = {
+  departmentName: formData.departmentName.trim(),
+  emails,
+};
+
         const res = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Failed to add department');
       }
@@ -224,18 +406,25 @@ useEffect(() => {
 
   // 🔹 Edit
   const handleEdit = (id: number) => {
-    if (!departmentPermissions.edit) {
-      alert('You do not have permission to edit departments');
-      return;
-    }
-    
-    const dept = departments.find((d) => d.id === id);
-    if (dept) {
-      setFormData(dept);
-      setEditingId(id);
-      setShowModal(true);
-    }
-  };
+  if (!departmentPermissions.edit) return;
+
+  const dept = departments.find(d => d.id === id);
+  if (!dept) return;
+
+  setFormData({
+    departmentName: dept.departmentName,
+    emails:
+      dept.emails && dept.emails.length > 0
+        ? dept.emails.map(e => ({
+            id: nanoid(),        // frontend-only stable key
+            email: e.email,
+          }))
+        : [{ id: nanoid(), email: '' }],
+  });
+
+  setEditingId(id);
+  setShowModal(true);
+};
 
   // 🔹 Delete
   const handleDelete = async (id: number) => {
@@ -255,11 +444,15 @@ useEffect(() => {
   };
 
   // 🔹 Reset form
-  const resetForm = () => {
-    setShowModal(false);
-    setEditingId(null);
-    setFormData({ departmentName: '' });
-  };
+const resetForm = () => {
+  setShowModal(false);
+  setEditingId(null);
+  setFormData({
+    departmentName: '',
+emails: [{ id: nanoid(), email: '' }]
+  });
+};
+
 
   // 🔹 Handle Add
   const handleAddNew = () => {
@@ -268,7 +461,10 @@ useEffect(() => {
       return;
     }
     
-    setFormData({ departmentName: '' });
+setFormData({
+  departmentName: '',
+emails: [{ id: nanoid(), email: '' }]
+});
     setEditingId(null);
     setShowModal(true);
   };
@@ -306,72 +502,9 @@ useEffect(() => {
     );
   }
 
-  // Modal component
-  const DepartmentModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Department' : 'Add Department'}
-            </h2>
-            <button
-              onClick={resetForm}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
-            >
-              ×
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Department Name
-              </label>
-              <input
-                type="text"
-                value={formData.departmentName}
-                onChange={(e) =>
-                  setFormData({ ...formData, departmentName: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                required
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <button
-                type="submit"
-                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
-                  editingId 
-                    ? (departmentPermissions.edit 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
-                    : (departmentPermissions.create 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' 
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70')
-                }`}
-                disabled={editingId ? !departmentPermissions.edit : !departmentPermissions.create}
-                title={editingId 
-                  ? (departmentPermissions.edit ? "Update department" : "No edit permission") 
-                  : (departmentPermissions.create ? "Create department" : "No create permission")
-                }
-              >
-                {editingId ? 'Update' : 'Add'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex-1"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+
+
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
@@ -388,12 +521,12 @@ useEffect(() => {
 
       {/* Search and Controls Section */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-4 text-black items-center">
           {/* ADD BUTTON - controlled by create permission */}
           <button
             onClick={handleAddNew}
             disabled={!departmentPermissions.create}
-            className={`px-6 py-3 rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
+            className={`px-6 py-3  rounded-lg transition-colors font-medium shadow-md flex items-center gap-2 ${
               departmentPermissions.create
                 ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
@@ -411,12 +544,12 @@ useEffect(() => {
             <Icons.Search />
           </div>
           <input
-            type="text"
-            placeholder="Search departments..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
-          />
+  type="text"
+  placeholder="Search departments..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+/>
         </div>
       </div>
 
@@ -429,7 +562,15 @@ useEffect(() => {
       </div>
 
       {/* Modal */}
-      {showModal && <DepartmentModal />}
+<DepartmentModal
+  show={showModal}
+  editingId={editingId}
+  formData={formData}
+  setFormData={setFormData}
+  onSubmit={handleSubmit}
+  onClose={resetForm}
+  departmentPermissions={departmentPermissions}
+/>
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
@@ -445,6 +586,8 @@ useEffect(() => {
               <tr>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">ID</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Department Name</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Emails</th>
+
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -454,6 +597,10 @@ useEffect(() => {
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-gray-700 font-medium">{item.id}</td>
                     <td className="px-6 py-4 text-gray-700">{item.departmentName}</td>
+                    <td className="px-6 py-4 text-gray-700">
+  {item.emails?.map(e => e.email).join(', ')}
+</td>
+
                     <td className="px-6 py-4">
                       <div className="flex gap-3">
                         {/* EDIT BUTTON - controlled by edit permission */}

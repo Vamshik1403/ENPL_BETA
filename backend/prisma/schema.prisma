@@ -190,9 +190,22 @@ model ServiceContractHistory {
 model Department {
   id             Int    @id @default(autoincrement())
   departmentName String
+
+  emails         DepartmentEmail[]   // 👈 multiple emails
   tasks          Task[]
   complaintRegistrations ComplaintRegistration[]
 }
+
+model DepartmentEmail {
+  id           Int        @id @default(autoincrement())
+  email        String
+  departmentId Int
+
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([email, departmentId]) // prevents duplicate email in same department
+}
+
 
 model Task {
   id               Int                      @id @default(autoincrement())
@@ -203,6 +216,7 @@ model Task {
   status           String                   @default("Open")
   title            String?
   description      String?
+  userId           Int?
   createdBy        String
   createdAt        DateTime                 @default(now())
   department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)

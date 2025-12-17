@@ -255,25 +255,33 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   };
 
   // 🔹 Filter navigation items based on read permission
-  const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
-    return items.filter(item => {
-      // 检查主项目的权限
-      if (!hasReadPermission(item.permissionKey)) return false;
-      
-      // 如果有嵌套项目，过滤嵌套项目
+ const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
+  return items
+    .map(item => {
+      // Handle nested items first
       if (item.nested && item.nested.length > 0) {
         const filteredNested = filterNavigationItems(item.nested);
-        if (filteredNested.length === 0) {
-          // 如果所有嵌套项目都没有权限，也不显示主项目
-          return false;
+
+        // If parent has NO read permission but children do → show children ONLY
+        if (!hasReadPermission(item.permissionKey)) {
+          return filteredNested.length > 0
+            ? { ...item, nested: filteredNested }
+            : null;
         }
-        // 更新过滤后的嵌套项目
-        item.nested = filteredNested;
+
+        // Parent has permission → show with filtered children
+        return filteredNested.length > 0
+          ? { ...item, nested: filteredNested }
+          : hasReadPermission(item.permissionKey)
+          ? item
+          : null;
       }
-      
-      return true;
-    });
-  };
+
+      // Non-nested item → normal permission check
+      return hasReadPermission(item.permissionKey) ? item : null;
+    })
+    .filter(Boolean) as NavigationItem[];
+};
 
   // 🔹 Render filtered navigation items
   const renderNavigationItem = (item: NavigationItem, level = 0) => {

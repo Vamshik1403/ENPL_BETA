@@ -42,6 +42,7 @@ interface TaskInventory {
 interface Task {
   id?: number;
   taskID: string;
+  userId: number;
   departmentId: number;
   addressBookId: number;
   siteId: number;
@@ -172,6 +173,11 @@ interface TaskModalProps {
   onOpenInventoryModal: () => void;
   onRemoveInventory: (index: number) => void;
 }
+
+const getAuthToken = () =>
+  localStorage.getItem("access_token") ||
+  localStorage.getItem("token");
+
 
 // TaskModal Component - Updated structure
 const TaskModal: React.FC<TaskModalProps> = ({
@@ -1079,6 +1085,7 @@ export default function TasksPage() {
   const [inventories, setInventories] = useState<any[]>([]);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [productTypes, setProductTypes] = useState<any[]>([]);
+  
 
 type CrudPerm = {
   read: boolean;
@@ -1090,7 +1097,11 @@ type CrudPerm = {
 type PermissionsJson = Record<string, CrudPerm>;
 
 const [userId, setUserId] = useState<number | null>(null);
+const [userType, setUserType] = useState<string | null>(null);
 const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+const [loggedUser, setLoggedUser] = useState<any>(null);
+const [userDepartmentId, setUserDepartmentId] = useState<number | null>(null);
+
 
 const taskPermissions: CrudPerm = {
   read: permissions?.TASKS?.read ?? false,
@@ -1101,9 +1112,10 @@ const taskPermissions: CrudPerm = {
 
 useEffect(() => {
   const storedUserId = localStorage.getItem("userId");
-  if (storedUserId) {
-    setUserId(Number(storedUserId));
-  }
+  const storedUserType = localStorage.getItem("userType");
+
+  if (storedUserId) setUserId(Number(storedUserId));
+  if (storedUserType) setUserType(storedUserType);
 }, []);
 
 
@@ -1171,31 +1183,68 @@ const getAllowedStatuses = (currentStatusRaw: string) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // 🔍 Filter tasks by ID, department, customer, site, or status
-  const filteredTasks = tasks.filter((task) => {
-    const term = searchTerm.toLowerCase();
-    const departmentName = departments.find(d => d.id === task.departmentId)?.departmentName?.toLowerCase() || '';
-    const customerName = addressBooks.find(a => a.id === task.addressBookId)?.customerName?.toLowerCase() || '';
-    const siteName = sites.find(s => s.id === task.siteId)?.siteName?.toLowerCase() || '';
+  
 
-    return (
-      task.taskID.toLowerCase().includes(term) ||
-      departmentName.includes(term) ||
-      customerName.includes(term) ||
-      siteName.includes(term) ||
-      task.status.toLowerCase().includes(term)
-    );
-  });
+const visibleTasks = tasks.filter(task => {
+  // SUPERADMIN sees everything
+  if (userType === "SUPERADMIN") return true;
 
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const paginatedTasks = filteredTasks.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  // wait until user context is ready
+  if (!userId || userDepartmentId === null) return false;
+
+  // HYBRID VISIBILITY RULE
+  return (
+    task.userId === userId ||
+    task.departmentId === userDepartmentId
   );
+});
+
+
+
+
+
+
+
+
+ const filteredTasks = visibleTasks.filter((task) => {
+  const term = searchTerm.toLowerCase();
+  const departmentName =
+    departments.find(d => d.id === task.departmentId)?.departmentName?.toLowerCase() || '';
+  const customerName =
+    addressBooks.find(a => a.id === task.addressBookId)?.customerName?.toLowerCase() || '';
+  const siteName =
+    sites.find(s => s.id === task.siteId)?.siteName?.toLowerCase() || '';
+
+  return (
+    task.taskID.toLowerCase().includes(term) ||
+    departmentName.includes(term) ||
+    customerName.includes(term) ||
+    siteName.includes(term) ||
+    task.status.toLowerCase().includes(term)
+  );
+});
+
+const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+
+const paginatedTasks = filteredTasks.slice(
+  (currentPage - 1) * itemsPerPage,
+  currentPage * itemsPerPage
+);
+
+useEffect(() => {
+  if (!userId) return;
+
+  setFormData(prev => ({
+    ...prev,
+    userId,
+  }));
+}, [userId]);
+
 
   // Form state - Initialize with empty arrays
   const [formData, setFormData] = useState<TaskFormData>({
     taskID: '',
+    userId: userId || 0,
     departmentId: departments.length > 0 ? departments[0].id : 0,
     addressBookId: 0,
     siteId: 0,
@@ -1340,8 +1389,10 @@ useEffect(() => {
 useEffect(() => {
   if (userId) {
     fetchUserPermissions(userId);
+    fetchLoggedUser(userId);
   }
 }, [userId]);
+
 
 
   const fetchDepartments = async () => {
@@ -1354,6 +1405,20 @@ useEffect(() => {
       setDepartments([]);
     }
   };
+
+  useEffect(() => {
+  if (!loggedUser?.department) return;
+  if (departments.length === 0) return;
+
+  const dept = departments.find(
+    d =>
+      d.departmentName.trim().toLowerCase() ===
+      loggedUser.department.trim().toLowerCase()
+  );
+
+  setUserDepartmentId(dept?.id ?? null);
+}, [loggedUser, departments]);
+
 
   const fetchAddressBooks = async () => {
     try {
@@ -1390,6 +1455,14 @@ useEffect(() => {
       setServiceWorkscopeCategories([]);
     }
   };
+
+  const fetchLoggedUser = async (uid: number) => {
+  const res = await fetch("http://localhost:8000/auth/users");
+  const users = await res.json();
+  const me = users.find((u: any) => u.id === uid);
+  setLoggedUser(me || null);
+};
+
 
   const fetchTasks = async () => {
     try {
@@ -1428,6 +1501,7 @@ useEffect(() => {
     const nextTaskId = await fetchNextTaskId();
     setFormData({
       taskID: nextTaskId,
+      userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
       siteId: 0,
@@ -1468,6 +1542,7 @@ useEffect(() => {
     setEditingId(null);
     setFormData({
       taskID: '',
+      userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
       siteId: 0,
@@ -1557,7 +1632,7 @@ useEffect(() => {
 
       const taskData = {
         id: editingId || undefined,
-
+        userId,
         taskID: formData.taskID,
         departmentId: formData.departmentId,
         addressBookId: formData.addressBookId,
@@ -1616,11 +1691,17 @@ warrantyStatus: inv.warrantyStatus
 
       const method = editingId ? "PATCH" : "POST";
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(taskData)
-      });
+const token = getAuthToken();
+
+const response = await fetch(url, {
+  method,
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify(taskData),
+});
+
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1642,15 +1723,22 @@ warrantyStatus: inv.warrantyStatus
   if (!selectedTask) return;
 
   try {
-    const response = await fetch(`http://localhost:8000/tasks-remarks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        taskId: selectedTask.id,
-        remark,
-        status,
-      }),
-    });
+const token = getAuthToken();
+
+const response = await fetch(`http://localhost:8000/tasks-remarks`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    taskId: selectedTask.id,
+    remark,
+    status,
+  }),
+});
+
+
 
     if (!response.ok) {
       throw new Error("Failed to add remark");
@@ -1728,11 +1816,18 @@ warrantyStatus: inv.warrantyStatus
           }))
         };
 
-        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedTask),
-        });
+
+        const token = getAuthToken();
+
+        const response =await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
+  method: 'PATCH',
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify(updatedTask),
+});
+
 
         if (!response.ok) {
           setSavedRemarks(savedRemarks);
@@ -1753,10 +1848,16 @@ warrantyStatus: inv.warrantyStatus
   const handleDeleteTask = async (id: number) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
 
+    const token = getAuthToken();
+
     try {
+
       const response = await fetch(`http://localhost:8000/task/${id}`, {
-        method: 'DELETE',
-      });
+  method: 'DELETE',
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
       if (!response.ok) throw new Error('Failed to delete task');
 
@@ -2034,6 +2135,7 @@ const handleEditTask = (task: Task) => {
 
   setFormData({
     taskID: task.taskID,
+    userId: task.userId,
     departmentId: task.departmentId,
     addressBookId: task.addressBookId,
     siteId: task.siteId,
@@ -2135,15 +2237,20 @@ warrantyStatus: inv.warrantyStatus ?? "Active"
   const handleSaveEditedRemark = async () => {
     if (!remarkToEdit) return;
 
+    const token = getAuthToken();
+
     try {
       const response = await fetch(`http://localhost:8000/tasks-remarks/${remarkToEdit.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          remark: editRemarkText,
-          status: editRemarkStatus
-        }),
-      });
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    remark: editRemarkText,
+    status: editRemarkStatus,
+  }),
+});
 
       if (!response.ok) {
         throw new Error("Failed to update remark");

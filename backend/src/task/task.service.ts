@@ -7,7 +7,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TaskService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateTaskDto) {
+  async create(dto: CreateTaskDto,loggedInUserId: number) {
     const { 
       contacts, 
       workscopeDetails, 
@@ -34,6 +34,7 @@ export class TaskService {
         taskID,
         status: 'open',
         createdBy: 'System User',
+        userId: loggedInUserId,
         createdAt: taskData.createdAt ? new Date(taskData.createdAt) : undefined,
       },
     });

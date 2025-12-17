@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Request, Req } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { JwtGuard } from 'src/auth/jwt.guard';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('task')
 export class TaskController {
@@ -22,10 +23,12 @@ findByCustomers(@Body('customerIds') customerIds: number[]) {
 
 
 
-  @Post()
-  create(@Request() req, @Body() dto: CreateTaskDto) {
-    return this.taskService.create(dto);
-  }
+@Post()
+create(@Body() dto: CreateTaskDto) {
+  return this.taskService.create(dto, dto.userId);
+}
+
+
 
   @Get()
   findAll() {

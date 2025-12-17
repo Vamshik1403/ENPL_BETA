@@ -1,7 +1,11 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsString, IsArray, IsEmail, IsOptional } from 'class-validator';
 
 export class CreateDepartmentDto {
   @IsString()
-  @IsNotEmpty()
   departmentName: string;
+
+  @IsArray()
+  @IsEmail({}, { each: true })
+  @IsOptional()
+  emails?: string[];
 }

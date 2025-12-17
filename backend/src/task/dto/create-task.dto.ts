@@ -88,6 +88,10 @@ export class CreateTaskDto {
   @IsInt()
   siteId: number;
 
+  @IsInt()
+  userId: number;
+
+
   @IsString()
   @IsNotEmpty()
   status: string;
