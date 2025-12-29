@@ -91,7 +91,6 @@ export class CreateTaskDto {
   @IsInt()
   userId: number;
 
-
   @IsString()
   @IsNotEmpty()
   status: string;
@@ -103,7 +102,6 @@ description?: string;
   @IsString()
 @IsOptional()
 title?: string;
-
 
   @IsString()
   @IsNotEmpty()

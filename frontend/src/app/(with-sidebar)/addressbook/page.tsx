@@ -23,6 +23,17 @@ interface AddressBookContact {
   emailAddress: string;
 }
 
+// Icons
+const Icons = {
+  Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+  Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+  Delete: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+  Search: () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>),
+  ChevronLeft: () => (<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>),
+  NoAccess: () => (<svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H9m3-6a3 3 0 11-6 0 3 3 0 016 0z" /></svg>),
+  Loading: () => (<svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)
+};
+
 // Permission types
 type CrudPerm = { read: boolean; create: boolean; edit: boolean; delete: boolean };
 type PermissionsJson = Record<string, CrudPerm>;
@@ -490,31 +501,6 @@ export default function AddressBookPage() {
     <div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
-        {permissions && (
-          <div className="text-sm text-gray-600 mb-2">
-            <div className="mb-2">
-              User ID: <span className="font-semibold">{userId || 'Not logged in'}</span>
-            </div>
-            <div className="mb-1">
-              <span className="font-medium">CUSTOMERS Permissions:</span>
-              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.read ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Read: {customersPerm.read ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.create ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Create: {customersPerm.create ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.edit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Edit: {customersPerm.edit ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${customersPerm.delete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Delete: {customersPerm.delete ? 'Yes' : 'No'}
-              </span>
-            </div>
-          </div>
-        )}
-        <div className="text-xs text-gray-500">
-          API Endpoint: http://localhost:8000/user-permissions/{userId}
-        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -883,19 +869,8 @@ export default function AddressBookPage() {
                         aria-label="Edit"
                         title={customersPerm.edit ? 'Edit' : 'No permission to edit'}
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
+                     <Icons.Edit />
+
                       </button>
 
                       {/* DELETE */}

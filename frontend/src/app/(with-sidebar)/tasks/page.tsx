@@ -315,7 +315,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     </div>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">
                     Site
@@ -863,69 +863,69 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
 }) => {
   const [newRemark, setNewRemark] = useState('');
 
-  
-// Also update the normalizeStatus function to handle "Work in Progress" properly:
-const normalizeStatus = (status: string) => {
-  if (!status) return 'Open';
-  
-  const normalized = status
-    .trim()
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
-    .replace(/\s+/g, ' ');
-  
-  // Handle variations of "Work in Progress"
-  if (normalized.includes('Progress') || normalized.includes('Wip') || normalized === 'Wip') {
-    return 'Work in Progress';
-  }
-  
-  return normalized;
-};
+
+  // Also update the normalizeStatus function to handle "Work in Progress" properly:
+  const normalizeStatus = (status: string) => {
+    if (!status) return 'Open';
+
+    const normalized = status
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase())
+      .replace(/\s+/g, ' ');
+
+    // Handle variations of "Work in Progress"
+    if (normalized.includes('Progress') || normalized.includes('Wip') || normalized === 'Wip') {
+      return 'Work in Progress';
+    }
+
+    return normalized;
+  };
 
 
- // In RemarksModal component, replace getCurrentTaskStatus function with:
-const getCurrentTaskStatus = () => {
-  if (!task?.remarks || task.remarks.length === 0) {
-    return "Open";
-  }
+  // In RemarksModal component, replace getCurrentTaskStatus function with:
+  const getCurrentTaskStatus = () => {
+    if (!task?.remarks || task.remarks.length === 0) {
+      return "Open";
+    }
 
-  const latest = [...task.remarks].sort(
-    (a, b) => (b.id || 0) - (a.id || 0)
-  )[0];
+    const latest = [...task.remarks].sort(
+      (a, b) => (b.id || 0) - (a.id || 0)
+    )[0];
 
-  return normalizeStatus(latest.status);
-};
+    return normalizeStatus(latest.status);
+  };
 
-const currentStatus = getCurrentTaskStatus();
-const allowedStatuses = getAllowedStatuses(currentStatus);
+  const currentStatus = getCurrentTaskStatus();
+  const allowedStatuses = getAllowedStatuses(currentStatus);
 
-// always reset dropdown when modal opens OR remarks change
-useEffect(() => {
-  if (!showModal) return;
+  // always reset dropdown when modal opens OR remarks change
+  useEffect(() => {
+    if (!showModal) return;
 
-  setNewStatus(
+    setNewStatus(
+      allowedStatuses.length ? allowedStatuses[0] : currentStatus
+    );
+  }, [showModal, task?.remarks]);
+
+
+
+
+  // Initialize newStatus properly
+  const [newStatus, setNewStatus] = useState(
     allowedStatuses.length ? allowedStatuses[0] : currentStatus
   );
-}, [showModal, task?.remarks]);
 
+  // Update effect to handle status changes
+  useEffect(() => {
+    if (!task || !showModal) return;
 
+    const current = normalizeStatus(getCurrentTaskStatus());
+    const allowed = getAllowedStatuses(current);
 
-
-// Initialize newStatus properly
-const [newStatus, setNewStatus] = useState(
-  allowedStatuses.length ? allowedStatuses[0] : currentStatus
-);
-
-// Update effect to handle status changes
-useEffect(() => {
-  if (!task || !showModal) return;
-
-  const current = normalizeStatus(getCurrentTaskStatus());
-  const allowed = getAllowedStatuses(current);
-  
-  // Set to first allowed status, or current if no allowed transitions
-  setNewStatus(allowed.length ? allowed[0] : current);
-}, [task, showModal]);
+    // Set to first allowed status, or current if no allowed transitions
+    setNewStatus(allowed.length ? allowed[0] : current);
+  }, [task, showModal]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -953,11 +953,11 @@ useEffect(() => {
               <div className="mt-1">
                 <span className="text-sm font-medium text-gray-700">Current Status: </span>
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${currentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                    currentStatus === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                      currentStatus === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
-                        currentStatus === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
-                          currentStatus === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
+                  currentStatus === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                    currentStatus === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
+                      currentStatus === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
+                        currentStatus === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
                   }`}>
                   {currentStatus}
                 </span>
@@ -1034,12 +1034,12 @@ useEffect(() => {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                              remark.status === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
-                                remark.status === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
-                                  remark.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                                    remark.status === 'Reopen' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
+                          remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                            remark.status === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
+                              remark.status === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
+                                remark.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                  remark.status === 'Reopen' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
                           }`}>
                           {remark.status}
                         </span>
@@ -1085,38 +1085,58 @@ export default function TasksPage() {
   const [inventories, setInventories] = useState<any[]>([]);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [productTypes, setProductTypes] = useState<any[]>([]);
-  
 
-type CrudPerm = {
-  read: boolean;
-  create: boolean;
-  edit: boolean;
-  delete: boolean;
+
+  type CrudPerm = {
+    read: boolean;
+    create: boolean;
+    edit: boolean;
+    delete: boolean;
+  };
+
+  type PermissionsJson = Record<string, CrudPerm>;
+
+  const [userId, setUserId] = useState<number | null>(null);
+  const [userType, setUserType] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+  const [loggedUser, setLoggedUser] = useState<any>(null);
+  const [userDepartmentId, setUserDepartmentId] = useState<number | null>(null);
+
+
+  const taskPermissions: CrudPerm = {
+    read: permissions?.TASKS?.read ?? false,
+    create: permissions?.TASKS?.create ?? false,
+    edit: permissions?.TASKS?.edit ?? false,
+    delete: permissions?.TASKS?.delete ?? false,
+  };
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    const storedUserType = localStorage.getItem("userType");
+
+    if (storedUserId) setUserId(Number(storedUserId));
+    if (storedUserType) setUserType(storedUserType);
+  }, []);
+
+  const HOURS_24 = 24 * 60 * 60 * 1000;
+
+const isTaskOpen = (task: Task) =>
+  task.status?.toLowerCase() === "open";
+
+const isTaskOlderThan24Hours = (task: Task) => {
+  if (!task.createdAt) return false;
+
+  const createdTime = new Date(task.createdAt).getTime();
+  const now = Date.now();
+
+  return now - createdTime > HOURS_24;
 };
 
-type PermissionsJson = Record<string, CrudPerm>;
-
-const [userId, setUserId] = useState<number | null>(null);
-const [userType, setUserType] = useState<string | null>(null);
-const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
-const [loggedUser, setLoggedUser] = useState<any>(null);
-const [userDepartmentId, setUserDepartmentId] = useState<number | null>(null);
-
-
-const taskPermissions: CrudPerm = {
-  read: permissions?.TASKS?.read ?? false,
-  create: permissions?.TASKS?.create ?? false,
-  edit: permissions?.TASKS?.edit ?? false,
-  delete: permissions?.TASKS?.delete ?? false,
+const hasTaskBeenAttempted = (task: Task) => {
+  return task.remarks && task.remarks.length > 0;
 };
 
-useEffect(() => {
-  const storedUserId = localStorage.getItem("userId");
-  const storedUserType = localStorage.getItem("userType");
 
-  if (storedUserId) setUserId(Number(storedUserId));
-  if (storedUserType) setUserType(storedUserType);
-}, []);
 
 
   const fetchProductTypes = async () => {
@@ -1135,110 +1155,125 @@ useEffect(() => {
   };
 
   const normalizeStatus = (status?: string) => {
-  if (!status) return "Open";
+    if (!status) return "Open";
 
-  const s = status.trim().toLowerCase();
+    const s = status.trim().toLowerCase();
 
-  if (s === "wip" || s.includes("progress")) return "Work in Progress";
-  if (s === "on-hold" || s === "on hold") return "On-Hold";
-  if (s === "re-open" || s === "reopen") return "Reopen";
+    if (s === "wip" || s.includes("progress")) return "Work in Progress";
+    if (s === "on-hold" || s === "on hold") return "On-Hold";
+    if (s === "re-open" || s === "reopen") return "Reopen";
 
-  return s.replace(/\b\w/g, c => c.toUpperCase());
-};
+    return s.replace(/\b\w/g, c => c.toUpperCase());
+  };
 
 
- // 🔥 Fixed Allowed status transitions
-const getAllowedStatuses = (currentStatusRaw: string) => {
-  const currentStatus = normalizeStatus(currentStatusRaw);
+  // 🔥 Fixed Allowed status transitions
+  const getAllowedStatuses = (currentStatusRaw: string) => {
+    const currentStatus = normalizeStatus(currentStatusRaw);
 
-  switch (currentStatus) {
-    case "Open":
-      return ["Scheduled"];
+    switch (currentStatus) {
+      case "Open":
+        return ["Scheduled"];
 
-    case "Scheduled":
-      return ["Work in Progress", "Rescheduled", "On-Hold"];
+      case "Scheduled":
+        return ["Work in Progress", "Rescheduled", "On-Hold"];
 
-    case "Work in Progress":
-      return ["On-Hold", "Completed"];
+      case "Work in Progress":
+        return ["On-Hold", "Completed"];
 
-    case "Rescheduled":
-      return ["Work in Progress", "On-Hold"];
+      case "Rescheduled":
+        return ["Work in Progress", "On-Hold"];
 
-    case "On-Hold":
-      return ["Rescheduled"];
+      case "On-Hold":
+        return ["Rescheduled"];
 
-    case "Completed":
-      return ["Reopen"];
+      case "Completed":
+        return ["Reopen"];
 
-    case "Reopen":
-      return ["Rescheduled"];
+      case "Reopen":
+        return ["Rescheduled"];
 
-    default:
-      return [];
-  }
-};
+      default:
+        return [];
+    }
+  };
 
   // 🔍 Search & Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  
 
-const visibleTasks = tasks.filter(task => {
-  // SUPERADMIN sees everything
-  if (userType === "SUPERADMIN") return true;
 
-  // wait until user context is ready
-  if (!userId || userDepartmentId === null) return false;
+  const visibleTasks = tasks.filter(task => {
+    // SUPERADMIN sees everything
+    if (userType === "SUPERADMIN") return true;
 
-  // HYBRID VISIBILITY RULE
+    // wait until user context is ready
+    if (!userId || userDepartmentId === null) return false;
+
+    // HYBRID VISIBILITY RULE
+    return (
+      task.userId === userId ||
+      task.departmentId === userDepartmentId
+    );
+  });
+
+
+
+
+
+
+
+
+  const filteredTasks = visibleTasks.filter((task) => {
+    const term = searchTerm.toLowerCase();
+    const departmentName =
+      departments.find(d => d.id === task.departmentId)?.departmentName?.toLowerCase() || '';
+    const customerName =
+      addressBooks.find(a => a.id === task.addressBookId)?.customerName?.toLowerCase() || '';
+    const siteName =
+      sites.find(s => s.id === task.siteId)?.siteName?.toLowerCase() || '';
+
+    return (
+      task.taskID.toLowerCase().includes(term) ||
+      departmentName.includes(term) ||
+      customerName.includes(term) ||
+      siteName.includes(term) ||
+      task.status.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+
+const sortedTasks = [...filteredTasks].sort((a, b) => {
+  const aOpen = isTaskOpen(a);
+  const bOpen = isTaskOpen(b);
+
+  // Open tasks always first
+  if (aOpen && !bOpen) return -1;
+  if (!aOpen && bOpen) return 1;
+
+  // If both same status, newest first
   return (
-    task.userId === userId ||
-    task.departmentId === userDepartmentId
+    new Date(b.createdAt).getTime() -
+    new Date(a.createdAt).getTime()
   );
 });
 
-
-
-
-
-
-
-
- const filteredTasks = visibleTasks.filter((task) => {
-  const term = searchTerm.toLowerCase();
-  const departmentName =
-    departments.find(d => d.id === task.departmentId)?.departmentName?.toLowerCase() || '';
-  const customerName =
-    addressBooks.find(a => a.id === task.addressBookId)?.customerName?.toLowerCase() || '';
-  const siteName =
-    sites.find(s => s.id === task.siteId)?.siteName?.toLowerCase() || '';
-
-  return (
-    task.taskID.toLowerCase().includes(term) ||
-    departmentName.includes(term) ||
-    customerName.includes(term) ||
-    siteName.includes(term) ||
-    task.status.toLowerCase().includes(term)
-  );
-});
-
-const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-
-const paginatedTasks = filteredTasks.slice(
+const paginatedTasks = sortedTasks.slice(
   (currentPage - 1) * itemsPerPage,
   currentPage * itemsPerPage
 );
 
-useEffect(() => {
-  if (!userId) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  setFormData(prev => ({
-    ...prev,
-    userId,
-  }));
-}, [userId]);
+    setFormData(prev => ({
+      ...prev,
+      userId,
+    }));
+  }, [userId]);
 
 
   // Form state - Initialize with empty arrays
@@ -1327,71 +1362,71 @@ useEffect(() => {
       }
     };
 
-    
+
 
     fetchSiteContacts();
   }, [formData.siteId]);
 
   const fetchUserPermissions = async (uid: number) => {
-  try {
-    const token =
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("token");
+    try {
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token");
 
-    const res = await fetch(
-      `http://localhost:8000/user-permissions/${uid}`,
-      {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
+      const res = await fetch(
+        `http://localhost:8000/user-permissions/${uid}`,
+        {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : {},
+        }
+      );
+
+      if (!res.ok) throw new Error("Permission fetch failed");
+
+      const data = await res.json();
+
+      let perms = null;
+
+      if (data?.permissions?.permissions) {
+        perms = data.permissions.permissions;
+      } else if (data?.permissions) {
+        perms = data.permissions;
+      } else {
+        perms = data;
       }
-    );
 
-    if (!res.ok) throw new Error("Permission fetch failed");
-
-    const data = await res.json();
-
-    let perms = null;
-
-    if (data?.permissions?.permissions) {
-      perms = data.permissions.permissions;
-    } else if (data?.permissions) {
-      perms = data.permissions;
-    } else {
-      perms = data;
+      setPermissions(perms);
+      localStorage.setItem("userPermissions", JSON.stringify(perms));
+    } catch (err) {
+      console.error(err);
+      const stored = localStorage.getItem("userPermissions");
+      if (stored) {
+        setPermissions(JSON.parse(stored));
+      } else {
+        setPermissions({});
+      }
     }
-
-    setPermissions(perms);
-    localStorage.setItem("userPermissions", JSON.stringify(perms));
-  } catch (err) {
-    console.error(err);
-    const stored = localStorage.getItem("userPermissions");
-    if (stored) {
-      setPermissions(JSON.parse(stored));
-    } else {
-      setPermissions({});
-    }
-  }
-};
+  };
 
 
   // Fetch data
-useEffect(() => {
-  fetchTasks();
-  fetchDepartments();
-  fetchAddressBooks();
-  fetchSites();
-  fetchNextTaskId();
-  fetchServiceWorkscopeCategories();
-  fetchProductTypes();
-}, []);
+  useEffect(() => {
+    fetchTasks();
+    fetchDepartments();
+    fetchAddressBooks();
+    fetchSites();
+    fetchNextTaskId();
+    fetchServiceWorkscopeCategories();
+    fetchProductTypes();
+  }, []);
 
-useEffect(() => {
-  if (userId) {
-    fetchUserPermissions(userId);
-    fetchLoggedUser(userId);
-  }
-}, [userId]);
+  useEffect(() => {
+    if (userId) {
+      fetchUserPermissions(userId);
+      fetchLoggedUser(userId);
+    }
+  }, [userId]);
 
 
 
@@ -1407,17 +1442,17 @@ useEffect(() => {
   };
 
   useEffect(() => {
-  if (!loggedUser?.department) return;
-  if (departments.length === 0) return;
+    if (!loggedUser?.department) return;
+    if (departments.length === 0) return;
 
-  const dept = departments.find(
-    d =>
-      d.departmentName.trim().toLowerCase() ===
-      loggedUser.department.trim().toLowerCase()
-  );
+    const dept = departments.find(
+      d =>
+        d.departmentName.trim().toLowerCase() ===
+        loggedUser.department.trim().toLowerCase()
+    );
 
-  setUserDepartmentId(dept?.id ?? null);
-}, [loggedUser, departments]);
+    setUserDepartmentId(dept?.id ?? null);
+  }, [loggedUser, departments]);
 
 
   const fetchAddressBooks = async () => {
@@ -1457,11 +1492,11 @@ useEffect(() => {
   };
 
   const fetchLoggedUser = async (uid: number) => {
-  const res = await fetch("http://localhost:8000/auth/users");
-  const users = await res.json();
-  const me = users.find((u: any) => u.id === uid);
-  setLoggedUser(me || null);
-};
+    const res = await fetch("http://localhost:8000/auth/users");
+    const users = await res.json();
+    const me = users.find((u: any) => u.id === uid);
+    setLoggedUser(me || null);
+  };
 
 
   const fetchTasks = async () => {
@@ -1676,9 +1711,9 @@ useEffect(() => {
             purchaseDate: inv.purchaseDate,
             warrantyPeriod: inv.warrantyPeriod,
             thirdPartyPurchase: inv.thirdPartyPurchase,
-warrantyStatus: inv.warrantyStatus
-  ? String(inv.warrantyStatus).trim()
-  : "Active"
+            warrantyStatus: inv.warrantyStatus
+              ? String(inv.warrantyStatus).trim()
+              : "Active"
           }))
           : undefined,
       };
@@ -1691,16 +1726,16 @@ warrantyStatus: inv.warrantyStatus
 
       const method = editingId ? "PATCH" : "POST";
 
-const token = getAuthToken();
+      const token = getAuthToken();
 
-const response = await fetch(url, {
-  method,
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(taskData),
-});
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(taskData),
+      });
 
 
       if (!response.ok) {
@@ -1719,54 +1754,54 @@ const response = await fetch(url, {
     }
   };
 
- const handleAddRemarkInModal = async (remark: string, status: string) => {
-  if (!selectedTask) return;
+  const handleAddRemarkInModal = async (remark: string, status: string) => {
+    if (!selectedTask) return;
 
-  try {
-const token = getAuthToken();
+    try {
+      const token = getAuthToken();
 
-const response = await fetch(`http://localhost:8000/tasks-remarks`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify({
-    taskId: selectedTask.id,
-    remark,
-    status,
-  }),
-});
+      const response = await fetch(`http://localhost:8000/tasks-remarks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          taskId: selectedTask.id,
+          remark,
+          status,
+        }),
+      });
 
 
 
-    if (!response.ok) {
-      throw new Error("Failed to add remark");
-    }
+      if (!response.ok) {
+        throw new Error("Failed to add remark");
+      }
 
-    const newRemark = await response.json();
+      const newRemark = await response.json();
 
-    // 🔥 CRITICAL FIX — update BOTH states
-    const updatedRemarks = [newRemark, ...(selectedTask.remarks || [])];
+      // 🔥 CRITICAL FIX — update BOTH states
+      const updatedRemarks = [newRemark, ...(selectedTask.remarks || [])];
 
-    setSavedRemarks(updatedRemarks);
+      setSavedRemarks(updatedRemarks);
 
-    setSelectedTask(prev =>
-      prev
-        ? {
+      setSelectedTask(prev =>
+        prev
+          ? {
             ...prev,
             status,            // update task status
             remarks: updatedRemarks, // update remarks source of truth
           }
-        : prev
-    );
+          : prev
+      );
 
-    await fetchTasks();
-  } catch (err) {
-    console.error(err);
-    setError("Failed to add remark");
-  }
-};
+      await fetchTasks();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to add remark");
+    }
+  };
 
 
   const handleRemoveRemarkInModal = async (id: number) => {
@@ -1819,14 +1854,14 @@ const response = await fetch(`http://localhost:8000/tasks-remarks`, {
 
         const token = getAuthToken();
 
-        const response =await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
-  method: 'PATCH',
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(updatedTask),
-});
+        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
+          method: 'PATCH',
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatedTask),
+        });
 
 
         if (!response.ok) {
@@ -1853,11 +1888,11 @@ const response = await fetch(`http://localhost:8000/tasks-remarks`, {
     try {
 
       const response = await fetch(`http://localhost:8000/task/${id}`, {
-  method: 'DELETE',
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) throw new Error('Failed to delete task');
 
@@ -2111,94 +2146,94 @@ const response = await fetch(`http://localhost:8000/tasks-remarks`, {
       formData.remarks.some(remark => remark.status === 'Closed');
   };
 
- // In the handleEditTask function, update the inventory loading part:
-const handleEditTask = (task: Task) => {
-  const sortedRemarks = task.remarks
-    ? [...task.remarks].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    : [];
+  // In the handleEditTask function, update the inventory loading part:
+  const handleEditTask = (task: Task) => {
+    const sortedRemarks = task.remarks
+      ? [...task.remarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      : [];
 
-  const formattedSchedule = (task.schedule || []).map(schedule => ({
-    ...schedule,
-    proposedDateTime: schedule.proposedDateTime ?
-      new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
-  }));
+    const formattedSchedule = (task.schedule || []).map(schedule => ({
+      ...schedule,
+      proposedDateTime: schedule.proposedDateTime ?
+        new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
+    }));
 
-  let taskStatus = 'Open';
-  if (task.remarks && task.remarks.length > 0) {
-    const sortedRemarks = [...task.remarks].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    let taskStatus = 'Open';
+    if (task.remarks && task.remarks.length > 0) {
+      const sortedRemarks = [...task.remarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      taskStatus = sortedRemarks[0]?.status || 'Open';
+    }
+
+    setFormData({
+      taskID: task.taskID,
+      userId: task.userId,
+      departmentId: task.departmentId,
+      addressBookId: task.addressBookId,
+      siteId: task.siteId,
+      status: taskStatus,
+      createdBy: task.createdBy,
+      createdAt: task.createdAt,
+      description: task.description || '',
+      // Start with empty arrays for adding new items
+      contacts: [],
+      workscopeDetails: [],
+      schedule: [
+        {
+          taskId: task.id || 0,
+          proposedDateTime: "",
+          priority: "Medium",
+        }
+      ],
+
+      // Start with one empty remark for adding new ones
+      remarks: [{
+        taskId: 0,
+        remark: '',
+        status: 'Open',
+        createdBy: 'Admin',
+        createdAt: new Date().toISOString()
+      }]
+    });
+
+    setSavedContacts(task.contacts || []);
+    setSavedWorkscopeDetails(
+      (task.workscopeDetails || []).map(w => ({
+        id: w.id!,
+        taskId: w.taskId!,
+        workscopeCategoryId: Number(w.workscopeCategoryId),
+        workscopeDetails: w.workscopeDetails,
+        extraNote: w.extraNote || ""
+      }))
     );
-    taskStatus = sortedRemarks[0]?.status || 'Open';
-  }
 
-  setFormData({
-    taskID: task.taskID,
-    userId: task.userId,
-    departmentId: task.departmentId,
-    addressBookId: task.addressBookId,
-    siteId: task.siteId,
-    status: taskStatus,
-    createdBy: task.createdBy,
-    createdAt: task.createdAt,
-    description: task.description || '',
-    // Start with empty arrays for adding new items
-    contacts: [],
-    workscopeDetails: [],
-    schedule: [
-      {
-        taskId: task.id || 0,
-        proposedDateTime: "",
-        priority: "Medium",
-      }
-    ],
+    setSavedSchedule(task.schedule || []);
+    setSavedRemarks(task.remarks || []);
 
-    // Start with one empty remark for adding new ones
-    remarks: [{
-      taskId: 0,
-      remark: '',
-      status: 'Open',
-      createdBy: 'Admin',
-      createdAt: new Date().toISOString()
-    }]
-  });
+    // Load task inventories if they exist - FIXED: Use actual warrantyStatus from API
+    if (task.taskInventories) {
+      setInventories(task.taskInventories.map((inv: any) => ({
+        productTypeId: inv.productTypeId,
+        productTypeName: productTypes.find(pt => pt.id === inv.productTypeId)?.productTypeName || 'Unknown',
+        makeModel: inv.makeModel,
+        snMac: inv.snMac,
+        description: inv.description,
+        purchaseDate: inv.purchaseDate,
+        warrantyPeriod: inv.warrantyPeriod,
+        thirdPartyPurchase: inv.thirdPartyPurchase,
+        // FIX: Use the actual warrantyStatus from API, default to "Active" only if null/undefined
+        warrantyStatus: inv.warrantyStatus ?? "Active"
+      })));
+    } else {
+      setInventories([]);
+    }
 
-  setSavedContacts(task.contacts || []);
-  setSavedWorkscopeDetails(
-    (task.workscopeDetails || []).map(w => ({
-      id: w.id!,
-      taskId: w.taskId!,
-      workscopeCategoryId: Number(w.workscopeCategoryId),
-      workscopeDetails: w.workscopeDetails,
-      extraNote: w.extraNote || ""
-    }))
-  );
-
-  setSavedSchedule(task.schedule || []);
-  setSavedRemarks(task.remarks || []);
-
-  // Load task inventories if they exist - FIXED: Use actual warrantyStatus from API
-  if (task.taskInventories) {
-    setInventories(task.taskInventories.map((inv: any) => ({
-      productTypeId: inv.productTypeId,
-      productTypeName: productTypes.find(pt => pt.id === inv.productTypeId)?.productTypeName || 'Unknown',
-      makeModel: inv.makeModel,
-      snMac: inv.snMac,
-      description: inv.description,
-      purchaseDate: inv.purchaseDate,
-      warrantyPeriod: inv.warrantyPeriod,
-      thirdPartyPurchase: inv.thirdPartyPurchase,
-      // FIX: Use the actual warrantyStatus from API, default to "Active" only if null/undefined
-warrantyStatus: inv.warrantyStatus ?? "Active"
-    })));
-  } else {
-    setInventories([]);
-  }
-
-  setEditingId(task.id || null);
-  setShowModal(true);
-};
+    setEditingId(task.id || null);
+    setShowModal(true);
+  };
 
   // Remark editing handlers
   const handleOpenEditRemarkModal = (remark: TasksRemarks) => {
@@ -2241,16 +2276,16 @@ warrantyStatus: inv.warrantyStatus ?? "Active"
 
     try {
       const response = await fetch(`http://localhost:8000/tasks-remarks/${remarkToEdit.id}`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify({
-    remark: editRemarkText,
-    status: editRemarkStatus,
-  }),
-});
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          remark: editRemarkText,
+          status: editRemarkStatus,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to update remark");
@@ -2281,252 +2316,252 @@ warrantyStatus: inv.warrantyStatus ?? "Active"
   };
 
   // Inventory Modal Component - UPDATED with warrantyStatus field
- // Replace the entire InventoryModalComponent with this updated version:
-const InventoryModalComponent = () => {
-  const [form, setForm] = useState({
-    productTypeId: "",
-    makeModel: "",
-    snMac: "",
-    description: "",
-    purchaseDate: "",
-    warrantyPeriod: "",
-    warrantyStatus: "",
-    thirdPartyPurchase: false
-  });
-  
-  // Add state to track if we're editing an existing item
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-  if (!showInventoryModal) return null;
-
-  // Function to reset the form
-  const resetForm = () => {
-    setForm({
+  // Replace the entire InventoryModalComponent with this updated version:
+  const InventoryModalComponent = () => {
+    const [form, setForm] = useState({
       productTypeId: "",
       makeModel: "",
       snMac: "",
       description: "",
       purchaseDate: "",
       warrantyPeriod: "",
-      warrantyStatus: "Active",
+      warrantyStatus: "",
       thirdPartyPurchase: false
     });
-    setEditingIndex(null);
-  };
 
-  // Function to edit an existing item
-  const handleEditInventory = (index: number) => {
-    const inv = inventories[index];
-    setForm({
-      productTypeId: inv.productTypeId?.toString() || "",
-      makeModel: inv.makeModel || "",
-      snMac: inv.snMac || "",
-      description: inv.description || "",
-      purchaseDate: inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : "",
-      warrantyPeriod: inv.warrantyPeriod || "",
-warrantyStatus: inv.warrantyStatus
-  ? String(inv.warrantyStatus).trim()
-  : "Active",
-      thirdPartyPurchase: inv.thirdPartyPurchase || false
-    });
-    setEditingIndex(index);
-  };
+    // Add state to track if we're editing an existing item
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const handleSave = () => {
-    if (!form.productTypeId || !form.makeModel || !form.snMac) {
-      alert("Product type, model, SN/MAC are required");
-      return;
-    }
+    if (!showInventoryModal) return null;
 
-    const selectedProduct = productTypes.find(
-      (pt: any) => pt.id === Number(form.productTypeId)
-    );
-
-    const newInventoryItem = {
-      ...form,
-      productTypeId: Number(form.productTypeId),
-      productTypeName: selectedProduct?.productTypeName,
-      warrantyStatus: form.warrantyStatus,
+    // Function to reset the form
+    const resetForm = () => {
+      setForm({
+        productTypeId: "",
+        makeModel: "",
+        snMac: "",
+        description: "",
+        purchaseDate: "",
+        warrantyPeriod: "",
+        warrantyStatus: "Active",
+        thirdPartyPurchase: false
+      });
+      setEditingIndex(null);
     };
 
-    if (editingIndex !== null) {
-      // Update existing item
-      const updatedInventories = [...inventories];
-      updatedInventories[editingIndex] = newInventoryItem;
-      setInventories(updatedInventories);
-    } else {
-      // Add new item
-      setInventories((prev: any[]) => [...prev, newInventoryItem]);
-    }
+    // Function to edit an existing item
+    const handleEditInventory = (index: number) => {
+      const inv = inventories[index];
+      setForm({
+        productTypeId: inv.productTypeId?.toString() || "",
+        makeModel: inv.makeModel || "",
+        snMac: inv.snMac || "",
+        description: inv.description || "",
+        purchaseDate: inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : "",
+        warrantyPeriod: inv.warrantyPeriod || "",
+        warrantyStatus: inv.warrantyStatus
+          ? String(inv.warrantyStatus).trim()
+          : "Active",
+        thirdPartyPurchase: inv.thirdPartyPurchase || false
+      });
+      setEditingIndex(index);
+    };
 
-    setShowInventoryModal(false);
-    resetForm();
-  };
-
-  const handleDelete = (index: number) => {
-    if (confirm('Are you sure you want to remove this inventory item?')) {
-      setInventories(prev => prev.filter((_, i) => i !== index));
-      if (editingIndex === index) {
-        resetForm();
+    const handleSave = () => {
+      if (!form.productTypeId || !form.makeModel || !form.snMac) {
+        alert("Product type, model, SN/MAC are required");
+        return;
       }
-    }
-  };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl text-gray-900 font-semibold">
-            {editingIndex !== null ? 'Edit Inventory Item' : 'Add Inventory Item'}
-          </h2>
-          <button
-            onClick={() => {
-              setShowInventoryModal(false);
-              resetForm();
-            }}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
-          >
-            ×
-          </button>
-        </div>
+      const selectedProduct = productTypes.find(
+        (pt: any) => pt.id === Number(form.productTypeId)
+      );
 
-        <div className="space-y-6">
-          {/* First Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Type *
-              </label>
-              <select
-                value={form.productTypeId}
-                onChange={(e) =>
-                  setForm({ ...form, productTypeId: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                required
-              >
-                <option value="">Select Product Type</option>
-                {productTypes.map((pt: any) => (
-                  <option key={pt.id} value={pt.id}>
-                    {pt.productTypeName}
-                  </option>
-                ))}
-              </select>
+      const newInventoryItem = {
+        ...form,
+        productTypeId: Number(form.productTypeId),
+        productTypeName: selectedProduct?.productTypeName,
+        warrantyStatus: form.warrantyStatus,
+      };
+
+      if (editingIndex !== null) {
+        // Update existing item
+        const updatedInventories = [...inventories];
+        updatedInventories[editingIndex] = newInventoryItem;
+        setInventories(updatedInventories);
+      } else {
+        // Add new item
+        setInventories((prev: any[]) => [...prev, newInventoryItem]);
+      }
+
+      setShowInventoryModal(false);
+      resetForm();
+    };
+
+    const handleDelete = (index: number) => {
+      if (confirm('Are you sure you want to remove this inventory item?')) {
+        setInventories(prev => prev.filter((_, i) => i !== index));
+        if (editingIndex === index) {
+          resetForm();
+        }
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl text-gray-900 font-semibold">
+              {editingIndex !== null ? 'Edit Inventory Item' : 'Add Inventory Item'}
+            </h2>
+            <button
+              onClick={() => {
+                setShowInventoryModal(false);
+                resetForm();
+              }}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {/* First Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Type *
+                </label>
+                <select
+                  value={form.productTypeId}
+                  onChange={(e) =>
+                    setForm({ ...form, productTypeId: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  required
+                >
+                  <option value="">Select Product Type</option>
+                  {productTypes.map((pt: any) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.productTypeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Make & Model *
+                </label>
+                <input
+                  value={form.makeModel}
+                  onChange={(e) =>
+                    setForm({ ...form, makeModel: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  required
+                />
+              </div>
             </div>
 
+            {/* Second Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  SN / MAC *
+                </label>
+                <input
+                  value={form.snMac}
+                  onChange={(e) =>
+                    setForm({ ...form, snMac: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Warranty Status
+                </label>
+                <select
+                  value={form.warrantyStatus}
+                  onChange={(e) =>
+                    setForm({ ...form, warrantyStatus: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Expired">Expired</option>
+                  <option value="Void">Void</option>
+                  <option value="Unknown">Unknown</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Third Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Purchase Date
+                </label>
+                <input
+                  type="date"
+                  value={form.purchaseDate}
+                  onChange={(e) =>
+                    setForm({ ...form, purchaseDate: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Warranty Period
+                </label>
+                <input
+                  value={form.warrantyPeriod}
+                  onChange={(e) =>
+                    setForm({ ...form, warrantyPeriod: e.target.value })
+                  }
+                  placeholder="e.g., 1 year, 2 years"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Make & Model *
+                Description
               </label>
-              <input
-                value={form.makeModel}
+              <textarea
+                value={form.description}
                 onChange={(e) =>
-                  setForm({ ...form, makeModel: e.target.value })
+                  setForm({ ...form, description: e.target.value })
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                required
+                rows={3}
               />
             </div>
-          </div>
 
-          {/* Second Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SN / MAC *
-              </label>
+            {/* Checkbox */}
+            <div className="flex items-center gap-3">
               <input
-                value={form.snMac}
+                type="checkbox"
+                id="thirdPartyPurchase"
+                checked={form.thirdPartyPurchase}
                 onChange={(e) =>
-                  setForm({ ...form, snMac: e.target.value })
+                  setForm({ ...form, thirdPartyPurchase: e.target.checked })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                required
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Warranty Status
+              <label htmlFor="thirdPartyPurchase" className="text-sm font-medium text-gray-700">
+                Third Party Purchase?
               </label>
-              <select
-                value={form.warrantyStatus}
-                onChange={(e) =>
-                  setForm({ ...form, warrantyStatus: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-              >
-                <option value="Active">Active</option>
-                <option value="Expired">Expired</option>
-                <option value="Void">Void</option>
-                <option value="Unknown">Unknown</option>
-              </select>
             </div>
           </div>
 
-          {/* Third Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Purchase Date
-              </label>
-              <input
-                type="date"
-                value={form.purchaseDate}
-                onChange={(e) =>
-                  setForm({ ...form, purchaseDate: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Warranty Period
-              </label>
-              <input
-                value={form.warrantyPeriod}
-                onChange={(e) =>
-                  setForm({ ...form, warrantyPeriod: e.target.value })
-                }
-                placeholder="e.g., 1 year, 2 years"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-              />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-              rows={3}
-            />
-          </div>
-
-          {/* Checkbox */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="thirdPartyPurchase"
-              checked={form.thirdPartyPurchase}
-              onChange={(e) =>
-                setForm({ ...form, thirdPartyPurchase: e.target.checked })
-              }
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="thirdPartyPurchase" className="text-sm font-medium text-gray-700">
-              Third Party Purchase?
-            </label>
-          </div>
-        </div>
-        
           <div className="mt-8 flex justify-end gap-3">
             <button
               type="button"
@@ -2566,18 +2601,17 @@ warrantyStatus: inv.warrantyStatus
         {/* Actions Bar */}
         <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="flex gap-4">
-      <button
-  onClick={handleOpenModal}
-  disabled={!taskPermissions.create}
-  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-    taskPermissions.create
-      ? "bg-blue-600 text-white hover:bg-blue-700"
-      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-  }`}
->
-  <PlusIcon className="h-5 w-5" />
-  Create Task
-</button>
+            <button
+              onClick={handleOpenModal}
+              disabled={!taskPermissions.create}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${taskPermissions.create
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+            >
+              <PlusIcon className="h-5 w-5" />
+              Create Task
+            </button>
           </div>
 
           {/* 🔍 Search Bar */}
@@ -2627,173 +2661,190 @@ warrantyStatus: inv.warrantyStatus
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedTasks.map((task) => (
-                    <tr key={task.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {task.taskID}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
-                      </td>
+  <tbody className="bg-white divide-y divide-gray-200">
+    {paginatedTasks.map((task) => {
 
-                    <td className="px-6 py-4 whitespace-nowrap">
-  {(() => {
-    // No remarks at all → default Open
-    if (!task.remarks || task.remarks.length === 0) {
+      
+   const isOverdueOpen =
+      isTaskOpen(task) && 
+      isTaskOlderThan24Hours(task) && 
+      !hasTaskBeenAttempted(task);
+
       return (
-        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-          Open
-        </span>
+        <tr
+          key={task.id}
+          className={`
+            border-b transition-all
+            ${isOverdueOpen
+              ? "bg-red-50 border-l-4 border-red-600"
+              : "hover:bg-gray-50"}
+          `}
+        >
+          <td className="p-3 font-medium text-gray-900">
+            {task.taskID}
+            {isOverdueOpen && (
+              <span className="ml-2 text-xs font-semibold text-red-600">
+                ⚠ Open &gt; 24h
+              </span>
+            )}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || 'N/A'}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap">
+            {(() => {
+              // No remarks at all → default Open
+              if (!task.remarks || task.remarks.length === 0) {
+                return (
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    Open
+                  </span>
+                );
+              }
+
+              // Sort remarks by latest
+              const sortedRemarks = [...task.remarks].sort(
+                (a, b) => (b.id || 0) - (a.id || 0)
+              );
+
+              const latestRemark = sortedRemarks[0];
+              const status = latestRemark?.status || 'Open';
+
+              return (
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status === 'Completed'
+                      ? 'bg-green-100 text-green-800'
+                      : status === 'Work in Progress'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : status === 'On-Hold'
+                          ? 'bg-orange-100 text-orange-800'
+                          : status === 'Rescheduled'
+                            ? 'bg-purple-100 text-purple-800'
+                            : status === 'Scheduled'
+                              ? 'bg-blue-100 text-blue-800'
+                              : status === 'Reopen'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800' // Open + fallback
+                    }`}
+                >
+                  {status}
+                </span>
+              );
+            })()}
+          </td>
+
+
+          <td className="px-6 py-4 text-sm text-gray-900 align-top w-64">
+            {task.remarks && task.remarks.length > 0 ? (
+              <div className="flex flex-col space-y-1">
+                <div className="font-medium break-words leading-snug">
+                  {(() => {
+                    const sortedRemarks = [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0));
+                    const latestRemark = sortedRemarks[0];
+
+                    return (
+                      <span className="block text-gray-800">
+                        {latestRemark.remark}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            ) : (
+              <span className="text-gray-400">No remarks</span>
+            )}
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  taskPermissions.create && handleOpenRemarksModal(task)
+                }
+                disabled={!taskPermissions.create}
+                className={`transition-colors
+                  ${taskPermissions.create
+                    ? "text-green-600 hover:text-green-900"
+                    : "text-gray-400 cursor-not-allowed"
+                  }`}
+                title={
+                  taskPermissions.create
+                    ? "View / Add Remarks"
+                    : "No permission to add remarks"
+                }
+              >
+
+                View
+              </button>
+
+              <button
+
+                onClick={() => taskPermissions.edit && handleEditTask(task)}
+                disabled={!taskPermissions.edit}
+                className={`transition-colors
+                  ${taskPermissions.edit
+                    ? "text-blue-600 hover:text-blue-900"
+                    : "text-gray-400 cursor-not-allowed"
+                  }`}
+                title={
+                  taskPermissions.edit ? "Edit Task" : "No permission to edit"
+                }
+              >
+
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                onClick={() =>
+                  taskPermissions.create && handleOpenRemarksModal(task)
+                }
+                disabled={!taskPermissions.create}
+                className={`transition-colors
+                  ${taskPermissions.create
+                    ? "text-green-600 hover:text-green-900"
+                    : "text-gray-400 cursor-not-allowed"
+                  }`}
+                title={
+                  taskPermissions.create
+                    ? "View / Add Remarks"
+                    : "No permission to add remarks"
+                }
+              >
+
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => taskPermissions.delete && handleDeleteTask(task.id!)}
+                disabled={!taskPermissions.delete}
+                className={`transition-colors
+                  ${taskPermissions.delete
+                    ? "text-red-600 hover:text-red-900"
+                    : "text-gray-400 cursor-not-allowed"
+                  }`}
+                title={
+                  taskPermissions.delete ? "Delete Task" : "No permission to delete"
+                }
+              >
+
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
       );
-    }
-
-    // Sort remarks by latest
-    const sortedRemarks = [...task.remarks].sort(
-      (a, b) => (b.id || 0) - (a.id || 0)
-    );
-
-    const latestRemark = sortedRemarks[0];
-    const status = latestRemark?.status || 'Open';
-
-    return (
-      <span
-        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          status === 'Completed'
-            ? 'bg-green-100 text-green-800'
-            : status === 'Work in Progress'   
-            ? 'bg-yellow-100 text-yellow-800'
-            : status === 'On-Hold'
-            ? 'bg-orange-100 text-orange-800'
-            : status === 'Rescheduled'
-            ? 'bg-purple-100 text-purple-800'
-            : status === 'Scheduled'
-            ? 'bg-blue-100 text-blue-800'
-            : status === 'Reopen'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-gray-100 text-gray-800' // Open + fallback
-        }`}
-      >
-        {status}
-      </span>
-    );
-  })()}
-</td>
-
-
-                      <td className="px-6 py-4 text-sm text-gray-900 align-top w-64">
-                        {task.remarks && task.remarks.length > 0 ? (
-                          <div className="flex flex-col space-y-1">
-                            <div className="font-medium break-words leading-snug">
-                              {(() => {
-                                const sortedRemarks = [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0));
-                                const latestRemark = sortedRemarks[0];
-
-                                return (
-                                  <span className="block text-gray-800">
-                                    {latestRemark.remark}
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">No remarks</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-2">
-                      <button
-  onClick={() =>
-    taskPermissions.create && handleOpenRemarksModal(task)
-  }
-  disabled={!taskPermissions.create}
-  className={`transition-colors
-    ${
-      taskPermissions.create
-        ? "text-green-600 hover:text-green-900"
-        : "text-gray-400 cursor-not-allowed"
-    }`}
-  title={
-    taskPermissions.create
-      ? "View / Add Remarks"
-      : "No permission to add remarks"
-  }
->
-
-                            View
-                            </button>
-                            
-                         <button
-                         
-  onClick={() => taskPermissions.edit && handleEditTask(task)}
-  disabled={!taskPermissions.edit}
-  className={`transition-colors
-    ${
-      taskPermissions.edit
-        ? "text-blue-600 hover:text-blue-900"
-        : "text-gray-400 cursor-not-allowed"
-    }`}
-  title={
-    taskPermissions.edit ? "Edit Task" : "No permission to edit"
-  }
->
-
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                         <button
-  onClick={() =>
-    taskPermissions.create && handleOpenRemarksModal(task)
-  }
-  disabled={!taskPermissions.create}
-  className={`transition-colors
-    ${
-      taskPermissions.create
-        ? "text-green-600 hover:text-green-900"
-        : "text-gray-400 cursor-not-allowed"
-    }`}
-  title={
-    taskPermissions.create
-      ? "View / Add Remarks"
-      : "No permission to add remarks"
-  }
->
-
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                            </svg>
-                          </button>
-                         <button
-  onClick={() => taskPermissions.delete && handleDeleteTask(task.id!)}
-  disabled={!taskPermissions.delete}
-  className={`transition-colors
-    ${
-      taskPermissions.delete
-        ? "text-red-600 hover:text-red-900"
-        : "text-gray-400 cursor-not-allowed"
-    }`}
-  title={
-    taskPermissions.delete ? "Delete Task" : "No permission to delete"
-  }
->
-
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {tasks.length === 0 && (
+    })}
+    {tasks.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                         No tasks found. Create your first task!

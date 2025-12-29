@@ -55,6 +55,7 @@ interface User {
   username: string;
   password?: string;
   fullName?: string;
+  email?: string;
   userType?: string;
   department?: string;
   createdAt?: string;
@@ -239,6 +240,16 @@ const UserModal = ({
               <option value="USER">User</option>
               <option value="VIEWER">Viewer</option>
             </select>
+          </div>
+
+          <div className="mb-3">
+            <label className="text-sm font-medium">Email</label>
+            <input
+              disabled={loading}
+              className="w-full mt-1 border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+              value={formData.email}
+              onChange={(e) => setFormData((f: any) => ({ ...f, email: e.target.value }))}
+            />
           </div>
 
           <div className="mb-6">
@@ -499,6 +510,7 @@ export default function UsersPage() {
     password: "",
     fullName: "",
     userType: "",
+    email: "",
     department: ""
   });
   const [savingUser, setSavingUser] = useState(false);
@@ -577,6 +589,7 @@ export default function UsersPage() {
           u.username?.toLowerCase().includes(t) ||
           u.fullName?.toLowerCase().includes(t) ||
           u.userType?.toLowerCase().includes(t) ||
+          u.email?.toLowerCase().includes(t) ||
           u.department?.toLowerCase().includes(t)
       )
     );
@@ -590,6 +603,7 @@ export default function UsersPage() {
       password: "",
       fullName: "",
       userType: "",
+      email: "",
       department: ""
     });
     setUserModalOpen(true);
@@ -602,6 +616,7 @@ export default function UsersPage() {
       password: "",
       fullName: u.fullName || "",
       userType: u.userType || "",
+      email: u.email || "",
       department: u.department || ""
     });
     setUserModalOpen(true);
@@ -616,6 +631,7 @@ export default function UsersPage() {
         username: userFormData.username,
         fullName: userFormData.fullName,
         userType: userFormData.userType,
+        email: userFormData.email,
         department: userFormData.department
       };
 
@@ -844,7 +860,7 @@ export default function UsersPage() {
 
         {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
+          <div className="px-6 py-4 border-b  from-blue-50 to-white">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-semibold text-gray-900">User List</div>
@@ -865,7 +881,7 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    {["Username", "Full Name", "User Type", "Department", "Actions"].map((t) => (
+                    {["Username", "Full Name", "User Type", "Department", "email", "Actions"].map((t) => (
                       <th
                         key={t}
                         className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
@@ -897,8 +913,12 @@ export default function UsersPage() {
                             {u.userType || 'Not set'}
                           </span>
                         </td>
+                      
                         <td className="px-6 py-4">
                           <div className="text-gray-900">{u.department || '-'}</div>
+                        </td>
+                          <td className="px-6 py-4">
+                          <div className="text-gray-900">{u.email || '-'}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">

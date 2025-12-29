@@ -465,12 +465,7 @@ useEffect(() => {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Customer Contact Management
           </h1>
-          <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
-            Permissions: {customerRegPermissions.create ? 'Create ✓' : 'Create ✗'} | 
-            {customerRegPermissions.read ? ' Read ✓' : ' Read ✗'} | 
-            {customerRegPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
-            {customerRegPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
-          </div>
+         
         </div>
 
         {/* Action Bar */}

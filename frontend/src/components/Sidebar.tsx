@@ -157,6 +157,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const [clientFullName, setClientFullName] = useState("User");
   const [clientUserType, setClientUserType] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
+
+  // ✅ SUPERADMIN flag (new)
+  const isSuperAdmin = clientUserType === "SUPERADMIN";
   
   // Permissions state
   const [allPermissions, setAllPermissions] = useState<AllPermissions>({});
@@ -183,6 +186,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // 🔹 Fetch permissions with dynamic userId
   const fetchPermissions = async () => {
     try {
+      // ✅ If SUPERADMIN → show all links, no need to fetch permissions
+      if (isSuperAdmin) {
+        setAllPermissions({});
+        setLoadingPermissions(false);
+        return;
+      }
+
       const storedUserId = localStorage.getItem("userId");
       
       if (!storedUserId) {
@@ -203,7 +213,30 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         return;
       }
 
-      const data: UserPermissionResponse = await res.json();
+      // ✅ FIX: Avoid res.json() when body is empty or not JSON
+      const contentType = res.headers.get("content-type") || "";
+      const rawText = await res.text();
+
+      if (!rawText) {
+        console.warn(`Empty response body for user ${userId} permissions`);
+        setAllPermissions({});
+        return;
+      }
+
+      if (!contentType.includes("application/json")) {
+        console.warn(`Non-JSON response for user ${userId} permissions:`, rawText);
+        setAllPermissions({});
+        return;
+      }
+
+      let data: UserPermissionResponse | null = null;
+      try {
+        data = JSON.parse(rawText) as UserPermissionResponse;
+      } catch (e) {
+        console.warn(`Invalid JSON response for user ${userId} permissions:`, rawText);
+        setAllPermissions({});
+        return;
+      }
 
       // Extract permissions from response
       if (data && data.permissions && data.permissions.permissions) {
@@ -224,7 +257,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   useEffect(() => {
     fetchPermissions();
-  }, [userId]); // Re-fetch when userId changes
+    // ✅ re-run when userId OR userType changes (SUPERADMIN)
+  }, [userId, isSuperAdmin]); // Re-fetch when userId changes
 
   const toggleSection = (section: keyof ExpandedSections) => {
     setExpandedSections(prev => ({
@@ -242,11 +276,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   // 🔹 Check if user has read permission for a menu item
   const hasReadPermission = (permissionKey: string): boolean => {
-    if (loadingPermissions) return false; // 加载中不显示任何项目
+    // ✅ SUPERADMIN sees everything
+    if (isSuperAdmin) return true;
+
+    if (loadingPermissions) return false; 
     
     const permission = allPermissions[permissionKey];
     if (!permission) {
-      // 如果没有找到权限配置，默认为false（安全起见）
       console.warn(`No permission found for key: ${permissionKey}`);
       return false;
     }
@@ -256,6 +292,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   // 🔹 Filter navigation items based on read permission
  const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
+  // ✅ SUPERADMIN: show all without filtering
+  if (isSuperAdmin) return items;
+
   return items
     .map(item => {
       // Handle nested items first
@@ -347,9 +386,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // 🔹 Filter all menu items based on permissions
   const filteredMainItems = filterNavigationItems(mainNavigationItems);
   const filteredSetupItems = filterNavigationItems(setupItems);
-  const filteredAdditionalLinks = additionalLinks.filter(link => 
-    hasReadPermission(link.permissionKey)
-  );
+
+  const filteredAdditionalLinks = isSuperAdmin
+    ? additionalLinks
+    : additionalLinks.filter(link => 
+        hasReadPermission(link.permissionKey)
+      );
 
   // 🔹 Check if any Setup items are visible
   const hasVisibleSetupItems = filteredSetupItems.length > 0;

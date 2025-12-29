@@ -608,31 +608,7 @@ export default function SitesPage() {
     <div className="p-8 -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Sites</h1>
-        {permissions && (
-          <div className="text-sm text-gray-600 mb-2">
-            <div className="mb-2">
-              User ID: <span className="font-semibold">{userId || 'Not logged in'}</span>
-            </div>
-            <div className="mb-1">
-              <span className="font-medium">SITES Permissions:</span>
-              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.read ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Read: {sitesPerm.read ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.create ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Create: {sitesPerm.create ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.edit ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Edit: {sitesPerm.edit ? 'Yes' : 'No'}
-              </span>
-              <span className={`ml-2 px-2 py-1 rounded ${sitesPerm.delete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                Delete: {sitesPerm.delete ? 'Yes' : 'No'}
-              </span>
-            </div>
-          </div>
-        )}
-        <div className="text-xs text-gray-500">
-          API Endpoint: http://localhost:8000/user-permissions/{userId}
-        </div>
+      
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">

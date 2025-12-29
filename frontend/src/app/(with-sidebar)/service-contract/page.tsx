@@ -980,16 +980,19 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
       </div>
 
       <div className="mb-6">
-        <button
+ <button
+  type="button"
+  onClick={handleAddNew}   // ✅ THIS WAS MISSING
   disabled={!serviceContractPerm.create}
   className={`px-6 py-3 rounded ${
     serviceContractPerm.create
-      ? 'bg-blue-600 text-white'
+      ? 'bg-blue-600 text-white hover:bg-blue-700'
       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
   }`}
 >
   Add Service Contract
 </button>
+
 
       </div>
 
@@ -1829,13 +1832,28 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
                 className="text-black"
               />
 
-              <InputField
-                label="Warranty Status"
-                value={inventoryForm.warrantyStatus}
-                onChange={(val) => setInventoryForm({ ...inventoryForm, warrantyStatus: val })}
-                placeholder="e.g., Active, Expired..."
-                className="text-black"
-              />
+            <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Warranty Status
+  </label>
+
+  <select
+    value={inventoryForm.warrantyStatus}
+    onChange={(e) =>
+      setInventoryForm({
+        ...inventoryForm,
+        warrantyStatus: e.target.value,
+      })
+    }
+    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+    required
+  >
+    <option value="">Select Warranty Status</option>
+    <option value="Active">Active</option>
+    <option value="Expired">Expired</option>
+  </select>
+</div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

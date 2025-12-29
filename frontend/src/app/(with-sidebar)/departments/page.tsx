@@ -481,42 +481,14 @@ emails: [{ id: nanoid(), email: '' }]
     );
   }
 
-  // If user doesn't have read permission, show access denied
-  if (!departmentPermissions.read) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <Icons.NoAccess />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-500">You don't have permission to view departments.</p>
-          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
-            <p className="text-sm text-gray-600">Debug info:</p>
-            <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
-            <p className="text-xs text-gray-500">DEPARTMENTS exists: {'DEPARTMENTS' in allPermissions ? 'Yes' : 'No'}</p>
-            <p className="text-xs text-gray-500">DEPARTMENTS permissions: {JSON.stringify(departmentPermissions)}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
-
+  
 
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Departments</h1>
-        {/* Permission status display */}
-        <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
-          Permissions: {departmentPermissions.create ? 'Create ✓' : 'Create ✗'} | 
-          {departmentPermissions.read ? ' Read ✓' : ' Read ✗'} | 
-          {departmentPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
-          {departmentPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
-        </div>
+       
       </div>
 
       {/* Search and Controls Section */}

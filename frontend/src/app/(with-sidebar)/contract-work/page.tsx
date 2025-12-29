@@ -183,12 +183,12 @@ useEffect(() => {
 
     // Check permissions before submitting
     if (editingId && !serviceCategoryPermissions.edit) {
-      alert('You do not have permission to edit contract work categories');
+      alert('You do not have permission to edit contract service categories');
       return;
     }
     
     if (!editingId && !serviceCategoryPermissions.create) {
-      alert('You do not have permission to create contract work categories');
+      alert('You do not have permission to create contract service categories');
       return;
     }
 
@@ -225,7 +225,7 @@ useEffect(() => {
   // 🔹 Edit existing category
   const handleEdit = (id: number) => {
     if (!serviceCategoryPermissions.edit) {
-      alert('You do not have permission to edit contract work categories');
+      alert('You do not have permission to edit contract service categories');
       return;
     }
     
@@ -243,7 +243,7 @@ useEffect(() => {
   // 🔹 Delete category
   const handleDelete = async (id: number) => {
     if (!serviceCategoryPermissions.delete) {
-      alert('You do not have permission to delete contract work categories');
+      alert('You do not have permission to delete contract service categories');
       return;
     }
     
@@ -268,7 +268,7 @@ useEffect(() => {
   // 🔹 Handle Add
   const handleAddNew = () => {
     if (!serviceCategoryPermissions.create) {
-      alert('You do not have permission to create contract work categories');
+      alert('You do not have permission to create contract service categories');
       return;
     }
     
@@ -298,7 +298,7 @@ useEffect(() => {
             <Icons.NoAccess />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-500">You don't have permission to view contract work categories.</p>
+          <p className="text-gray-500">You don't have permission to view contract service categories.</p>
           <div className="mt-4 p-3 bg-gray-100 rounded text-left">
             <p className="text-sm text-gray-600">Debug info:</p>
             <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
@@ -378,14 +378,8 @@ useEffect(() => {
   return (
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">Contract Work Categories</h1>
-        {/* Permission status display */}
-        <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
-          Permissions: {serviceCategoryPermissions.create ? 'Create ✓' : 'Create ✗'} | 
-          {serviceCategoryPermissions.read ? ' Read ✓' : ' Read ✗'} | 
-          {serviceCategoryPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
-          {serviceCategoryPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
-        </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">Contract Service Categories</h1>
+       
       </div>
 
       {/* Search and Controls Section */}
@@ -403,7 +397,7 @@ useEffect(() => {
             title={serviceCategoryPermissions.create ? "Add new category" : "No create permission"}
           >
             <Icons.Plus />
-            Add Category
+            Add Service Category
           </button>
         </div>
 
@@ -436,7 +430,7 @@ useEffect(() => {
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-white">Contract Work Categories</h2>
+            <h2 className="text-xl font-semibold text-white">Contract Service Categories</h2>
             {loading && <span className="text-sm text-blue-100">Loading...</span>}
           </div>
         </div>

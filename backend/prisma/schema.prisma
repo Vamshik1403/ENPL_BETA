@@ -209,7 +209,7 @@ model DepartmentEmail {
 
 model Task {
   id               Int                      @id @default(autoincrement())
-  taskID           String                   @default(uuid())
+  taskID           String                   @unique 
   departmentId     Int
   addressBookId    Int
   siteId           Int
@@ -222,6 +222,8 @@ model Task {
   department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   addressBook      AddressBook              @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
   site             Site                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id])
+
   contacts         TasksContacts[]
   workscopeCat     TasksWorkscopeCategory[]
   workscopeDetails TasksWorkscopeDetails[]
@@ -350,11 +352,13 @@ model User {
   id         Int      @id @default(autoincrement())
   username   String   @unique
   password   String
+  email      String?   @unique
   fullName   String?  
   userType   String?
   department String?
   createdAt  DateTime @default(now())
   userPermission UserPermission?
+  tasks      Task[]
 }
 
 model CustomerContact {

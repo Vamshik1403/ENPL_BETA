@@ -25,17 +25,30 @@ import { TasksWorkscopeDetailsModule } from './tasks-workscope-details/tasks-wor
 import { TasksScheduleModule } from './task-schedule/task-schedule.module';
 import { TasksRemarksModule } from './task-remarks/task-remarks.module';
 import { SupportTicketsModule } from './support-tickets/support-tickets.module';
-import { CreateSupportTicketUserModule } from './create-support-ticket-user/create-support-ticket-user.module';
 import { ServiceContractTypeModule } from './service-contract-type/service-contract-type.module';
 import { ServiceContractBillingModule } from './service-contract-billing/service-contract-billing.module';
 import { TaskImagesModule } from './task-images/task-images.module';
 import { AuthModule } from './auth/auth.module';
-import { ComplaintRegistrationModule } from './complaint-registration/complaint-registration.module';
 import { CustomerContactModule } from './customer-contact/customer-contact.module';
 import { UserPermissionModule } from './user-permission/user-permission.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
 @Module({
-  imports: [AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule, CreateSupportTicketUserModule, ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule,ComplaintRegistrationModule, CustomerContactModule, UserPermissionModule],
+  imports:
+   [ MailerModule.forRoot({
+  transport: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  },
+}),
+
+    AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule,  ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule, CustomerContactModule, UserPermissionModule],
   controllers: [
     AppController,
     AddressBookController,
@@ -45,5 +58,8 @@ import { UserPermissionModule } from './user-permission/user-permission.module';
     PrismaService,
     AddressBookService,
   ],
+  
 })
+
+
 export class AppModule {}

@@ -320,26 +320,7 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
     );
   }
 
-  // If user doesn't have read permission, show access denied
-  if (!productCategoryPermissions.read) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <Icons.NoAccess />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-500">You don't have permission to view product types.</p>
-          <div className="mt-4 p-3 bg-gray-100 rounded text-left">
-            <p className="text-sm text-gray-600">Debug info:</p>
-            <p className="text-xs text-gray-500">All permission keys: {Object.keys(allPermissions).join(', ') || 'None'}</p>
-            <p className="text-xs text-gray-500">PRODUCTS_CATEGORY exists: {'PRODUCTS_CATEGORY' in allPermissions ? 'Yes' : 'No'}</p>
-            <p className="text-xs text-gray-500">PRODUCTS_CATEGORY permissions: {JSON.stringify(productCategoryPermissions)}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+ 
 
   // Modal component
   const ProductModal = () => (
@@ -348,7 +329,7 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? 'Edit Product Type' : 'Add Product Type'}
+              {editingId ? 'Edit Product Category' : 'Add Product Category'}
             </h2>
             <button
               onClick={resetForm}
@@ -414,14 +395,8 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
   return (
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 mb-2">Product Types</h1>
-        {/* Permission status display */}
-        <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded inline-block">
-          Permissions: {productCategoryPermissions.create ? 'Create ✓' : 'Create ✗'} | 
-          {productCategoryPermissions.read ? ' Read ✓' : ' Read ✗'} | 
-          {productCategoryPermissions.edit ? ' Edit ✓' : ' Edit ✗'} | 
-          {productCategoryPermissions.delete ? ' Delete ✓' : 'Delete ✗'}
-        </div>
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">Product Category</h1>
+       
       </div>
 
       {/* Search and Controls Section */}
@@ -436,10 +411,10 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
                 ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
             }`}
-            title={productCategoryPermissions.create ? "Add new product type" : "No create permission"}
+            title={productCategoryPermissions.create ? "Add new product category" : "No create permission"}
           >
             <Icons.Plus />
-            Add Product Type
+            Add Product Category
           </button>
         </div>
 
@@ -460,7 +435,7 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
 
       {/* Results Count */}
       <div className="mb-4 text-sm text-gray-600">
-        Showing {currentProducts.length} of {filteredProducts.length} product types
+        Showing {currentProducts.length} of {filteredProducts.length} product categories
         {searchTerm && (
           <span> for "<strong>{searchTerm}</strong>"</span>
         )}
@@ -508,7 +483,7 @@ const res = await fetch(`${PERMISSIONS_API}/${uid}`);
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm"
                         >
                           <Icons.Plus />
-                          Add Your First Product Type
+                          Add Your First Product Category
                         </button>
                       </div>
                     )}

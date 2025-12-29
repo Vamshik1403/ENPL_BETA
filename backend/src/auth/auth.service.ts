@@ -11,7 +11,7 @@ export class AuthService {
   ) {}
 
   async register(data: any) {
-    const { username, password, fullName, userType, department } = data;
+    const { username, password, fullName, email, userType, department } = data;
 
     const existing = await this.prisma.user.findUnique({ where: { username } });
     if (existing) throw new UnauthorizedException('Username already exists');
@@ -23,6 +23,7 @@ export class AuthService {
         username,
         password: hashed,
         fullName,
+        email,
         userType,
         department
       },
@@ -37,6 +38,7 @@ async getAllUsers() {
       id: true,
       username: true,
       fullName: true,
+      email: true,
       userType: true,
       department: true,
       createdAt: true
@@ -51,6 +53,7 @@ async getUserById(id: number) {
       id: true,
       username: true,
       fullName: true,
+      email: true,
       userType: true,
       department: true,
       createdAt: true,
@@ -95,6 +98,8 @@ async deleteUser(id: number) {
   const payload = {
     sub: user.id,
     username: user.username,
+    email: user.email,
+    fullName: user.fullName,
     userType: user.userType,
     department: user.department
   };
@@ -102,6 +107,8 @@ async deleteUser(id: number) {
   return { 
     access_token: this.jwt.sign(payload),
     id: user.id,
+    username: user.username,
+    email: user.email,
     userType: user.userType,
     fullName: user.fullName
   };
