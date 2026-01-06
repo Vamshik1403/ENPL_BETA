@@ -19,19 +19,36 @@ export class AddressBookService {
         addressBookID,
       }
     });
-  }
+  } 
 
-  async generateNextId(addressType: string = 'Customer'): Promise<string> {
-    const prefix = 'CUS'; // Always use CUS prefix
+ async generateNextId(addressType: string): Promise<string> {
+  const prefix = 'ENPL';
+  
+  try {
+    // Get current year
+    const currentYear = new Date().getFullYear().toString();
     
     // Count existing Customer records
     const count = await this.prisma.addressBook.count({
-      where: { addressType: 'Customer' }
+      where: { 
+        addressType,
+        // Optional: Add year filter if you want year-specific sequences
+        // createdAt: {
+        //   gte: new Date(`${currentYear}-01-01`),
+        //   lt: new Date(`${parseInt(currentYear) + 1}-01-01`)
+        // }
+      }
     });
     
-    const nextNumber = String(count + 1).padStart(3, '0');
-    return `${prefix}/${nextNumber}`;
+    // Generate 4-digit sequential number
+    const nextNumber = String(count + 1).padStart(4, '0');
+    
+    return `${prefix}/${currentYear}/${nextNumber}`;
+  } catch (error) {
+    console.error('Error generating next ID:', error);
+    throw new Error('Failed to generate customer ID');
   }
+}
 
   findAll(): Promise<AddressBook[]> {
     return this.prisma.addressBook.findMany({

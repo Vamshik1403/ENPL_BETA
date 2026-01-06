@@ -199,7 +199,7 @@ export default function SitesPage() {
       if (response.ok) {
         const data = await response.json();
         setSites(data);
-        console.log('Sites loaded successfully:', data.length, 'entries');
+        console.log('Branches loaded successfully:', data.length, 'entries');
       } else {
         console.error('Failed to fetch sites:', response.status, response.statusText);
         setSites([]);
@@ -607,7 +607,7 @@ export default function SitesPage() {
   return (
     <div className="p-8 -mt-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Sites</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Branches</h1>
       
       </div>
 
@@ -625,7 +625,7 @@ export default function SitesPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add Site
+          Add Branch
         </button>
 
         {/* Search Bar */}
@@ -1025,7 +1025,7 @@ export default function SitesPage() {
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-semibold text-white">Sites</h2>
+            <h2 className="text-xl font-semibold text-white">Branches</h2>
             <div className="text-white text-sm">
               Showing {currentItems.length} of {filteredSites.length} entries
               {searchTerm && (
@@ -1039,9 +1039,9 @@ export default function SitesPage() {
             <thead className="bg-blue-50">
               <tr>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">ID</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site ID</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site Name</th>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Site Address</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch ID</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch Name</th>
+                <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch Address</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Actions</th>
               </tr>
             </thead>

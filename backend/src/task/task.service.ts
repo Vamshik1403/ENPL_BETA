@@ -213,7 +213,9 @@ Support Team
     'N/A';
 
   // 6️⃣ Email body
-  const subject = `New Task Created - ${task.taskID}`;
+  const title = task.title ? task.title.trim() : 'No Title';
+
+  const subject = `ENPL | SUPPORT TICKET | - ${task.taskID} | ${title}`;
 
   const body = task.userId
     ? `
@@ -291,24 +293,21 @@ Support Team
       ? task.remarks[0].status
       : 'Open';
 
-    // 🔒 CUSTOMER RULE
-    let finalStatus = lastStatus;
+   // 🔒 CUSTOMER STATUS RULES
+let finalStatus = lastStatus;
 
-    // ✅ ONLY allow Reopen if task is Completed
-    if (
-      lastStatus === 'Completed' &&
-      dto.status === 'Reopen'
-    ) {
-      finalStatus = 'Reopen';
-    }
+const allowedCustomerStatuses = ['Completed', 'Reopen'];
 
-    // 🚫 Any other status change from customer is ignored
+// ✅ Allow status change ONLY if requested status is allowed
+if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
+  finalStatus = dto.status;
+}
 
     return this.prisma.tasksRemarks.create({
       data: {
         taskId,
         remark: dto.remark,
-        status: finalStatus,   // 🔥 THIS IS THE FIX
+        status: finalStatus,   
         createdBy: dto.createdBy,
       },
     });

@@ -88,7 +88,6 @@ const API = {
 const MODULES: { key: string; label: string }[] = [
   { key: 'DASHBOARD', label: 'Dashboard' },
   { key: 'CUSTOMERS', label: 'Customers' },
-
   { key: 'SITES', label: 'Sites' },
   { key: 'SERVICE_CONTRACTS', label: 'Service Contracts' },
   { key: 'TASKS', label: 'Tasks' },
@@ -175,6 +174,7 @@ const UserModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center px-4">
       <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg text-black">
+
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
             {editingId ? 'Edit User' : 'Add User'}
@@ -235,10 +235,8 @@ const UserModal = ({
               onChange={(e) => setFormData((f: any) => ({ ...f, userType: e.target.value }))}
             >
               <option value="">Select type</option>
-              <option value="SUPERADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
-              <option value="USER">User</option>
-              <option value="VIEWER">Viewer</option>
+              <option value="SUPERADMIN">SUPERADMIN</option>
+              <option value="USER">USER</option>
             </select>
           </div>
 
@@ -522,7 +520,6 @@ export default function UsersPage() {
   const [loadingPerm, setLoadingPerm] = useState(false);
   const [savingPerm, setSavingPerm] = useState(false);
   const [permError, setPermError] = useState<string>('');
-
   // Loading State
   const [loadingUsers, setLoadingUsers] = useState(false);
 

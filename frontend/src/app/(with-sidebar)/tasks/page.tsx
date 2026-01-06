@@ -3,6 +3,8 @@
 import { PlusIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+import { debounce } from 'lodash'; // or implement your own
+
 interface Department {
   id: number;
   departmentName: string;
@@ -54,6 +56,7 @@ interface Task {
   workscopeCat?: string;
   createdBy: string;
   description?: string;
+  title?: string;
   createdAt: string;
   contacts?: TasksContacts[];
   workscopeDetails?: TasksWorkscopeDetails[];
@@ -177,6 +180,7 @@ interface TaskModalProps {
 const getAuthToken = () =>
   localStorage.getItem("access_token") ||
   localStorage.getItem("token");
+
 
 
 // TaskModal Component - Updated structure
@@ -334,6 +338,25 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    Task Title
+
+                  </label>
+                  <input
+
+                    type="text"
+                    value={formData.title || ''}
+                    onChange={(e) =>
+                      onFormDataChange({ ...formData, title: e.target.value })
+                    }
+                    placeholder="Enter task title..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                    required
+                  />
+
                 </div>
 
                 <div>
@@ -927,17 +950,33 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
     setNewStatus(allowed.length ? allowed[0] : current);
   }, [task, showModal]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newRemark.trim()) {
-      onAddRemark(newRemark.trim(), newStatus);
-      setNewRemark('');
+// In RemarksModal component, add:
+const [isSubmitting, setIsSubmitting] = useState(false);
 
+// Update handleSubmit:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (isSubmitting) return; // Prevent double submit
+  
+  if (newRemark.trim()) {
+    setIsSubmitting(true);
+    
+    try {
+      await onAddRemark(newRemark.trim(), newStatus);
+      setNewRemark('');
+      
       const updatedCurrentStatus = newStatus;
       const updatedAllowedStatuses = getAllowedStatuses(updatedCurrentStatus);
       setNewStatus(updatedAllowedStatuses[0] || 'Scheduled');
+    } catch (error) {
+      console.error("Failed to add remark:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }
+};
+
 
   if (!showModal || !task) return null;
 
@@ -1007,7 +1046,7 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
                 </div>
               </div>
             </div>
-            <button
+ <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -1085,7 +1124,7 @@ export default function TasksPage() {
   const [inventories, setInventories] = useState<any[]>([]);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [productTypes, setProductTypes] = useState<any[]>([]);
-
+  const [currentUserName, setCurrentUserName] = useState<string>('User');
 
   type CrudPerm = {
     read: boolean;
@@ -1109,6 +1148,10 @@ export default function TasksPage() {
     edit: permissions?.TASKS?.edit ?? false,
     delete: permissions?.TASKS?.delete ?? false,
   };
+
+  const debouncedFetchTasks = debounce(async () => {
+  await fetchTasks();
+}, 300);
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
@@ -1284,9 +1327,10 @@ const paginatedTasks = sortedTasks.slice(
     addressBookId: 0,
     siteId: 0,
     status: 'Open',
-    createdBy: 'Admin',
+    createdBy: currentUserName,
     createdAt: new Date().toISOString(),
     description: '',
+    title: '',
     contacts: [], // Start with empty array
     workscopeDetails: [], // Start with empty array
     schedule: [], // Start with empty array
@@ -1428,6 +1472,15 @@ const paginatedTasks = sortedTasks.slice(
     }
   }, [userId]);
 
+useEffect(() => {
+  const storedUserId = localStorage.getItem("userId");
+  const storedUserType = localStorage.getItem("userType");
+  const storedUserName = localStorage.getItem("username");
+
+  if (storedUserId) setUserId(Number(storedUserId));
+  if (storedUserType) setUserType(storedUserType);
+  if (storedUserName) setCurrentUserName(storedUserName);
+}, []);
 
 
   const fetchDepartments = async () => {
@@ -1491,34 +1544,53 @@ const paginatedTasks = sortedTasks.slice(
     }
   };
 
-  const fetchLoggedUser = async (uid: number) => {
-    const res = await fetch("http://localhost:8000/auth/users");
+const fetchLoggedUser = async (uid: number) => {
+  const token = getAuthToken();
+  
+  try {
+    const res = await fetch("http://localhost:8000/auth/users", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     const users = await res.json();
     const me = users.find((u: any) => u.id === uid);
-    setLoggedUser(me || null);
-  };
-
-
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/task');
-      const data = await response.json();
-
-      const tasksWithSortedRemarks = Array.isArray(data)
-        ? data.map((task: Task) => ({
-          ...task,
-          remarks: task.remarks
-            ? [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0))
-            : []
-        }))
-        : [];
-
-      setTasks(tasksWithSortedRemarks);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setTasks([]);
+    
+    if (me) {
+      setLoggedUser(me);
+      // Store the user's actual name for later use
+      const username = me.name || me.username || me.email || 'User';
+      localStorage.setItem("username", username);
     }
-  };
+  } catch (err) {
+    console.error("Failed to fetch user details:", err);
+    setLoggedUser(null);
+  }
+};
+
+ const fetchTasks = async () => {
+  try {
+    setLoading(true);
+    const response = await fetch('http://localhost:8000/task');
+    const data = await response.json();
+
+    // Only sort if needed
+    const tasksWithSortedRemarks = Array.isArray(data)
+      ? data.map((task: Task) => ({
+        ...task,
+        // Only sort when actually needed
+        remarks: task.remarks
+          ? [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0))
+          : []
+      }))
+      : [];
+
+    setTasks(tasksWithSortedRemarks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    setTasks([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchNextTaskId = async () => {
     try {
@@ -1533,17 +1605,19 @@ const paginatedTasks = sortedTasks.slice(
 
   // Modal handlers
   const handleOpenModal = async () => {
-    const nextTaskId = await fetchNextTaskId();
-    setFormData({
+  const nextTaskId = await fetchNextTaskId();
+  const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+      setFormData({
       taskID: nextTaskId,
       userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
       siteId: 0,
       status: 'Open',
-      createdBy: 'Admin',
+    createdBy: actualUserName, // Use actual user name
       createdAt: new Date().toISOString(),
       description: '',
+      title: '',
       // Start with empty arrays - fields will open when "Add" is clicked
       contacts: [],
       workscopeDetails: [],
@@ -1559,7 +1633,7 @@ const paginatedTasks = sortedTasks.slice(
         taskId: 0,
         remark: '',
         status: 'Open',
-        createdBy: 'Admin',
+    createdBy: actualUserName, // Use actual user name
         createdAt: new Date().toISOString()
       }]
     });
@@ -1582,9 +1656,10 @@ const paginatedTasks = sortedTasks.slice(
       addressBookId: 0,
       siteId: 0,
       status: 'Open',
-      createdBy: 'Admin',
+      createdBy: currentUserName,
       createdAt: new Date().toISOString(),
       description: '',
+      title: '',
       contacts: [],
       workscopeDetails: [],
       schedule: [
@@ -1623,186 +1698,243 @@ const paginatedTasks = sortedTasks.slice(
   };
 
   // Form submission - FIXED TO INCLUDE REMARKS
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    const cleanArray = (arr: any[], mapper: any) =>
-      arr.length ? arr.map(mapper) : undefined;
+  const cleanArray = (arr: any[], mapper: any) =>
+    arr.length ? arr.map(mapper) : undefined;
 
-    try {
-      // Determine task status from saved remarks
-      let taskStatus = 'Open';
-      let remarksToSave: any[] = [];
+  try {
+    // Get the actual user name from localStorage or state
+    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+    
+    // Determine task status from saved remarks
+    let taskStatus = 'Open';
+    let remarksToSave: any[] = [];
 
-      // First check saved remarks
-      if (savedRemarks.length > 0) {
-        const sortedRemarks = [...savedRemarks].sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        taskStatus = sortedRemarks[0]?.status || 'Open';
-        remarksToSave = sortedRemarks.map(r => ({
-          remark: r.remark,
-          status: r.status,
-          createdBy: r.createdBy || 'Admin',
-          createdAt: r.createdAt || new Date().toISOString(),
-          description: r.description || ""
-        }));
-      }
-      // Then check if there's a new remark in the form (for Add Task)
-      else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
-        const newRemark = {
-          remark: formData.remarks[0].remark,
-          status: 'Open', // Always "Open" for new tasks
-          createdBy: 'Admin',
-          createdAt: new Date().toISOString(),
-          description: ""
-        };
-        remarksToSave = [newRemark];
-        taskStatus = 'Open';
-      }
-
-      console.log("Remarks to save:", remarksToSave); // Debug log
-
-      const taskData = {
-        id: editingId || undefined,
-        userId,
-        taskID: formData.taskID,
-        departmentId: formData.departmentId,
-        addressBookId: formData.addressBookId,
-        siteId: formData.siteId,
-        status: taskStatus,
-        createdBy: formData.createdBy,
-        createdAt: formData.createdAt,
-        description: formData.description,
-
-        contacts: cleanArray(savedContacts, (c: any) => ({
-          contactName: c.contactName,
-          contactNumber: c.contactNumber,
-          contactEmail: c.contactEmail
-        })),
-
-        workscopeDetails: savedWorkscopeDetails.length > 0
-          ? savedWorkscopeDetails.map(w => ({
-            workscopeCategoryId: Number(w.workscopeCategoryId),
-            workscopeDetails: w.workscopeDetails,
-            extraNote: w.extraNote || ""
-          }))
-          : undefined,
-
-        schedule: cleanArray(savedSchedule, (s: any) => ({
-          proposedDateTime: s.proposedDateTime,
-          priority: s.priority
-        })),
-
-        // ✅ FIX: INCLUDE REMARKS IN PAYLOAD
-        remarks: remarksToSave.length > 0
-          ? remarksToSave
-          : undefined,
-
-        taskInventories: inventories.length
-          ? inventories.map(inv => ({
-            serviceContractId: 0,
-            productTypeId: Number(inv.productTypeId),
-            makeModel: inv.makeModel,
-            snMac: inv.snMac,
-            description: inv.description,
-            purchaseDate: inv.purchaseDate,
-            warrantyPeriod: inv.warrantyPeriod,
-            thirdPartyPurchase: inv.thirdPartyPurchase,
-            warrantyStatus: inv.warrantyStatus
-              ? String(inv.warrantyStatus).trim()
-              : "Active"
-          }))
-          : undefined,
-      };
-
-      console.log("DEBUG PAYLOAD:", JSON.stringify(taskData, null, 2));
-
-      const url = editingId
-        ? `http://localhost:8000/task/${editingId}`
-        : `http://localhost:8000/task`;
-
-      const method = editingId ? "PATCH" : "POST";
-
-      const token = getAuthToken();
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(taskData),
-      });
-
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save task: ${errorText}`);
-      }
-
-      await fetchTasks();
-      alert("Task saved successfully!");
-      handleCloseModal();
-    } catch (err) {
-      console.error("Save error:", err);
-      setError(err instanceof Error ? err.message : "Failed to save task");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddRemarkInModal = async (remark: string, status: string) => {
-    if (!selectedTask) return;
-
-    try {
-      const token = getAuthToken();
-
-      const response = await fetch(`http://localhost:8000/tasks-remarks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          taskId: selectedTask.id,
-          remark,
-          status,
-        }),
-      });
-
-
-
-      if (!response.ok) {
-        throw new Error("Failed to add remark");
-      }
-
-      const newRemark = await response.json();
-
-      // 🔥 CRITICAL FIX — update BOTH states
-      const updatedRemarks = [newRemark, ...(selectedTask.remarks || [])];
-
-      setSavedRemarks(updatedRemarks);
-
-      setSelectedTask(prev =>
-        prev
-          ? {
-            ...prev,
-            status,            // update task status
-            remarks: updatedRemarks, // update remarks source of truth
-          }
-          : prev
+    // First check saved remarks
+    if (savedRemarks.length > 0) {
+      const sortedRemarks = [...savedRemarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+      taskStatus = sortedRemarks[0]?.status || 'Open';
+      remarksToSave = sortedRemarks.map(r => ({
+        remark: r.remark,
+        status: r.status,
+        createdBy: r.createdBy || actualUserName, // Use actual user name
+        createdAt: r.createdAt || new Date().toISOString(),
+        description: r.description || "",
 
-      await fetchTasks();
-    } catch (err) {
-      console.error(err);
-      setError("Failed to add remark");
+      }));
     }
-  };
+    // Then check if there's a new remark in the form (for Add Task)
+    else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
+      const newRemark = {
+        remark: formData.remarks[0].remark,
+        status: 'Open', // Always "Open" for new tasks
+        createdBy: actualUserName, // Use actual user name
+        createdAt: new Date().toISOString(),
+        description: ""
+      };
+      remarksToSave = [newRemark];
+      taskStatus = 'Open';
+    }
 
+    console.log("Remarks to save:", remarksToSave); // Debug log
+
+    const taskData = {
+      id: editingId || undefined,
+      userId,
+      taskID: formData.taskID,
+      departmentId: formData.departmentId,
+      addressBookId: formData.addressBookId,
+      siteId: formData.siteId,
+      status: taskStatus,
+      createdBy: actualUserName, // Also update main task createdBy
+      createdAt: formData.createdAt,
+      description: formData.description,
+      title: formData.title,
+
+      contacts: cleanArray(savedContacts, (c: any) => ({
+        contactName: c.contactName,
+        contactNumber: c.contactNumber,
+        contactEmail: c.contactEmail
+      })),
+
+      workscopeDetails: savedWorkscopeDetails.length > 0
+        ? savedWorkscopeDetails.map(w => ({
+          workscopeCategoryId: Number(w.workscopeCategoryId),
+          workscopeDetails: w.workscopeDetails,
+          extraNote: w.extraNote || ""
+        }))
+        : undefined,
+
+      schedule: cleanArray(savedSchedule, (s: any) => ({
+        proposedDateTime: s.proposedDateTime,
+        priority: s.priority
+      })),
+
+      // ✅ FIX: INCLUDE REMARKS IN PAYLOAD
+      remarks: remarksToSave.length > 0
+        ? remarksToSave
+        : undefined,
+
+      taskInventories: inventories.length
+        ? inventories.map(inv => ({
+          serviceContractId: 0,
+          productTypeId: Number(inv.productTypeId),
+          makeModel: inv.makeModel,
+          snMac: inv.snMac,
+          description: inv.description,
+          purchaseDate: inv.purchaseDate,
+          warrantyPeriod: inv.warrantyPeriod,
+          thirdPartyPurchase: inv.thirdPartyPurchase,
+          warrantyStatus: inv.warrantyStatus
+            ? String(inv.warrantyStatus).trim()
+            : "Active"
+        }))
+        : undefined,
+    };
+
+    console.log("DEBUG PAYLOAD:", JSON.stringify(taskData, null, 2));
+
+    const url = editingId
+      ? `http://localhost:8000/task/${editingId}`
+      : `http://localhost:8000/task`;
+
+    const method = editingId ? "PATCH" : "POST";
+
+    const token = getAuthToken();
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(taskData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to save task: ${errorText}`);
+    }
+
+    await fetchTasks();
+    alert("Task saved successfully!");
+    handleCloseModal();
+  } catch (err) {
+    console.error("Save error:", err);
+    setError(err instanceof Error ? err.message : "Failed to save task");
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const handleAddRemarkInModal = async (remark: string, status: string) => {
+  if (!selectedTask) return;
+
+  // Show immediate feedback
+  const submitButton = document.activeElement as HTMLButtonElement;
+  const originalText = submitButton?.textContent;
+
+
+  try {
+    const token = getAuthToken();
+    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+
+    // OPTIMIZATION: Optimistic update
+    const tempRemark = {
+      id: Date.now(), // Temporary ID
+      taskId: selectedTask.id!,
+      remark,
+      status,
+      createdBy: actualUserName,
+      createdAt: new Date().toISOString(),
+      description: ""
+    };
+
+    // Update UI immediately (optimistic update)
+    const updatedRemarks = [tempRemark, ...savedRemarks];
+    setSavedRemarks(updatedRemarks);
+    
+    // Update the task in local state immediately
+    if (selectedTask) {
+      const updatedTask = {
+        ...selectedTask,
+        status,
+        remarks: updatedRemarks
+      };
+      setSelectedTask(updatedTask);
+    }
+
+    // Update tasks list optimistically
+    setTasks(prev => prev.map(task => 
+      task.id === selectedTask.id 
+        ? { ...task, status, remarks: updatedRemarks }
+        : task
+    ));
+
+    // Then make API call
+    const response = await fetch(`http://localhost:8000/tasks-remarks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        taskId: selectedTask.id,
+        remark,
+        status,
+        createdBy: actualUserName,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to add remark");
+    }
+
+    const newRemark = await response.json();
+
+    // Replace temporary remark with actual one from server
+    const finalUpdatedRemarks = [newRemark, ...savedRemarks];
+    setSavedRemarks(finalUpdatedRemarks);
+
+    // Update with real data
+    setTasks(prev => prev.map(task => 
+      task.id === selectedTask.id 
+        ? { 
+            ...task, 
+            status, 
+            remarks: finalUpdatedRemarks 
+          }
+        : task
+    ));
+
+    // Only fetch if you need to sync with other users
+    // await fetchTasks(); // REMOVE or keep if needed for real-time sync
+
+  } catch (err) {
+    console.error(err);
+    setError("Failed to add remark");
+    
+    // Revert optimistic update on error
+    setSavedRemarks(savedRemarks);
+    setTasks(prev => prev.map(task => 
+      task.id === selectedTask.id 
+        ? { ...task, status: selectedTask.status, remarks: savedRemarks }
+        : task
+    ));
+  } finally {
+    // Restore button state
+    if (submitButton) {
+      submitButton.textContent = originalText;
+      submitButton.disabled = false;
+    }
+  }
+};
 
   const handleRemoveRemarkInModal = async (id: number) => {
     try {
@@ -1828,6 +1960,7 @@ const paginatedTasks = sortedTasks.slice(
           createdBy: selectedTask.createdBy,
           createdAt: selectedTask.createdAt,
           description: selectedTask.description || '',
+          title: selectedTask.title || '',
           contacts: (selectedTask.contacts || []).map(c => ({
             contactName: c.contactName,
             contactNumber: c.contactNumber,
@@ -2047,7 +2180,7 @@ const paginatedTasks = sortedTasks.slice(
         ...remark,
         id: Date.now(),
         createdAt: new Date().toISOString(),
-        createdBy: 'Admin'
+        createdBy: currentUserName
       };
 
       setSavedRemarks(prev => [...prev, newRemark]);
@@ -2057,7 +2190,7 @@ const paginatedTasks = sortedTasks.slice(
           taskId: 0,
           remark: '',
           status: 'Open',
-          createdBy: 'Admin',
+          createdBy: currentUserName,
           createdAt: new Date().toISOString()
         }]
       }));
@@ -2148,25 +2281,28 @@ const paginatedTasks = sortedTasks.slice(
 
   // In the handleEditTask function, update the inventory loading part:
   const handleEditTask = (task: Task) => {
-    const sortedRemarks = task.remarks
-      ? [...task.remarks].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      : [];
+   const sortedRemarks = task.remarks
+    ? [...task.remarks].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    : [];
 
-    const formattedSchedule = (task.schedule || []).map(schedule => ({
-      ...schedule,
-      proposedDateTime: schedule.proposedDateTime ?
-        new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
-    }));
+  const formattedSchedule = (task.schedule || []).map(schedule => ({
+    ...schedule,
+    proposedDateTime: schedule.proposedDateTime ?
+      new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
+  }));
 
-    let taskStatus = 'Open';
-    if (task.remarks && task.remarks.length > 0) {
-      const sortedRemarks = [...task.remarks].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      taskStatus = sortedRemarks[0]?.status || 'Open';
-    }
+  let taskStatus = 'Open';
+  if (task.remarks && task.remarks.length > 0) {
+    const sortedRemarks = [...task.remarks].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    taskStatus = sortedRemarks[0]?.status || 'Open';
+  }
+
+    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+
 
     setFormData({
       taskID: task.taskID,
@@ -2175,9 +2311,10 @@ const paginatedTasks = sortedTasks.slice(
       addressBookId: task.addressBookId,
       siteId: task.siteId,
       status: taskStatus,
-      createdBy: task.createdBy,
+    createdBy: actualUserName, // Use actual user name
       createdAt: task.createdAt,
       description: task.description || '',
+      title: task.title || '',
       // Start with empty arrays for adding new items
       contacts: [],
       workscopeDetails: [],
@@ -2194,7 +2331,7 @@ const paginatedTasks = sortedTasks.slice(
         taskId: 0,
         remark: '',
         status: 'Open',
-        createdBy: 'Admin',
+    createdBy: actualUserName, // Use actual user name
         createdAt: new Date().toISOString()
       }]
     });
@@ -2262,6 +2399,10 @@ const paginatedTasks = sortedTasks.slice(
         createdBy: formData.createdBy,
         createdAt: formData.createdAt,
         description: formData.description,
+        title: formData.title,
+        contacts: savedContacts,
+        workscopeDetails: savedWorkscopeDetails,
+        schedule: savedSchedule,
         remarks: savedRemarks
       } as Task);
     }
@@ -2323,6 +2464,7 @@ const paginatedTasks = sortedTasks.slice(
       makeModel: "",
       snMac: "",
       description: "",
+
       purchaseDate: "",
       warrantyPeriod: "",
       warrantyStatus: "",
@@ -2349,23 +2491,7 @@ const paginatedTasks = sortedTasks.slice(
       setEditingIndex(null);
     };
 
-    // Function to edit an existing item
-    const handleEditInventory = (index: number) => {
-      const inv = inventories[index];
-      setForm({
-        productTypeId: inv.productTypeId?.toString() || "",
-        makeModel: inv.makeModel || "",
-        snMac: inv.snMac || "",
-        description: inv.description || "",
-        purchaseDate: inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : "",
-        warrantyPeriod: inv.warrantyPeriod || "",
-        warrantyStatus: inv.warrantyStatus
-          ? String(inv.warrantyStatus).trim()
-          : "Active",
-        thirdPartyPurchase: inv.thirdPartyPurchase || false
-      });
-      setEditingIndex(index);
-    };
+  
 
     const handleSave = () => {
       if (!form.productTypeId || !form.makeModel || !form.snMac) {
@@ -2529,6 +2655,9 @@ const paginatedTasks = sortedTasks.slice(
                 />
               </div>
             </div>
+
+
+
 
             {/* Description */}
             <div>
@@ -2763,25 +2892,14 @@ const paginatedTasks = sortedTasks.slice(
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  taskPermissions.create && handleOpenRemarksModal(task)
-                }
-                disabled={!taskPermissions.create}
-                className={`transition-colors
-                  ${taskPermissions.create
-                    ? "text-green-600 hover:text-green-900"
-                    : "text-gray-400 cursor-not-allowed"
-                  }`}
-                title={
-                  taskPermissions.create
-                    ? "View / Add Remarks"
-                    : "No permission to add remarks"
-                }
-              >
-
-                View
-              </button>
+              <a
+                            href={`/tasks/view/${task.taskID}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-900 underline"
+                          >
+                            View
+                          </a>
 
               <button
 

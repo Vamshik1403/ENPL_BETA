@@ -364,7 +364,6 @@ useEffect(() => {
     <div className="p-8 bg-gray-50 min-h-screen -mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Workscope category</h1>
-       
       </div>
 
       {/* Search and Controls Section */}

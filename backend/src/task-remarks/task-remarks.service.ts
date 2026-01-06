@@ -70,8 +70,10 @@ constructor(
   if (!recipients.length) return remark;
 
   // 6️⃣ Email content
-  const subject = `Task Status Updated - ${task.taskID}`;
+  const title = task.title ? task.title.trim() : 'No Title';
 
+  const subject = `ENPL | SUPPORT TICKET | - ${task.taskID} | ${title}`;
+  
   const body = `
 Task Status Updated
 

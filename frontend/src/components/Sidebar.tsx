@@ -85,12 +85,24 @@ const mainNavigationItems: NavigationItem[] = [
         permissionKey: 'CUSTOMERS'
       },
       { 
-        name: 'Sites', 
+        name: 'Branches', 
         href: '/sites', 
         icon: <MapPin className="w-4 h-4" />,
         permissionKey: 'SITES'
+      },
+      { 
+        name: 'Customer Registration', 
+        href: '/customer-registration', 
+        icon: <Users className="w-4 h-4" />,
+        permissionKey: 'CUSTOMER_REGISTRATION'
       }
     ]
+  },
+  { 
+    name: 'Tasks', 
+    href: '/tasks', 
+    icon: <CheckSquare className="w-4 h-4" />,
+    permissionKey: 'TASKS'
   },
   { 
     name: 'Service Contracts', 
@@ -98,12 +110,6 @@ const mainNavigationItems: NavigationItem[] = [
     icon: <FileText className="w-4 h-4" />,
     permissionKey: 'SERVICE_CONTRACTS'
   },
-  { 
-    name: 'Tasks', 
-    href: '/tasks', 
-    icon: <CheckSquare className="w-4 h-4" />,
-    permissionKey: 'TASKS'
-  }
 ];
 
 const setupItems: NavigationItem[] = [
@@ -130,21 +136,12 @@ const setupItems: NavigationItem[] = [
     href: '/workscope', 
     icon: <BarChart3 className="w-4 h-4" />,
     permissionKey: 'WORKSCOPE_CATEGORY'
-  }
-];
-
-const additionalLinks = [
+  },
   { 
     name: 'Users Permission', 
     href: '/userpermission', 
     icon: <UserCheckIcon className="w-4 h-4" />,
     permissionKey: 'USERS'
-  },
-  { 
-    name: 'Customer Registration', 
-    href: '/customer-registration', 
-    icon: <Users className="w-4 h-4" />,
-    permissionKey: 'CUSTOMER_REGISTRATION'
   }
 ];
 
@@ -291,36 +288,36 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   };
 
   // 🔹 Filter navigation items based on read permission
- const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
-  // ✅ SUPERADMIN: show all without filtering
-  if (isSuperAdmin) return items;
+  const filterNavigationItems = (items: NavigationItem[]): NavigationItem[] => {
+    // ✅ SUPERADMIN: show all without filtering
+    if (isSuperAdmin) return items;
 
-  return items
-    .map(item => {
-      // Handle nested items first
-      if (item.nested && item.nested.length > 0) {
-        const filteredNested = filterNavigationItems(item.nested);
+    return items
+      .map(item => {
+        // Handle nested items first
+        if (item.nested && item.nested.length > 0) {
+          const filteredNested = filterNavigationItems(item.nested);
 
-        // If parent has NO read permission but children do → show children ONLY
-        if (!hasReadPermission(item.permissionKey)) {
+          // If parent has NO read permission but children do → show children ONLY
+          if (!hasReadPermission(item.permissionKey)) {
+            return filteredNested.length > 0
+              ? { ...item, nested: filteredNested }
+              : null;
+          }
+
+          // Parent has permission → show with filtered children
           return filteredNested.length > 0
             ? { ...item, nested: filteredNested }
+            : hasReadPermission(item.permissionKey)
+            ? item
             : null;
         }
 
-        // Parent has permission → show with filtered children
-        return filteredNested.length > 0
-          ? { ...item, nested: filteredNested }
-          : hasReadPermission(item.permissionKey)
-          ? item
-          : null;
-      }
-
-      // Non-nested item → normal permission check
-      return hasReadPermission(item.permissionKey) ? item : null;
-    })
-    .filter(Boolean) as NavigationItem[];
-};
+        // Non-nested item → normal permission check
+        return hasReadPermission(item.permissionKey) ? item : null;
+      })
+      .filter(Boolean) as NavigationItem[];
+  };
 
   // 🔹 Render filtered navigation items
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
@@ -387,12 +384,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const filteredMainItems = filterNavigationItems(mainNavigationItems);
   const filteredSetupItems = filterNavigationItems(setupItems);
 
-  const filteredAdditionalLinks = isSuperAdmin
-    ? additionalLinks
-    : additionalLinks.filter(link => 
-        hasReadPermission(link.permissionKey)
-      );
-
   // 🔹 Check if any Setup items are visible
   const hasVisibleSetupItems = filteredSetupItems.length > 0;
 
@@ -453,27 +444,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           </>
         )}
 
-        {/* Additional Links - Only show if items exist */}
-        {filteredAdditionalLinks.length > 0 && (
-          <>
-            {filteredAdditionalLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`
-                  flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
-                  ${pathname === link.href
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-                    : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
-                `}
-              >
-                {link.icon}
-                {!isCollapsed && <span className="ml-2">{link.name}</span>}
-              </Link>
-            ))}
-          </>
-        )}
-
         {/* Setup Section - Only show if items exist */}
         {hasVisibleSetupItems && (
           <div className="mt-4 pt-3 border-t border-gray-700">
@@ -501,7 +471,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               <div
                 className={`
                   ml-4 overflow-hidden transition-all duration-300
-                  ${expandedSections.setup ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}
+                  ${expandedSections.setup ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}
                 `}
               >
                 <div className="space-y-1 border-l border-purple-500 pl-3 mt-1">
@@ -511,8 +481,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             )}
           </div>
         )}
-
-      
       </div>
 
       {/* User Footer */}
