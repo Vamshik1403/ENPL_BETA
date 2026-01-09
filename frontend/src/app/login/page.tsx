@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const API_LOGIN = 'https://ristarerp.openwan.in/backend/auth/login';
+  const API_LOGIN = 'https://enplerp.electrohelps.in/auth/login';
 
   const handleLogin = async (e: any) => {
   e.preventDefault();
@@ -63,7 +63,7 @@ export default function LoginPage() {
     localStorage.setItem('token', data.access_token);
 
     // 🔥 FETCH USER DETAILS
-    const userRes = await fetch("https://ristarerp.openwan.in/backend/auth/users", {
+    const userRes = await fetch("https://enplerp.electrohelps.in/auth/users", {
       headers: {
         Authorization: `Bearer ${data.access_token}`
       }

@@ -68,8 +68,8 @@ export default function ProductsPage() {
   const [itemsPerPage] = useState(10);
   const [filteredProducts, setFilteredProducts] = useState<ProductType[]>([]);
 
-  const API_URL = 'https://ristarerp.openwan.in/backend/producttype';
-  const PERMISSIONS_API = 'https://ristarerp.openwan.in/backend/user-permissions';
+  const API_URL = 'https://enplerp.electrohelps.in/producttype';
+  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/user-permissions';
 
   // Fetch permissions
 const fetchPermissions = async (uid: number) => {

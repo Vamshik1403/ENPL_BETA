@@ -79,15 +79,15 @@ export default function Dashboard() {
         taskRes,
         tasksRemarksRes
       ] = await Promise.all([
-        fetch("https://ristarerp.openwan.in/backend/sites"),
-        fetch("https://ristarerp.openwan.in/backend/address-book"),
-        fetch("https://ristarerp.openwan.in/backend/service-contract"),
-        fetch("https://ristarerp.openwan.in/backend/contractworkcategory"),
-        fetch("https://ristarerp.openwan.in/backend/department"),
-        fetch("https://ristarerp.openwan.in/backend/producttype"),
-        fetch("https://ristarerp.openwan.in/backend/workscope-category"),
-        fetch("https://ristarerp.openwan.in/backend/task"),
-        fetch("https://ristarerp.openwan.in/backend/tasks-remarks"),
+        fetch("https://enplerp.electrohelps.in/sites"),
+        fetch("https://enplerp.electrohelps.in/address-book"),
+        fetch("https://enplerp.electrohelps.in/service-contract"),
+        fetch("https://enplerp.electrohelps.in/contractworkcategory"),
+        fetch("https://enplerp.electrohelps.in/department"),
+        fetch("https://enplerp.electrohelps.in/producttype"),
+        fetch("https://enplerp.electrohelps.in/workscope-category"),
+        fetch("https://enplerp.electrohelps.in/task"),
+        fetch("https://enplerp.electrohelps.in/tasks-remarks"),
       ]);
 
       const sitesData = await sitesRes.json();

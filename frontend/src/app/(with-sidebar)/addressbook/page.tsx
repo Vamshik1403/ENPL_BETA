@@ -87,7 +87,7 @@ export default function AddressBookPage() {
       // Try to get token from localStorage
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
       
-      const response = await fetch(`https://ristarerp.openwan.in/backend/user-permissions/${userId}`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/user-permissions/${userId}`, {
         headers: token ? {
           'Authorization': `Bearer ${token}`
         } : {}
@@ -196,7 +196,7 @@ export default function AddressBookPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('https://ristarerp.openwan.in/backend/address-book');
+      const response = await fetch('https://enplerp.electrohelps.in/address-book');
       if (response.ok) {
         const data = await response.json();
         setAddressBooks(data);
@@ -241,7 +241,7 @@ export default function AddressBookPage() {
 
   const generateAddressBookId = async (addressType: string) => {
     try {
-      const response = await fetch(`https://ristarerp.openwan.in/backend/address-book/next-id/${addressType}`);
+      const response = await fetch(`https://enplerp.electrohelps.in/address-book/next-id/${addressType}`);
       const data = await response.json();
       return data.nextId;
     } catch (error) {
@@ -312,7 +312,7 @@ export default function AddressBookPage() {
 
         console.log('Update data being sent:', updateData);
 
-        const response = await fetch(`https://ristarerp.openwan.in/backend/address-book/${editingId}`, {
+        const response = await fetch(`https://enplerp.electrohelps.in/address-book/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ export default function AddressBookPage() {
                 if (contact.id) {
                   // Update existing contact
                   console.log('Updating existing contact:', contact.id);
-                  const contactResponse = await fetch(`https://ristarerp.openwan.in/backend/address-book/contacts/${contact.id}`, {
+                  const contactResponse = await fetch(`https://enplerp.electrohelps.in/address-book/contacts/${contact.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -349,7 +349,7 @@ export default function AddressBookPage() {
                 } else {
                   // Create new contact
                   console.log('Creating new contact for address book:', editingId);
-                  const contactResponse = await fetch('https://ristarerp.openwan.in/backend/addressbookcontact', {
+                  const contactResponse = await fetch('https://enplerp.electrohelps.in/addressbookcontact', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -380,7 +380,7 @@ export default function AddressBookPage() {
       } else {
         // Create new record
         console.log('Creating new record');
-        const response = await fetch('https://ristarerp.openwan.in/backend/address-book', {
+        const response = await fetch('https://enplerp.electrohelps.in/address-book', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -394,7 +394,7 @@ export default function AddressBookPage() {
           // Create contacts for this address book
           for (const contact of formContacts) {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              await fetch('https://ristarerp.openwan.in/backend/addressbookcontact', {
+              await fetch('https://enplerp.electrohelps.in/addressbookcontact', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -450,7 +450,7 @@ export default function AddressBookPage() {
 
       // Fetch existing contacts for this address book
       try {
-        const response = await fetch(`https://ristarerp.openwan.in/backend/address-book/${id}/contacts`);
+        const response = await fetch(`https://enplerp.electrohelps.in/address-book/${id}/contacts`);
         if (response.ok) {
           const contactsData = await response.json();
           setFormContacts(contactsData);
@@ -473,7 +473,7 @@ export default function AddressBookPage() {
     
     if (confirm('Are you sure you want to delete this customer?')) {
       try {
-        const response = await fetch(`https://ristarerp.openwan.in/backend/address-book/${id}`, {
+        const response = await fetch(`https://enplerp.electrohelps.in/address-book/${id}`, {
           method: 'DELETE',
         });
 

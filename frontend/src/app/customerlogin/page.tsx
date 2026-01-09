@@ -15,7 +15,7 @@ export default function CustomerLoginPage() {
     setLoading(true);
 
     const res = await fetch(
-      `https://ristarerp.openwan.in/backend/customer-contact/by-email?email=${email}`,
+      `https://enplerp.electrohelps.in/customer-contact/by-email?email=${email}`,
     );
 
     if (!res.ok) {
