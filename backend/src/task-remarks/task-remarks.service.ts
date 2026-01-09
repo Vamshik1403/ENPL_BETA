@@ -49,18 +49,22 @@ constructor(
     task.department?.emails?.map(e => e.email) || [];
 
   // 4️⃣ Customer emails (via addressBook → customerContact)
-  const customerContacts = await this.prisma.customerContact.findMany({
-    where: {
-      sites: {
-        some: {
-          customerId: task.addressBookId,
+  let customerEmails: string[] = [];
+  
+  if (task.addressBookId) {
+    const customerContacts = await this.prisma.customerContact.findMany({
+      where: {
+        sites: {
+          some: {
+            customerId: task.addressBookId,
+          },
         },
       },
-    },
-    select: { emailAddress: true },
-  });
+      select: { emailAddress: true },
+    });
 
-  const customerEmails = customerContacts.map(c => c.emailAddress);
+    customerEmails = customerContacts.map(c => c.emailAddress);
+  }
 
   // 5️⃣ Merge recipients
   const recipients = Array.from(

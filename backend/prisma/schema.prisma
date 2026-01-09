@@ -207,21 +207,38 @@ model DepartmentEmail {
 }
 
 
+enum TaskType {
+  SERVICE
+  PRODUCT_INQUIRY
+  PURCHASE_ORDER
+}
+
+enum PurchaseType {
+  INQUIRY
+  ORDER
+}
+
+
 model Task {
   id               Int                      @id @default(autoincrement())
   taskID           String                   @unique 
   departmentId     Int
-  addressBookId    Int
-  siteId           Int
+  addressBookId    Int?
+  siteId           Int?
   status           String                   @default("Open")
   title            String?
   description      String?
+  attachment       String? 
+  priority         String?
   userId           Int?
   createdBy        String
   createdAt        DateTime                 @default(now())
+   taskType         TaskType @default(SERVICE) // 🔥 NEW
+  purchase         TaskPurchase?   // 🔥 NEW (1–1)
+
   department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  addressBook      AddressBook              @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
-  site             Site                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  addressBook      AddressBook?              @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+  site             Site?                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   user        User?        @relation(fields: [userId], references: [id])
 
   contacts         TasksContacts[]
@@ -232,6 +249,56 @@ model Task {
   images           TaskImage[]
   taskInventories  TaskInventory[]
 }
+
+
+model TaskPurchase {
+  id            Int          @id @default(autoincrement())
+  taskId        Int          @unique
+
+  customerName  String?     
+  address       String?
+
+  createdAt     DateTime @default(now())
+
+  task          Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  products      TaskPurchaseProduct[]
+  taskPurchaseAttachments TaskPurchaseAttachment[]
+   purchaseType  PurchaseType
+}
+
+model TaskPurchaseProduct {
+  id             Int      @id @default(autoincrement())
+  taskPurchaseId Int
+
+  make           String?
+  model          String?
+  description    String?
+
+  warranty       String?
+  rate           Decimal? @db.Decimal(10,2)
+  vendor         String?
+
+  validity       DateTime?   // 🔥 Inquiry only
+  availability   String?     // 🔥 Inquiry only
+
+  createdAt      DateTime @default(now())
+
+  taskPurchase   TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
+}
+
+model TaskPurchaseAttachment {
+  id            Int      @id @default(autoincrement())
+  taskPurchaseId Int
+  filename      String
+  filepath      String
+  mimeType      String
+  fileSize      Int
+  uploadedAt    DateTime @default(now())
+  taskPurchase  TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
+}
+
+
 
 model TaskInventory {
   id                 Int             @id @default(autoincrement())

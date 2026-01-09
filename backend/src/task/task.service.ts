@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -15,24 +15,31 @@ export class TaskService {
     /* --------------------------------------------------
      CUSTOMER EMAILS FROM DB (SOURCE OF TRUTH)
   -------------------------------------------------- */
-  private async getCustomerEmailsByAddressBook(
-    addressBookId: number,
-  ): Promise<string[]> {
-    const contacts = await this.prisma.customerContact.findMany({
-      where: {
-        sites: {
-          some: {
-            customerId: addressBookId,
-          },
+ private async getCustomerEmailsByAddressBook(
+  addressBookId: number | null,
+): Promise<string[]> {
+
+  if (!addressBookId) {
+    return []; // 🔥 inquiry without customer
+  }
+
+  const contacts = await this.prisma.customerContact.findMany({
+    where: {
+      sites: {
+        some: {
+          customerId: addressBookId,
         },
       },
-      select: {
-        emailAddress: true,
-      },
-    });
+    },
+    select: {
+      emailAddress: true,
+    },
+  });
 
-    return contacts.map(c => c.emailAddress);
-  }
+  return contacts
+    .map(c => c.emailAddress)
+    .filter(Boolean);
+}
 
   /* --------------------------------------------------
      CREATE TASK (INTERNAL + CUSTOMER)
@@ -48,6 +55,9 @@ export class TaskService {
       schedule,
       remarks,
       taskInventories,
+      purchase,              // 🔥 NEW
+      taskType,              // 🔥 NEW
+      purchaseAttachments,   // 🔥 NEW for attachments
       ...taskData
     } = dto as any;
 
@@ -65,60 +75,140 @@ export class TaskService {
       ? 'Internal User'
       : customerInfo?.name || 'Customer';
 
-    // 🔹 Create Task
-    const task = await this.prisma.task.create({
-      data: {
-        taskID,
-        departmentId: dto.departmentId,
-        addressBookId: dto.addressBookId,
-        siteId: dto.siteId,
-        status: dto.status || 'Open',
-        title: dto.title,
-        description: dto.description ?? null,
-        userId: loggedInUserId ?? null,
-        createdBy,
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
 
-    // 🔹 First remark (customer description lives here)
-    if (remarks?.length === 1) {
-      await this.prisma.tasksRemarks.create({
+      // 🔹 Create Task
+      const task = await tx.task.create({
         data: {
-          taskId: task.id,
-          remark: remarks[0].remark,
-          status: remarks[0].status || 'Open',
-          createdBy: remarks[0].createdBy || createdBy,
+          taskID,
+          departmentId: dto.departmentId,
+          addressBookId: dto.addressBookId,
+          siteId: dto.siteId,
+          status: dto.status || 'Open',
+          title: dto.title,
+          description: dto.description ?? null,
+          attachment: dto.attachment ?? null,
+          priority: dto.priority ?? null,
+          userId: loggedInUserId ?? null,
+          createdBy,
+          taskType: taskType ?? 'SERVICE',
         },
       });
-    }
 
-    // 🔹 Reload full task for email
-    const fullTask = await this.prisma.task.findUnique({
-      where: { id: task.id },
-      include: {
-        department: { include: { emails: true } },
-        addressBook: true,
-        site: true,
-        user: true,
-        remarks: {
-          orderBy: { createdAt: 'asc' },
-          take: 1,
+      // 🔹 First remark
+      if (remarks?.length === 1) {
+        await tx.tasksRemarks.create({
+          data: {
+            taskId: task.id,
+            remark: remarks[0].remark,
+            status: remarks[0].status || 'Open',
+            createdBy: remarks[0].createdBy || createdBy,
+          },
+        });
+      }
+
+      // 🔹 PURCHASE LOGIC (ONLY if present)
+      if (purchase) {
+        const taskPurchase = await tx.taskPurchase.create({
+          data: {
+            taskId: task.id,
+            purchaseType: purchase.purchaseType,
+            customerName: purchase.customerName,
+            address: purchase.address,
+          },
+        });
+
+        // Validate and create products
+        for (const product of purchase.products || []) {
+          // 🔒 Rule enforcement
+          if (
+            purchase.purchaseType === purchase.ORDER &&
+            (product.validity || product.availability)
+          ) {
+            throw new BadRequestException(
+              'Validity / availability not allowed for Purchase Order',
+            );
+          }
+
+          await tx.taskPurchaseProduct.create({
+            data: {
+              taskPurchaseId: taskPurchase.id,
+              make: product.make,
+              model: product.model,
+              description: product.description,
+              warranty: product.warranty,
+              rate: product.rate,
+              vendor: product.vendor,
+              validity: product.validity ? new Date(product.validity) : null,
+              availability: product.availability,
+            },
+          });
+        }
+
+        // 🔹 Handle attachments if provided
+        if (purchaseAttachments?.length) {
+          for (const attachment of purchaseAttachments) {
+            await tx.taskPurchaseAttachment.create({
+              data: {
+                taskPurchaseId: taskPurchase.id,
+                filename: attachment.filename,
+                filepath: attachment.filepath,
+                mimeType: attachment.mimeType,
+                fileSize: attachment.fileSize,
+              },
+            });
+          }
+        }
+      }
+
+      // 🔹 Reload full task
+      const fullTask = await tx.task.findUnique({
+        where: { id: task.id },
+        include: {
+          department: { include: { emails: true } },
+          addressBook: true,
+          site: true,
+          user: true,
+          remarks: {
+            orderBy: { createdAt: 'asc' },
+            take: 1,
+          },
+          purchase: {
+            include: {
+              products: true,
+              taskPurchaseAttachments: true, // 🔥 NEW
+            },
+          },
         },
-      },
+      });
+
+      await this.sendTaskCreatedEmail(fullTask);
+
+      return fullTask;
     });
-
-    // 🔹 Resolve customer emails ONLY from DB
-    let customerEmails: string[] = [];
-    if (!loggedInUserId) {
-      customerEmails = await this.getCustomerEmailsByAddressBook(
-        dto.addressBookId,
-      );
-    }
-
-await this.sendTaskCreatedEmail(fullTask);
-
-    return fullTask;
   }
+
+
+  async addPurchaseAttachment(taskId: number, file: Express.Multer.File) {
+  const purchase = await this.prisma.taskPurchase.findUnique({
+    where: { taskId },
+  });
+
+  if (!purchase) {
+    throw new BadRequestException('Purchase record not found');
+  }
+
+  return this.prisma.taskPurchaseAttachment.create({
+    data: {
+      taskPurchaseId: purchase.id,
+      filename: file.originalname,
+      filepath: file.path,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+    },
+  });
+}
+
 
   /* --------------------------------------------------
      EMAIL BODY BUILDERS
@@ -372,6 +462,10 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
         schedule: true,
         remarks: true,
         taskInventories: true,
+        purchase: { include: { 
+          products: true,
+          taskPurchaseAttachments: true
+        } }, // 🔥 NEW
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -390,6 +484,10 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
         schedule: true,
         remarks: true,
         taskInventories: true,
+        purchase: { include: {
+          products: true,
+          taskPurchaseAttachments: true
+          } }, // 🔥 NEW
       },
     });
 
@@ -397,7 +495,7 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
     return task;
   }
 
-  async update(id: number, dto: UpdateTaskDto) {
+ async update(id: number, dto: UpdateTaskDto) {
     await this.findOne(id);
 
     const {
@@ -406,90 +504,176 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
       schedule,
       remarks,
       taskInventories,
+      purchase,              // 🔥 NEW
+      purchaseAttachments,   // 🔥 NEW
       ...updateData
     } = dto as any;
 
-    // --- UPDATE MAIN TASK ---
-    await this.prisma.task.update({
-      where: { id },
-      data: updateData,
-    });
+    return this.prisma.$transaction(async (tx) => {
 
-    // --- CONTACTS ---
-    await this.prisma.tasksContacts.deleteMany({ where: { taskId: id } });
-    if (contacts?.length) {
-      await this.prisma.tasksContacts.createMany({
-        data: contacts.map((c: any) => ({
-          taskId: id,
-          contactName: c.contactName,
-          contactNumber: c.contactNumber,
-          contactEmail: c.contactEmail,
-        })),
+      // --- UPDATE MAIN TASK ---
+      await tx.task.update({
+        where: { id },
+        data: updateData,
       });
-    }
 
-    // --- WORKSCOPE DETAILS ---
-    await this.prisma.tasksWorkscopeDetails.deleteMany({ where: { taskId: id } });
-    if (workscopeDetails?.length) {
-      await this.prisma.tasksWorkscopeDetails.createMany({
-        data: workscopeDetails.map((d: any) => ({
-          taskId: id,
-          workscopeCategoryId: parseInt(d.workscopeCategoryId),
-          workscopeDetails: d.workscopeDetails,
-          extraNote: d.extraNote,
-        })),
-      });
-    }
-
-    // --- SCHEDULE ---
-    await this.prisma.tasksSchedule.deleteMany({ where: { taskId: id } });
-    if (schedule?.length) {
-      await this.prisma.tasksSchedule.createMany({
-        data: schedule.map((s: any) => ({
-          taskId: id,
-          proposedDateTime: new Date(s.proposedDateTime),
-          priority: s.priority,
-        })),
-      });
-    }
-
-    // --- INVENTORY UPDATE (delete + recreate) ---
-    await this.prisma.taskInventory.deleteMany({ where: { taskId: id } });
-
-    if (taskInventories?.length) {
-      for (const inv of taskInventories) {
-        await this.prisma.taskInventory.create({
-          data: {
+      // --- CONTACTS ---
+      await tx.tasksContacts.deleteMany({ where: { taskId: id } });
+      if (contacts?.length) {
+        await tx.tasksContacts.createMany({
+          data: contacts.map((c: any) => ({
             taskId: id,
-            serviceContractId: inv.serviceContractId,
-            productTypeId: inv.productTypeId,
-            makeModel: inv.makeModel,
-            snMac: inv.snMac,
-            description: inv.description,
-            purchaseDate: new Date(inv.purchaseDate),
-            warrantyPeriod: inv.warrantyPeriod,
-            warrantyStatus: inv.warrantyStatus,
-            thirdPartyPurchase: inv.thirdPartyPurchase,
-          },
+            contactName: c.contactName,
+            contactNumber: c.contactNumber,
+            contactEmail: c.contactEmail,
+          })),
         });
       }
-    }
 
-    return this.prisma.task.findUnique({
-      where: { id },
-      include: {
-        department: true,
-        addressBook: true,
-        site: true,
-        contacts: true,
-        workscopeCat: true,
-        workscopeDetails: true,
-        schedule: true,
-        remarks: true,
-        taskInventories: true,
-      },
+      // --- WORKSCOPE DETAILS ---
+      await tx.tasksWorkscopeDetails.deleteMany({ where: { taskId: id } });
+      if (workscopeDetails?.length) {
+        await tx.tasksWorkscopeDetails.createMany({
+          data: workscopeDetails.map((d: any) => ({
+            taskId: id,
+            workscopeCategoryId: parseInt(d.workscopeCategoryId),
+            workscopeDetails: d.workscopeDetails,
+            extraNote: d.extraNote,
+          })),
+        });
+      }
+
+      // --- SCHEDULE ---
+      await tx.tasksSchedule.deleteMany({ where: { taskId: id } });
+      if (schedule?.length) {
+        await tx.tasksSchedule.createMany({
+          data: schedule.map((s: any) => ({
+            taskId: id,
+            proposedDateTime: new Date(s.proposedDateTime),
+            priority: s.priority,
+          })),
+        });
+      }
+
+      // --- INVENTORY ---
+      await tx.taskInventory.deleteMany({ where: { taskId: id } });
+      if (taskInventories?.length) {
+        for (const inv of taskInventories) {
+          await tx.taskInventory.create({
+            data: {
+              taskId: id,
+              serviceContractId: inv.serviceContractId,
+              productTypeId: inv.productTypeId,
+              makeModel: inv.makeModel,
+              snMac: inv.snMac,
+              description: inv.description,
+              purchaseDate: inv.purchaseDate
+                ? new Date(inv.purchaseDate)
+                : null,
+              warrantyPeriod: inv.warrantyPeriod,
+              warrantyStatus: inv.warrantyStatus,
+              thirdPartyPurchase: inv.thirdPartyPurchase,
+            },
+          });
+        }
+      }
+
+      // 🔥 PURCHASE UPDATE / CREATE
+      if (purchase) {
+        // 🔒 VALIDATE UPDATE RULES
+        if (purchase.products !== undefined && purchase.products.length === 0) {
+          throw new BadRequestException(
+            'Products cannot be empty if provided'
+          );
+        }
+
+        // Validate product rules for ORDER type
+        if (purchase.products) {
+          for (const product of purchase.products) {
+            if (
+              purchase.purchaseType === purchase.ORDER &&
+              (product.validity || product.availability)
+            ) {
+              throw new BadRequestException(
+                'Validity / availability not allowed for Purchase Order'
+              );
+            }
+          }
+        }
+
+        let taskPurchase = await tx.taskPurchase.findUnique({
+          where: { taskId: id },
+        });
+
+        if (!taskPurchase) {
+          taskPurchase = await tx.taskPurchase.create({
+            data: {
+              taskId: id,
+              purchaseType: purchase.purchaseType,
+              customerName: purchase.customerName,
+              address: purchase.address,
+            },
+          });
+        } else {
+          await tx.taskPurchase.update({
+            where: { id: taskPurchase.id },
+            data: {
+              purchaseType: purchase.purchaseType,
+              customerName: purchase.customerName,
+              address: purchase.address,
+            },
+          });
+        }
+
+        // Update products if provided
+        if (purchase.products) {
+          await tx.taskPurchaseProduct.deleteMany({
+            where: { taskPurchaseId: taskPurchase.id },
+          });
+
+          for (const product of purchase.products) {
+            await tx.taskPurchaseProduct.create({
+              data: {
+                taskPurchaseId: taskPurchase.id,
+                make: product.make,
+                model: product.model,
+                description: product.description,
+                warranty: product.warranty,
+                rate: product.rate,
+                vendor: product.vendor,
+                validity: product.validity ? new Date(product.validity) : null,
+                availability: product.availability,
+              },
+            });
+          }
+        }
+
+       
+      }
+
+      return tx.task.findUnique({
+        where: { id },
+        include: {
+          department: true,
+          addressBook: true,
+          site: true,
+          contacts: true,
+          workscopeCat: true,
+          workscopeDetails: true,
+          schedule: true,
+          remarks: true,
+          taskInventories: true,
+          purchase: {
+            include: {
+              products: true,
+              taskPurchaseAttachments: true, // 🔥 NEW
+            },
+          },
+        },
+      });
     });
   }
+
 
   async remove(id: number) {
     await this.findOne(id);

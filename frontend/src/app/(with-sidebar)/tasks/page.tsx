@@ -3,7 +3,6 @@
 import { PlusIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-import { debounce } from 'lodash'; // or implement your own
 
 interface Department {
   id: number;
@@ -17,7 +16,7 @@ interface ServiceWorkscopeCategory {
 
 interface AddressBook {
   id: number;
-  addressBookID: string;
+  addressBookID: string | null;
   customerName: string;
   addressType: string;
 }
@@ -26,7 +25,7 @@ interface Site {
   id: number;
   siteID: string;
   siteName: string;
-  addressBookId: number;
+  addressBookId: number | null;
 }
 
 interface TaskInventory {
@@ -41,13 +40,37 @@ interface TaskInventory {
   warrantyStatus?: string;
 }
 
+type TaskType = "SERVICE" | "PRODUCT_INQUIRY" | "PURCHASE_ORDER";
+type PurchaseType = "INQUIRY" | "ORDER";
+
+interface TaskPurchaseProduct {
+  id?: number;
+  make?: string;
+  model?: string;
+  description?: string;
+  warranty?: string;
+  rate?: number | string;
+  vendor?: string;
+  validity?: string;      // datetime-local string
+  availability?: string;  // Inquiry only
+}
+
+interface TaskPurchase {
+  purchaseType: PurchaseType;  // INQUIRY / ORDER
+  customerName?: string;       // inquiry free text
+  address?: string;            // inquiry free text
+  products: TaskPurchaseProduct[];
+  // attachments: handled later (see step 6)
+}
+
+
 interface Task {
   id?: number;
   taskID: string;
   userId: number;
-  departmentId: number;
-  addressBookId: number;
-  siteId: number;
+  departmentId: number | null;
+  addressBookId: number | null;
+  siteId: number | null;
   status: string;
   department?: string;
   customer?: string;
@@ -63,6 +86,16 @@ interface Task {
   schedule?: TasksSchedule[];
   remarks?: TasksRemarks[];
   taskInventories?: TaskInventory[];
+  taskType?: TaskType;        // 🔥 NEW
+  purchase?: TaskPurchase;    // 🔥 NEW
+  taskPurchaseAttachments?: {
+    id: number;
+    filename: string;
+    filepath: string;
+    mimeType: string;
+    fileSize: number;
+  }[];
+
 }
 
 interface TasksContacts {
@@ -98,15 +131,54 @@ interface TasksRemarks {
   createdAt: string;
 }
 
-interface TaskFormData extends Task {
+interface TaskFormData {
+  // Core task fields
+  id?: number;
+  taskID?: string;
+  departmentId: number | null;
+  userId?: number | null;
+  addressBookId: number | null;
+  siteId: number | null;
+  taskType?: string;
+
+
+  title?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  createdBy?: string;
+  createdAt?: string;
+
+  // SALES-only temporary fields
+  customerName?: string;
+  address?: string;
+  contactName?: string;
+  contactNumber?: string;
+  contactEmail?: string;
+
+  // PURCHASE
+  purchase?: {
+    purchaseType: "INQUIRY" | "ORDER";
+    customerName?: string;
+    address?: string;
+    products: any[];
+  };
+
+  // Collections
   contacts: TasksContacts[];
   workscopeDetails: TasksWorkscopeDetails[];
   schedule: TasksSchedule[];
   remarks: TasksRemarks[];
 }
 
+
 // TaskModal Component
 interface TaskModalProps {
+  isPurchaseDepartment: boolean;
+  isTechnicalDepartment: boolean;
+  isBillingDepartment: boolean;
+  isSalesDepartment: boolean;
+  isHRAdminDepartment: boolean;
   showModal: boolean;
   editingId: number | null;
   formData: TaskFormData;
@@ -131,6 +203,8 @@ interface TaskModalProps {
   editingSavedContact: number | null;
   editingSavedWorkscope: number | null;
   editingSavedSchedule: number | null;
+  purchaseFile: File | null;
+  setPurchaseFile: React.Dispatch<React.SetStateAction<File | null>>;
   inventories: any[];
   productTypes: any[];
   onClose: () => void;
@@ -175,16 +249,22 @@ interface TaskModalProps {
   onEditLatestRemark: (remark: TasksRemarks) => void;
   onOpenInventoryModal: () => void;
   onRemoveInventory: (index: number) => void;
+  savedPurchaseAttachments: any[];
+
 }
+
 
 const getAuthToken = () =>
   localStorage.getItem("access_token") ||
   localStorage.getItem("token");
 
-
-
 // TaskModal Component - Updated structure
 const TaskModal: React.FC<TaskModalProps> = ({
+  isPurchaseDepartment,
+  isTechnicalDepartment,
+  isBillingDepartment,
+  isSalesDepartment,
+  isHRAdminDepartment,
   showModal,
   editingId,
   formData,
@@ -200,7 +280,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
   savedSchedule,
   savedRemarks,
   inventories,
-  productTypes,
+  purchaseFile,
+  setPurchaseFile,
+  savedPurchaseAttachments,
   onClose,
   onSubmit,
   onCustomerSearchChange,
@@ -212,12 +294,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onAddWorkscopeDetail,
   onRemoveWorkscopeDetail,
   onUpdateWorkscopeDetail,
-  onAddSchedule,
-  onRemoveSchedule,
-  onUpdateSchedule,
   onAddRemark,
-  onRemoveRemark,
   onUpdateRemark,
+  onUpdateSchedule,
   onSaveContact,
   onSaveWorkscopeDetail,
   onSaveSchedule,
@@ -248,7 +327,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           <form onSubmit={onSubmit} className="space-y-6">
-            {/* Basic Task Information */}
+            {/* Basic Task Information - Always show */}
             <div className="border-b pb-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -257,10 +336,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     Department
                   </label>
                   <select
-                    value={
-                      formData.departmentId ||
-                      (departments.length > 0 ? departments[0].id : '')
-                    }
+                    value={formData.departmentId || (departments.length > 0 ? departments[0].id : '')}
                     onChange={(e) =>
                       onFormDataChange({
                         ...formData,
@@ -277,477 +353,991 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     ))}
                   </select>
                 </div>
+              </div>
+            </div>
 
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-900 mb-1">
-                    Customer
-                  </label>
-                  <input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e) => {
-                      onCustomerSearchChange(e.target.value);
-                      onShowCustomerDropdownChange(true);
-                    }}
-                    onFocus={() => onShowCustomerDropdownChange(true)}
-                    placeholder="Search customer..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  />
-                  {showCustomerDropdown && customerSearch && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredCustomers.map((customer) => (
-                        <div
-                          key={customer.id}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
-                          onClick={() => {
-                            onFormDataChange({ ...formData, addressBookId: customer.id, siteId: 0 });
-                            onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-                            onShowCustomerDropdownChange(false);
-                          }}
-                        >
-                          {customer.addressBookID} - {customer.customerName}
+            {/* PURCHASE DEPARTMENT SECTION */}
+            {isPurchaseDepartment && (
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Purchase</h3>
+
+                {/* Task Type Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
+                      Task Type *
+                    </label>
+                    <select
+                      value={formData.purchase?.purchaseType || "INQUIRY"}
+                      onChange={(e) => {
+                        const purchaseType = e.target.value as "INQUIRY" | "ORDER";
+
+                        const newData = {
+                          ...formData,
+                          taskType: (purchaseType === "INQUIRY" ? "PRODUCT_INQUIRY" : "PURCHASE_ORDER") as TaskType,
+                          purchase: {
+                            ...(formData.purchase || { products: [] }),
+                            purchaseType,
+                            // Clear inquiry fields when switching to ORDER
+                            customerName: purchaseType === "INQUIRY" ? (formData.purchase?.customerName || "") : "",
+                            address: purchaseType === "INQUIRY" ? (formData.purchase?.address || "") : "",
+                            products: formData.purchase?.products || [],
+                          },
+                        };
+
+                        // Reset customer/site selection for Inquiry
+                        if (purchaseType === "INQUIRY") {
+                          newData.addressBookId = null;
+                          newData.siteId = null;
+
+                          onCustomerSearchChange("");
+                        }
+
+                        onFormDataChange(newData);
+                      }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      required
+                    >
+                      <option value="INQUIRY">Product Inquiry</option>
+                      <option value="ORDER">Purchase Order</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* CUSTOMER SELECTION FOR PURCHASE ORDER */}
+                {(formData.purchase?.purchaseType || "INQUIRY") === "ORDER" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Customer *
+                      </label>
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => {
+                          onCustomerSearchChange(e.target.value);
+                          onShowCustomerDropdownChange(true);
+                        }}
+                        onFocus={() => onShowCustomerDropdownChange(true)}
+                        placeholder="Search customer..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        required
+                      />
+                      {showCustomerDropdown && customerSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCustomers.map((customer) => (
+                            <div
+                              key={customer.id}
+                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
+                              onClick={() => {
+                                onFormDataChange({ ...formData, addressBookId: customer.id, siteId: 0 });
+                                onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                                onShowCustomerDropdownChange(false);
+                              }}
+                            >
+                              {customer.addressBookID} - {customer.customerName}
+                            </div>
+                          ))}
+                          {filteredCustomers.length === 0 && (
+                            <div className="px-3 py-2 text-gray-500">No customers found</div>
+                          )}
                         </div>
-                      ))}
-                      {filteredCustomers.length === 0 && (
-                        <div className="px-3 py-2 text-gray-500">No customers found</div>
+                      )}
+                      {formData.addressBookId && formData.addressBookId > 0 && (
+                        <div className="mt-1 text-sm text-green-600">
+                          Selected: {addressBooks.find(ab => ab.id === formData.addressBookId)?.customerName}
+                        </div>
                       )}
                     </div>
-                  )}
-                  {formData.addressBookId > 0 && (
-                    <div className="mt-1 text-sm text-green-600">
-                      Selected: {addressBooks.find(ab => ab.id === formData.addressBookId)?.customerName}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Branch/Site *
+                      </label>
+                      <select
+                        value={formData.siteId ?? 0}
+                        onChange={(e) => onFormDataChange({ ...formData, siteId: parseInt(e.target.value) })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        required
+                        disabled={formData.addressBookId === 0}
+                      >
+                        <option value={0}>Select Branch/Site</option>
+                        {filteredSites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.siteID} - {site.siteName}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                <div>
+                {/* INQUIRY SPECIFIC FIELDS */}
+                {(formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Customer Name (Inquiry) *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.purchase?.customerName || ""}
+                        onChange={(e) =>
+                          onFormDataChange({
+                            ...formData,
+                            purchase: {
+                              ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+                              customerName: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        placeholder="Enter customer name for inquiry"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Address (Inquiry) *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.purchase?.address || ""}
+                        onChange={(e) =>
+                          onFormDataChange({
+                            ...formData,
+                            purchase: {
+                              ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+                              address: e.target.value,
+                            },
+                          })
+                        }
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        placeholder="Enter address for inquiry"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TITLE FIELD - FOR BOTH INQUIRY AND ORDER */}
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-900 mb-1">
-                    Site
-                  </label>
-                  <select
-                    value={formData.siteId}
-                    onChange={(e) => onFormDataChange({ ...formData, siteId: parseInt(e.target.value) })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                    required
-                    disabled={formData.addressBookId === 0}
-                  >
-                    <option value={0}>Select Site</option>
-                    {filteredSites.map((site) => (
-                      <option key={site.id} value={site.id}>
-                        {site.siteID} - {site.siteName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">
-                    Task Title
-
+                    Title *
                   </label>
                   <input
-
                     type="text"
                     value={formData.title || ''}
                     onChange={(e) =>
                       onFormDataChange({ ...formData, title: e.target.value })
                     }
-                    placeholder="Enter task title..."
+                    placeholder="Enter title..."
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     required
                   />
-
                 </div>
 
-                <div>
+                {/* PRODUCTS REQUIREMENTS */}
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-900 mb-1">
-                    Description
+                    Products Requirements *
                   </label>
                   <textarea
-                    value={formData.description || ''}
-                    onChange={(e) =>
-                      onFormDataChange({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Add a task description..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white min-h-[100px]"
-                    rows={4}
+                    value={formData.description || ""}
+                    onChange={(e) => onFormDataChange({ ...formData, description: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white min-h-[90px]"
+                    placeholder="Enter products requirements..."
+                    required
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Task Contacts */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Task Contacts</h3>
-                <button
-                  type="button"
-                  onClick={onAddContact}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                >
-                  + Add Contact
-                </button>
-              </div>
-
-              {/* Current Form Contacts - Initially empty, will show when Add Contact is clicked */}
-              {formData.contacts.length > 0 && formData.contacts.map((contact, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Name
-                    </label>
-                    <input
-                      type="text"
-                      value={contact.contactName}
-                      onChange={(e) => onUpdateContact(index, "contactName", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                      placeholder="Enter contact name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Number
-                    </label>
-                    <input
-                      type="text"
-                      value={contact.contactNumber}
-                      onChange={(e) => onUpdateContact(index, "contactNumber", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                      placeholder="Enter contact number"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Email
-                    </label>
-                    <input
-                      type="email"
-                      value={contact.contactEmail}
-                      onChange={(e) => onUpdateContact(index, "contactEmail", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                      placeholder="Enter contact email"
-                    />
-                  </div>
-
-                  <div className="flex items-end gap-2">
+                {/* PRODUCTS TABLE */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-md font-semibold text-gray-900">Products</h4>
                     <button
                       type="button"
-                      onClick={() => onSaveContact(index)}
-                      disabled={!contact.contactName || !contact.contactNumber}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      onClick={() => (window as any).__addPurchaseProductRow?.()}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                     >
-                      Save Contact
+                      + Add Product
                     </button>
-                    {formData.contacts.length > 1 && (
+                  </div>
+
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-blue-50">
+                        <tr>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Make</th>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Model</th>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Description</th>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Warranty</th>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Rate</th>
+                          <th className="p-2 text-left text-blue-800 font-semibold">Vendor</th>
+
+                          {/* Inquiry-only fields */}
+                          {(formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY" && (
+                            <>
+                              <th className="p-2 text-left text-blue-800 font-semibold">Validity</th>
+                              <th className="p-2 text-left text-blue-800 font-semibold">Availability</th>
+                            </>
+                          )}
+                          <th className="p-2 text-left text-blue-800 font-semibold w-20">Action</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {(formData.purchase?.products || []).length === 0 ? (
+                          <tr>
+                            <td className="p-3 text-gray-500" colSpan={(formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY" ? 10 : 8}>
+                              No products added yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          (formData.purchase?.products || []).map((p, idx) => (
+                            <tr key={idx} className="border-t">
+                              <td className="p-2">
+                                <input
+                                  value={p.make || ""}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "make", e.target.value)}
+                                  className="w-40 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={p.model || ""}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "model", e.target.value)}
+                                  className="w-40 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={p.description || ""}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "description", e.target.value)}
+                                  className="w-64 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={p.warranty || ""}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "warranty", e.target.value)}
+                                  className="w-32 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={String(p.rate ?? "")}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "rate", e.target.value)}
+                                  className="w-28 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  value={p.vendor || ""}
+                                  onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "vendor", e.target.value)}
+                                  className="w-40 border rounded px-2 py-1 text-gray-900"
+                                />
+                              </td>
+
+                              {/* Inquiry-only fields */}
+                              {(formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY" && (
+                                <>
+                                  <td className="p-2">
+                                    <input
+                                      type="datetime-local"
+                                      value={p.validity || ""}
+                                      onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "validity", e.target.value)}
+                                      className="w-56 border rounded px-2 py-1 text-gray-900"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <input
+                                      value={p.availability || ""}
+                                      onChange={(e) => (window as any).__updatePurchaseProductRow?.(idx, "availability", e.target.value)}
+                                      className="w-40 border rounded px-2 py-1 text-gray-900"
+                                    />
+                                  </td>
+                                </>
+                              )}
+
+                              <td className="p-2">
+                                <button
+                                  type="button"
+                                  onClick={() => (window as any).__removePurchaseProductRow?.(idx)}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ATTACHMENT */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    Attachment
+                  </label>
+
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setPurchaseFile(file);
+                    }}
+                  />
+                  {savedPurchaseAttachments.length > 0 && (
+                    <div className="mt-3 space-y-2 text-black">
+                      <div className="text-sm font-medium text-gray-700">
+                        Existing Attachments
+                      </div>
+
+                      {savedPurchaseAttachments.map(att => (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between bg-gray-50 border rounded px-3 py-2"
+                        >
+                          <span className="text-sm text-gray-800 truncate">
+                            {att.filename}
+                          </span>
+
+                          <div className="flex gap-3 text-sm">
+                            <a
+                              href={`http://localhost:8000/${String(att.filepath).replace(/\\/g, "/")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              View
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {purchaseFile && (
+                    <div className="text-xs text-green-600 mt-1">
+                      Selected: {purchaseFile.name}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-500 mt-1">
+                    Max file size: 10MB. Supported formats: PDF, DOC, DOCX, JPG, PNG
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* REGULAR TASK FIELDS FOR TECHNICAL, BILLING, HR&ADMIN, SALES */}
+            {!isPurchaseDepartment && (
+              <>
+                {/* Customer and Site Selection for Technical & Billing */}
+                {(isTechnicalDepartment || isBillingDepartment) && (
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Customer Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Customer *
+                        </label>
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => {
+                            onCustomerSearchChange(e.target.value);
+                            onShowCustomerDropdownChange(true);
+                          }}
+                          onFocus={() => onShowCustomerDropdownChange(true)}
+                          placeholder="Search customer..."
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required={isTechnicalDepartment || isBillingDepartment}
+                        />
+                        {showCustomerDropdown && customerSearch && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {filteredCustomers.map((customer) => (
+                              <div
+                                key={customer.id}
+                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
+                                onClick={() => {
+                                  onFormDataChange({ ...formData, addressBookId: customer.id, siteId: 0 });
+                                  onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                                  onShowCustomerDropdownChange(false);
+                                }}
+                              >
+                                {customer.addressBookID} - {customer.customerName}
+                              </div>
+                            ))}
+                            {filteredCustomers.length === 0 && (
+                              <div className="px-3 py-2 text-gray-500">No customers found</div>
+                            )}
+                          </div>
+                        )}
+                        {formData.addressBookId !== null && formData.addressBookId > 0 && (
+                          <div className="mt-1 text-sm text-green-600">
+                            Selected: {addressBooks.find(ab => ab.id === formData.addressBookId)?.customerName}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          {isBillingDepartment ? "Branch" : "Site"} *
+                        </label>
+                        <select
+                          value={formData.siteId || 0}
+                          onChange={(e) => onFormDataChange({ ...formData, siteId: parseInt(e.target.value) })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required={isTechnicalDepartment || isBillingDepartment}
+                          disabled={formData.addressBookId === 0}
+                        >
+                          <option value={0}>Select {isBillingDepartment ? "Branch" : "Site"}</option>
+                          {filteredSites.map((site) => (
+                            <option key={site.id} value={site.id}>
+                              {site.siteID} - {site.siteName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SALES DEPARTMENT FIELDS */}
+                {isSalesDepartment && (
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Sales Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Customer Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Customer Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.customerName || ''}
+                          onChange={(e) =>
+                            onFormDataChange({ ...formData, customerName: e.target.value })
+                          }
+                          placeholder="Enter customer name"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
+
+                      {/* Address */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Address *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.address || ''}
+                          onChange={(e) =>
+                            onFormDataChange({ ...formData, address: e.target.value })
+                          }
+                          placeholder="Enter address"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
+
+                      {/* Contact Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Contact Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.contactName || ''}
+                          onChange={(e) =>
+                            onFormDataChange({ ...formData, contactName: e.target.value })
+                          }
+                          placeholder="Enter contact name"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
+
+                      {/* Contact Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Contact Number *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.contactNumber || ''}
+                          onChange={(e) =>
+                            onFormDataChange({ ...formData, contactNumber: e.target.value })
+                          }
+                          placeholder="Enter contact number"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
+
+                      {/* Contact Email */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Contact Email
+                        </label>
+                        <input
+                          type="email"
+                          value={formData.contactEmail || ''}
+                          onChange={(e) =>
+                            onFormDataChange({ ...formData, contactEmail: e.target.value })
+                          }
+                          placeholder="Enter contact email"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* COMMON FIELDS FOR ALL DEPARTMENTS (except Purchase) */}
+                <div className="border-b pb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Task Details</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.title || ''}
+                        onChange={(e) =>
+                          onFormDataChange({ ...formData, title: e.target.value })
+                        }
+                        placeholder="Enter task title..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        value={formData.description || ''}
+                        onChange={(e) =>
+                          onFormDataChange({ ...formData, description: e.target.value })
+                        }
+                        placeholder="Add a task description..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white min-h-[100px]"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ATTACHMENT SECTION FOR BILLING, HR&ADMIN, SALES */}
+                {(isBillingDepartment || isHRAdminDepartment || isSalesDepartment) && (
+                  <div className="border-b pb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Attachment</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">
+                        File Attachment
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setPurchaseFile(file);
+                        }}
+                        className="w-full"
+                      />
+                      {purchaseFile && (
+                        <div className="text-xs text-green-600 mt-1">
+                          Selected: {purchaseFile.name}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500 mt-1">
+                        Max file size: 10MB. Supported formats: PDF, DOC, DOCX, JPG, PNG
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Task Contacts (Only for Technical & Sales) */}
+                {(isTechnicalDepartment || isSalesDepartment) && (
+                  <div className="border-b pb-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Task Contacts</h3>
                       <button
                         type="button"
-                        onClick={() => onRemoveContact(index)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                        onClick={onAddContact}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                       >
-                        Remove
+                        + Add Contact
                       </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                    </div>
 
-              {/* Saved Contacts Table */}
-              {savedContacts.length > 0 && (
-                <div className="bg-white rounded-lg border overflow-hidden mb-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-50">
-                      <tr>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Name</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Number</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Email</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {savedContacts.map((contact) => (
-                        <tr key={contact.id} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">{contact.contactName}</td>
-                          <td className="p-3 text-gray-700">{contact.contactNumber}</td>
-                          <td className="p-3 text-gray-700">{contact.contactEmail || "N/A"}</td>
-                          <td className="p-3">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => onRemoveSavedContact(contact.id!)}
-                                className="text-red-600 hover:text-red-800 font-medium text-sm"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                    {formData.contacts.length > 0 && formData.contacts.map((contact, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Name
+                          </label>
+                          <input
+                            type="text"
+                            value={contact.contactName}
+                            onChange={(e) => onUpdateContact(index, "contactName", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                            placeholder="Enter contact name"
+                          />
+                        </div>
 
-            {/* Workscope Details */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Workscope Details</h3>
-                <button
-                  type="button"
-                  onClick={onAddWorkscopeDetail}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                >
-                  + Add WorkScope
-                </button>
-              </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Number
+                          </label>
+                          <input
+                            type="text"
+                            value={contact.contactNumber}
+                            onChange={(e) => onUpdateContact(index, "contactNumber", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                            placeholder="Enter contact number"
+                          />
+                        </div>
 
-              {/* Current Form Workscope Details - Initially empty */}
-              {formData.workscopeDetails.length > 0 && formData.workscopeDetails.map((detail, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white rounded-lg border">
-                  {/* Workscope Category Dropdown */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Workscope Category
-                    </label>
-                    <select
-                      value={detail.workscopeCategoryId || 0}
-                      onChange={(e) => onUpdateWorkscopeDetail(index, "workscopeCategoryId", parseInt(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                    >
-                      <option value={0}>Select Category</option>
-                      {serviceWorkscopeCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.workscopeCategoryName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Contact Email
+                          </label>
+                          <input
+                            type="email"
+                            value={contact.contactEmail}
+                            onChange={(e) => onUpdateContact(index, "contactEmail", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                            placeholder="Enter contact email"
+                          />
+                        </div>
 
-                  {/* Workscope Details Textarea */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Workscope Details
-                    </label>
-                    <textarea
-                      value={detail.workscopeDetails || ''}
-                      onChange={(e) => onUpdateWorkscopeDetail(index, 'workscopeDetails', e.target.value)}
-                      placeholder="Enter workscope details..."
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
-                      rows={2}
-                    />
-                  </div>
-
-                  {/* Add/Remove Buttons */}
-                  <div className="flex justify-end items-end gap-2 md:col-span-2">
-                    <button
-                      type="button"
-                      onClick={() => onSaveWorkscopeDetail(index)}
-                      disabled={!detail.workscopeDetails || detail.workscopeCategoryId === 0}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Save Workscope
-                    </button>
-                    {formData.workscopeDetails.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => onRemoveWorkscopeDetail(index)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Saved Workscope Details Table */}
-              {savedWorkscopeDetails.length > 0 && (
-                <div className="bg-white rounded-lg border overflow-hidden mb-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-50">
-                      <tr>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Category</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Details</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {savedWorkscopeDetails.map((workscope) => (
-                        <tr key={workscope.id} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">
-                            {serviceWorkscopeCategories.find(cat => cat.id === workscope.workscopeCategoryId)?.workscopeCategoryName || 'N/A'}
-                          </td>
-                          <td className="p-3 text-gray-700">{workscope.workscopeDetails}</td>
-                          <td className="p-3">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => onRemoveSavedWorkscopeDetail(workscope.id!)}
-                                className="text-red-600 hover:text-red-800 font-medium text-sm"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Schedule */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Schedule</h3>
-              </div>
-
-              {/* Add Schedule Form - Initially empty, will show when needed */}
-              {formData.schedule.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Proposed Date & Time
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={formData.schedule[0]?.proposedDateTime || ''}
-                      onChange={(e) => onUpdateSchedule(0, 'proposedDateTime', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Priority
-                    </label>
-                    <select
-                      value={formData.schedule[0]?.priority || 'Medium'}
-                      onChange={(e) => onUpdateSchedule(0, 'priority', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="button"
-                      onClick={onSaveSchedule}
-                      disabled={!formData.schedule[0]?.proposedDateTime || !formData.schedule[0]?.priority}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Add Schedule
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Saved Schedule Table */}
-              {savedSchedule.length > 0 && (
-                <div className="bg-white rounded-lg border overflow-hidden mb-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-50">
-                      <tr>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Date & Time</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Priority</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {savedSchedule.map((schedule) => (
-                        <tr key={schedule.id} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">
-                            {new Date(schedule.proposedDateTime).toLocaleString()}
-                          </td>
-                          <td className="p-3 text-gray-700">{schedule.priority}</td>
-                          <td className="p-3">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => onRemoveSavedSchedule(schedule.id!)}
-                                className="text-red-600 hover:text-red-800 font-medium text-sm"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Inventory Section */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Inventory Items</h3>
-                <button
-                  type="button"
-                  onClick={onOpenInventoryModal}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                >
-                  + Add Inventory Item
-                </button>
-              </div>
-
-              {inventories.length > 0 ? (
-                <div className="bg-white rounded-lg border overflow-hidden mb-4">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-50">
-                      <tr>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Product Type</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Make & Model</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">SN/MAC</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">Warranty</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold">3rd Party</th>
-                        <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inventories.map((inv, i) => (
-                        <tr key={i} className="border-t hover:bg-gray-50">
-                          <td className="p-3 text-gray-700">{inv.productTypeName}</td>
-                          <td className="p-3 text-gray-700">{inv.makeModel}</td>
-                          <td className="p-3 text-gray-700">{inv.snMac}</td>
-                          <td className="p-3 text-gray-700">{inv.warrantyStatus}</td>
-                          <td className="p-3 text-gray-700">{inv.thirdPartyPurchase ? "Yes" : "No"}</td>
-                          <td className="p-3">
+                        <div className="flex items-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onSaveContact(index)}
+                            disabled={!contact.contactName || !contact.contactNumber}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Save Contact
+                          </button>
+                          {formData.contacts.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => onRemoveInventory(i)}
-                              className="text-red-600 hover:text-red-800 text-sm"
+                              onClick={() => onRemoveContact(index)}
+                              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                             >
                               Remove
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg border">
-                  No inventory items added yet
-                </div>
-              )}
-            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
 
-            {/* Task Remarks */}
+                    {savedContacts.length > 0 && (
+                      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                        <table className="w-full text-sm">
+                          <thead className="bg-blue-50">
+                            <tr>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Name</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Number</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Email</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {savedContacts.map((contact) => (
+                              <tr key={contact.id} className="border-t border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-gray-700">{contact.contactName}</td>
+                                <td className="p-3 text-gray-700">{contact.contactNumber}</td>
+                                <td className="p-3 text-gray-700">{contact.contactEmail || "N/A"}</td>
+                                <td className="p-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onRemoveSavedContact(contact.id!)}
+                                      className="text-red-600 hover:text-red-800 font-medium text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Workscope Details (Only for Technical) */}
+                {isTechnicalDepartment && (
+                  <div className="border-b pb-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Workscope Details</h3>
+                      <button
+                        type="button"
+                        onClick={onAddWorkscopeDetail}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                      >
+                        + Add WorkScope
+                      </button>
+                    </div>
+
+                    {formData.workscopeDetails.length > 0 && formData.workscopeDetails.map((detail, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Workscope Category
+                          </label>
+                          <select
+                            value={detail.workscopeCategoryId || 0}
+                            onChange={(e) => onUpdateWorkscopeDetail(index, "workscopeCategoryId", parseInt(e.target.value))}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          >
+                            <option value={0}>Select Category</option>
+                            {serviceWorkscopeCategories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.workscopeCategoryName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Workscope Details
+                          </label>
+                          <textarea
+                            value={detail.workscopeDetails || ''}
+                            onChange={(e) => onUpdateWorkscopeDetail(index, 'workscopeDetails', e.target.value)}
+                            placeholder="Enter workscope details..."
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white min-h-[42px] resize-vertical"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="flex justify-end items-end gap-2 md:col-span-2">
+                          <button
+                            type="button"
+                            onClick={() => onSaveWorkscopeDetail(index)}
+                            disabled={!detail.workscopeDetails || detail.workscopeCategoryId === 0}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Save Workscope
+                          </button>
+                          {formData.workscopeDetails.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveWorkscopeDetail(index)}
+                              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {savedWorkscopeDetails.length > 0 && (
+                      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                        <table className="w-full text-sm">
+                          <thead className="bg-blue-50">
+                            <tr>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Category</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Details</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {savedWorkscopeDetails.map((workscope) => (
+                              <tr key={workscope.id} className="border-t border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-gray-700">
+                                  {serviceWorkscopeCategories.find(cat => cat.id === workscope.workscopeCategoryId)?.workscopeCategoryName || 'N/A'}
+                                </td>
+                                <td className="p-3 text-gray-700">{workscope.workscopeDetails}</td>
+                                <td className="p-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onRemoveSavedWorkscopeDetail(workscope.id!)}
+                                      className="text-red-600 hover:text-red-800 font-medium text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Schedule (Only for Technical) */}
+                {isTechnicalDepartment && (
+                  <div className="border-b pb-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Schedule</h3>
+                    </div>
+
+                    {formData.schedule.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-white rounded-lg border">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Proposed Date & Time
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={formData.schedule[0]?.proposedDateTime || ''}
+                            onChange={(e) => onUpdateSchedule(0, 'proposedDateTime', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Priority
+                          </label>
+                          <select
+                            value={formData.schedule[0]?.priority || 'Medium'}
+                            onChange={(e) => onUpdateSchedule(0, 'priority', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-end gap-2">
+                          <button
+                            type="button"
+                            onClick={onSaveSchedule}
+                            disabled={!formData.schedule[0]?.proposedDateTime || !formData.schedule[0]?.priority}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Add Schedule
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {savedSchedule.length > 0 && (
+                      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                        <table className="w-full text-sm">
+                          <thead className="bg-blue-50">
+                            <tr>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Date & Time</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Priority</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {savedSchedule.map((schedule) => (
+                              <tr key={schedule.id} className="border-t border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-gray-700">
+                                  {new Date(schedule.proposedDateTime).toLocaleString()}
+                                </td>
+                                <td className="p-3 text-gray-700">{schedule.priority}</td>
+                                <td className="p-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onRemoveSavedSchedule(schedule.id!)}
+                                      className="text-red-600 hover:text-red-800 font-medium text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Inventory Section (Only for Technical) */}
+                {isTechnicalDepartment && (
+                  <div className="border-b pb-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Inventory Items</h3>
+                      <button
+                        type="button"
+                        onClick={onOpenInventoryModal}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                      >
+                        + Add Inventory Item
+                      </button>
+                    </div>
+
+                    {inventories.length > 0 ? (
+                      <div className="bg-white rounded-lg border overflow-hidden mb-4">
+                        <table className="w-full text-sm">
+                          <thead className="bg-blue-50">
+                            <tr>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Product Type</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Make & Model</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">SN/MAC</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">Warranty</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold">3rd Party</th>
+                              <th className="p-3 text-left text-blue-800 font-semibold w-20">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {inventories.map((inv, i) => (
+                              <tr key={i} className="border-t hover:bg-gray-50">
+                                <td className="p-3 text-gray-700">{inv.productTypeName}</td>
+                                <td className="p-3 text-gray-700">{inv.makeModel}</td>
+                                <td className="p-3 text-gray-700">{inv.snMac}</td>
+                                <td className="p-3 text-gray-700">{inv.warrantyStatus}</td>
+                                <td className="p-3 text-gray-700">{inv.thirdPartyPurchase ? "Yes" : "No"}</td>
+                                <td className="p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => onRemoveInventory(i)}
+                                    className="text-red-600 hover:text-red-800 text-sm"
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg border">
+                        No inventory items added yet
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Task Remarks - KEEP THIS FOR ALL DEPARTMENTS */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">Task Remarks</h3>
               </div>
 
-              {/* Show New Remark Form ONLY in Add Task Modal */}
               {!editingId && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-white rounded-lg border">
                   <div className="md:col-span-2">
@@ -793,7 +1383,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               )}
 
-              {/* Saved Remarks Display - Show existing remarks as read-only */}
               {savedRemarks.length > 0 && (
                 <div className="mb-4">
                   <h4 className="text-md font-semibold text-gray-900 mb-3">
@@ -838,7 +1427,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </div>
 
-            {/* Form Actions */}
+            {/* Form Actions - ALWAYS SHOW */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
                 type="button"
@@ -950,32 +1539,32 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
     setNewStatus(allowed.length ? allowed[0] : current);
   }, [task, showModal]);
 
-// In RemarksModal component, add:
-const [isSubmitting, setIsSubmitting] = useState(false);
+  // In RemarksModal component, add:
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-// Update handleSubmit:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (isSubmitting) return; // Prevent double submit
-  
-  if (newRemark.trim()) {
-    setIsSubmitting(true);
-    
-    try {
-      await onAddRemark(newRemark.trim(), newStatus);
-      setNewRemark('');
-      
-      const updatedCurrentStatus = newStatus;
-      const updatedAllowedStatuses = getAllowedStatuses(updatedCurrentStatus);
-      setNewStatus(updatedAllowedStatuses[0] || 'Scheduled');
-    } catch (error) {
-      console.error("Failed to add remark:", error);
-    } finally {
-      setIsSubmitting(false);
+  // Update handleSubmit:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSubmitting) return; // Prevent double submit
+
+    if (newRemark.trim()) {
+      setIsSubmitting(true);
+
+      try {
+        await onAddRemark(newRemark.trim(), newStatus);
+        setNewRemark('');
+
+        const updatedCurrentStatus = newStatus;
+        const updatedAllowedStatuses = getAllowedStatuses(updatedCurrentStatus);
+        setNewStatus(updatedAllowedStatuses[0] || 'Scheduled');
+      } catch (error) {
+        console.error("Failed to add remark:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
-  }
-};
+  };
 
 
   if (!showModal || !task) return null;
@@ -1046,7 +1635,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </div>
             </div>
- <button
+            <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -1110,6 +1699,8 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 // Main TasksPage Component
 export default function TasksPage() {
+  const [purchaseFile, setPurchaseFile] = useState<File | null>(null);
+  const [savedPurchaseAttachments, setSavedPurchaseAttachments] = useState<any[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
@@ -1125,6 +1716,8 @@ export default function TasksPage() {
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [productTypes, setProductTypes] = useState<any[]>([]);
   const [currentUserName, setCurrentUserName] = useState<string>('User');
+
+
 
   type CrudPerm = {
     read: boolean;
@@ -1149,9 +1742,7 @@ export default function TasksPage() {
     delete: permissions?.TASKS?.delete ?? false,
   };
 
-  const debouncedFetchTasks = debounce(async () => {
-  await fetchTasks();
-}, 300);
+
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
@@ -1163,24 +1754,82 @@ export default function TasksPage() {
 
   const HOURS_24 = 24 * 60 * 60 * 1000;
 
-const isTaskOpen = (task: Task) =>
-  task.status?.toLowerCase() === "open";
+  const isTaskOpen = (task: Task) =>
+    task.status?.toLowerCase() === "open";
 
-const isTaskOlderThan24Hours = (task: Task) => {
-  if (!task.createdAt) return false;
+  const isTaskOlderThan24Hours = (task: Task) => {
+    if (!task.createdAt) return false;
 
-  const createdTime = new Date(task.createdAt).getTime();
-  const now = Date.now();
+    const createdTime = new Date(task.createdAt).getTime();
+    const now = Date.now();
 
-  return now - createdTime > HOURS_24;
-};
+    return now - createdTime > HOURS_24;
+  };
 
-const hasTaskBeenAttempted = (task: Task) => {
-  return task.remarks && task.remarks.length > 0;
-};
+  const hasTaskBeenAttempted = (task: Task) => {
+    return task.remarks && task.remarks.length > 0;
+  };
 
 
+  const addPurchaseProductRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      purchase: {
+        ...(prev.purchase || { purchaseType: "INQUIRY", products: [] }),
+        products: [
+          ...(prev.purchase?.products || []),
+          {
+            make: "",
+            model: "",
+            description: "",
+            warranty: "",
+            rate: "",
+            vendor: "",
+            validity: "",
+            availability: "",
+          },
+        ],
+      },
+    }));
+  };
 
+  const removePurchaseProductRow = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      purchase: {
+        ...(prev.purchase || { purchaseType: "INQUIRY", products: [] }),
+        products: (prev.purchase?.products || []).filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  const updatePurchaseProductRow = (
+    index: number,
+    field: keyof TaskPurchaseProduct,
+    value: any
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      purchase: {
+        ...(prev.purchase || { purchaseType: "INQUIRY", products: [] }),
+        products: (prev.purchase?.products || []).map((p, i) =>
+          i === index ? { ...p, [field]: value } : p
+        ),
+      },
+    }));
+  };
+
+  useEffect(() => {
+    (window as any).__addPurchaseProductRow = addPurchaseProductRow;
+    (window as any).__updatePurchaseProductRow = updatePurchaseProductRow;
+    (window as any).__removePurchaseProductRow = removePurchaseProductRow;
+
+    return () => {
+      delete (window as any).__addPurchaseProductRow;
+      delete (window as any).__updatePurchaseProductRow;
+      delete (window as any).__removePurchaseProductRow;
+    };
+  }, [addPurchaseProductRow, updatePurchaseProductRow, removePurchaseProductRow]);
 
   const fetchProductTypes = async () => {
     try {
@@ -1289,25 +1938,25 @@ const hasTaskBeenAttempted = (task: Task) => {
 
   const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
 
-const sortedTasks = [...filteredTasks].sort((a, b) => {
-  const aOpen = isTaskOpen(a);
-  const bOpen = isTaskOpen(b);
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const aOpen = isTaskOpen(a);
+    const bOpen = isTaskOpen(b);
 
-  // Open tasks always first
-  if (aOpen && !bOpen) return -1;
-  if (!aOpen && bOpen) return 1;
+    // Open tasks always first
+    if (aOpen && !bOpen) return -1;
+    if (!aOpen && bOpen) return 1;
 
-  // If both same status, newest first
-  return (
-    new Date(b.createdAt).getTime() -
-    new Date(a.createdAt).getTime()
+    // If both same status, newest first
+    return (
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+    );
+  });
+
+  const paginatedTasks = sortedTasks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
-});
-
-const paginatedTasks = sortedTasks.slice(
-  (currentPage - 1) * itemsPerPage,
-  currentPage * itemsPerPage
-);
 
   useEffect(() => {
     if (!userId) return;
@@ -1334,8 +1983,34 @@ const paginatedTasks = sortedTasks.slice(
     contacts: [], // Start with empty array
     workscopeDetails: [], // Start with empty array
     schedule: [], // Start with empty array
-    remarks: [] // Start with empty array
+    remarks: [], // Start with empty array
+    taskType: "SERVICE",
+    purchase: {
+      purchaseType: "INQUIRY",
+      customerName: "",
+      address: "",
+      products: [],
+    },
+
   });
+
+
+  // Calculate isPurchaseDepartment BEFORE TaskModal component
+  // Calculate isPurchaseDepartment BEFORE TaskModal component
+  const selectedDepartmentName =
+    departments.find(d => d.id === formData.departmentId)?.departmentName
+      ?.trim()
+      ?.toLowerCase() || "";
+
+  const isPurchaseDepartment = selectedDepartmentName === "purchase";
+  const isTechnicalDepartment = selectedDepartmentName === "technical";
+  const isBillingDepartment = selectedDepartmentName === "billing";
+  const isHRAdminDepartment =
+    selectedDepartmentName === "hr" ||
+    selectedDepartmentName === "hr&admin" ||
+    selectedDepartmentName === "hradmin";
+  const isSalesDepartment = selectedDepartmentName === "sales";
+
 
   // Search and dropdown states
   const [departmentSearch, setDepartmentSearch] = useState('');
@@ -1370,7 +2045,7 @@ const paginatedTasks = sortedTasks.slice(
 
   const filteredCustomers = addressBooks.filter(customer =>
     customer.customerName.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    customer.addressBookID.toLowerCase().includes(customerSearch.toLowerCase())
+    (customer.addressBookID?.toLowerCase() || '').includes(customerSearch.toLowerCase())
   );
 
   const filteredWorkscopeCategories = serviceWorkscopeCategories.filter(cat =>
@@ -1472,15 +2147,15 @@ const paginatedTasks = sortedTasks.slice(
     }
   }, [userId]);
 
-useEffect(() => {
-  const storedUserId = localStorage.getItem("userId");
-  const storedUserType = localStorage.getItem("userType");
-  const storedUserName = localStorage.getItem("username");
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    const storedUserType = localStorage.getItem("userType");
+    const storedUserName = localStorage.getItem("username");
 
-  if (storedUserId) setUserId(Number(storedUserId));
-  if (storedUserType) setUserType(storedUserType);
-  if (storedUserName) setCurrentUserName(storedUserName);
-}, []);
+    if (storedUserId) setUserId(Number(storedUserId));
+    if (storedUserType) setUserType(storedUserType);
+    if (storedUserName) setCurrentUserName(storedUserName);
+  }, []);
 
 
   const fetchDepartments = async () => {
@@ -1544,53 +2219,53 @@ useEffect(() => {
     }
   };
 
-const fetchLoggedUser = async (uid: number) => {
-  const token = getAuthToken();
-  
-  try {
-    const res = await fetch("http://localhost:8000/auth/users", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    const users = await res.json();
-    const me = users.find((u: any) => u.id === uid);
-    
-    if (me) {
-      setLoggedUser(me);
-      // Store the user's actual name for later use
-      const username = me.name || me.username || me.email || 'User';
-      localStorage.setItem("username", username);
+  const fetchLoggedUser = async (uid: number) => {
+    const token = getAuthToken();
+
+    try {
+      const res = await fetch("http://localhost:8000/auth/users", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const users = await res.json();
+      const me = users.find((u: any) => u.id === uid);
+
+      if (me) {
+        setLoggedUser(me);
+        // Store the user's actual name for later use
+        const username = me.name || me.username || me.email || 'User';
+        localStorage.setItem("username", username);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user details:", err);
+      setLoggedUser(null);
     }
-  } catch (err) {
-    console.error("Failed to fetch user details:", err);
-    setLoggedUser(null);
-  }
-};
+  };
 
- const fetchTasks = async () => {
-  try {
-    setLoading(true);
-    const response = await fetch('http://localhost:8000/task');
-    const data = await response.json();
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/task');
+      const data = await response.json();
 
-    // Only sort if needed
-    const tasksWithSortedRemarks = Array.isArray(data)
-      ? data.map((task: Task) => ({
-        ...task,
-        // Only sort when actually needed
-        remarks: task.remarks
-          ? [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0))
-          : []
-      }))
-      : [];
+      // Only sort if needed
+      const tasksWithSortedRemarks = Array.isArray(data)
+        ? data.map((task: Task) => ({
+          ...task,
+          // Only sort when actually needed
+          remarks: task.remarks
+            ? [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0))
+            : []
+        }))
+        : [];
 
-    setTasks(tasksWithSortedRemarks);
-  } catch (error) {
-    console.error('Error fetching tasks:', error);
-    setTasks([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setTasks(tasksWithSortedRemarks);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchNextTaskId = async () => {
     try {
@@ -1605,16 +2280,16 @@ const fetchLoggedUser = async (uid: number) => {
 
   // Modal handlers
   const handleOpenModal = async () => {
-  const nextTaskId = await fetchNextTaskId();
-  const actualUserName = localStorage.getItem("username") || currentUserName || "User";
-      setFormData({
+    const nextTaskId = await fetchNextTaskId();
+    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+    setFormData({
       taskID: nextTaskId,
       userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
       siteId: 0,
       status: 'Open',
-    createdBy: actualUserName, // Use actual user name
+      createdBy: actualUserName, // Use actual user name
       createdAt: new Date().toISOString(),
       description: '',
       title: '',
@@ -1633,9 +2308,17 @@ const fetchLoggedUser = async (uid: number) => {
         taskId: 0,
         remark: '',
         status: 'Open',
-    createdBy: actualUserName, // Use actual user name
+        createdBy: actualUserName, // Use actual user name
         createdAt: new Date().toISOString()
-      }]
+      }],
+      taskType: "SERVICE",
+      purchase: {
+        purchaseType: "INQUIRY",
+        customerName: "",
+        address: "",
+        products: [],
+      },
+
     });
     setSavedContacts([]);
     setSavedWorkscopeDetails([]);
@@ -1644,6 +2327,9 @@ const fetchLoggedUser = async (uid: number) => {
     setInventories([]);
     setEditingId(null);
     setShowModal(true);
+    setPurchaseFile(null);
+    setSavedPurchaseAttachments([]);
+
   };
 
   const handleCloseModal = () => {
@@ -1669,13 +2355,22 @@ const fetchLoggedUser = async (uid: number) => {
           priority: "Medium",
         }
       ],
-      remarks: []
+      remarks: [],
+      taskType: "SERVICE",
+      purchase: {
+        purchaseType: "INQUIRY",
+        customerName: "",
+        address: "",
+        products: [],
+      },
+
     });
     setSavedContacts([]);
     setSavedWorkscopeDetails([]);
     setSavedSchedule([]);
     setSavedRemarks([]);
     setInventories([]);
+    setPurchaseFile(null);
   };
 
   const handleOpenRemarksModal = (task: Task) => {
@@ -1698,243 +2393,327 @@ const fetchLoggedUser = async (uid: number) => {
   };
 
   // Form submission - FIXED TO INCLUDE REMARKS
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const cleanArray = (arr: any[], mapper: any) =>
-    arr.length ? arr.map(mapper) : undefined;
+    const cleanArray = (arr: any[], mapper: any) =>
+      arr.length ? arr.map(mapper) : undefined;
 
-  try {
-    // Get the actual user name from localStorage or state
-    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
-    
-    // Determine task status from saved remarks
-    let taskStatus = 'Open';
-    let remarksToSave: any[] = [];
+    try {
+      // Get the actual user name from localStorage or state
+      const actualUserName = localStorage.getItem("username") || currentUserName || "User";
 
-    // First check saved remarks
-    if (savedRemarks.length > 0) {
-      const sortedRemarks = [...savedRemarks].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      taskStatus = sortedRemarks[0]?.status || 'Open';
-      remarksToSave = sortedRemarks.map(r => ({
-        remark: r.remark,
-        status: r.status,
-        createdBy: r.createdBy || actualUserName, // Use actual user name
-        createdAt: r.createdAt || new Date().toISOString(),
-        description: r.description || "",
+      // Determine task status from saved remarks
+      let taskStatus = 'Open';
+      let remarksToSave: any[] = [];
 
-      }));
-    }
-    // Then check if there's a new remark in the form (for Add Task)
-    else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
-      const newRemark = {
-        remark: formData.remarks[0].remark,
-        status: 'Open', // Always "Open" for new tasks
-        createdBy: actualUserName, // Use actual user name
-        createdAt: new Date().toISOString(),
-        description: ""
+      // First check saved remarks
+      if (savedRemarks.length > 0) {
+        const sortedRemarks = [...savedRemarks].sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        taskStatus = sortedRemarks[0]?.status || 'Open';
+        remarksToSave = sortedRemarks.map(r => ({
+          remark: r.remark,
+          status: r.status,
+          createdBy: r.createdBy || actualUserName, // Use actual user name
+          createdAt: r.createdAt || new Date().toISOString(),
+          description: r.description || "",
+
+        }));
+      }
+      // Then check if there's a new remark in the form (for Add Task)
+      else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
+        const newRemark = {
+          remark: formData.remarks[0].remark,
+          status: 'Open', // Always "Open" for new tasks
+          createdBy: actualUserName, // Use actual user name
+          createdAt: new Date().toISOString(),
+          description: ""
+        };
+        remarksToSave = [newRemark];
+        taskStatus = 'Open';
+      }
+
+
+      const taskData: any = {
+        id: editingId || undefined,
+        userId,
+        taskID: formData.taskID,
+        departmentId: formData.departmentId,
+        addressBookId:
+          formData.addressBookId && formData.addressBookId > 0
+            ? formData.addressBookId
+            : null,
+
+        siteId:
+          formData.siteId && formData.siteId > 0
+            ? formData.siteId
+            : null,
+
+        status: taskStatus,
+        createdBy: actualUserName,
+        createdAt: formData.createdAt,
+        description: formData.description,
+        title: formData.title,
+
+        contacts: cleanArray(savedContacts, (c: any) => ({
+          contactName: c.contactName,
+          contactNumber: c.contactNumber,
+          contactEmail: c.contactEmail,
+        })),
+
+        workscopeDetails: savedWorkscopeDetails.length > 0
+          ? savedWorkscopeDetails.map(w => ({
+            workscopeCategoryId: Number(w.workscopeCategoryId),
+            workscopeDetails: w.workscopeDetails,
+            extraNote: w.extraNote || "",
+          }))
+          : undefined,
+
+        schedule: cleanArray(savedSchedule, (s: any) => ({
+          proposedDateTime: s.proposedDateTime,
+          priority: s.priority,
+        })),
+
+        remarks: remarksToSave.length > 0 ? remarksToSave : undefined,
+
+        taskType: isPurchaseDepartment
+          ? ((formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY"
+            ? "PRODUCT_INQUIRY"
+            : "PURCHASE_ORDER")
+          : "SERVICE",
+
+        taskInventories: inventories.length
+          ? inventories.map(inv => ({
+            serviceContractId: 0,
+            productTypeId: Number(inv.productTypeId),
+            makeModel: inv.makeModel,
+            snMac: inv.snMac,
+            description: inv.description,
+            purchaseDate: inv.purchaseDate,
+            warrantyPeriod: inv.warrantyPeriod,
+            thirdPartyPurchase: inv.thirdPartyPurchase,
+            warrantyStatus: inv.warrantyStatus
+              ? String(inv.warrantyStatus).trim()
+              : "Active",
+          }))
+          : undefined,
       };
-      remarksToSave = [newRemark];
-      taskStatus = 'Open';
+
+      /* ---------------------------------------------------
+         🔥 PURCHASE PAYLOAD — ADD CONDITIONALLY (CRITICAL)
+      --------------------------------------------------- */
+
+      // RULE:
+      // ✔ CREATE → require products
+      // ✔ UPDATE → send purchase ONLY if products exist
+      // ❌ NEVER send empty purchase on update
+
+      const hasProducts =
+        Array.isArray(formData.purchase?.products) &&
+        formData.purchase.products.length > 0;
+
+      const hasPurchaseMetaChanges =
+        !!formData.purchase?.customerName ||
+        !!formData.purchase?.address ||
+        !!formData.purchase?.purchaseType;
+
+      // 🔥 SEND PURCHASE IF ANY PURCHASE DATA EXISTS
+      if (isPurchaseDepartment && formData.purchase && (hasProducts || hasPurchaseMetaChanges)) {
+        taskData.purchase = {
+          purchaseType: formData.purchase.purchaseType || "INQUIRY",
+
+          customerName:
+            formData.purchase.purchaseType === "INQUIRY"
+              ? formData.purchase.customerName || ""
+              : null,
+
+          address:
+            formData.purchase.purchaseType === "INQUIRY"
+              ? formData.purchase.address || ""
+              : null,
+
+          // 🔥 IMPORTANT: send products ONLY if present
+          products: hasProducts
+            ? formData.purchase.products.map((p: any) => ({
+              make: p.make || null,
+              model: p.model || null,
+              description: p.description || null,
+              warranty: p.warranty || null,
+              rate: p.rate === "" || p.rate == null ? null : Number(p.rate),
+              vendor: p.vendor || null,
+              validity:
+                formData.purchase && formData.purchase.purchaseType === "INQUIRY" && p.validity
+                  ? p.validity
+                  : null,
+              availability:
+                formData.purchase && formData.purchase.purchaseType === "INQUIRY"
+                  ? p.availability || null
+                  : null,
+            }))
+            : undefined, // 🔥 THIS IS THE KEY
+        };
+      }
+
+
+      const url = editingId
+        ? `http://localhost:8000/task/${editingId}`
+        : `http://localhost:8000/task`;
+
+      const method = editingId ? "PATCH" : "POST";
+
+      const token = getAuthToken();
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save task: ${errorText}`);
+      }
+
+      const savedTask = await response.json();
+
+      // 🔥 Upload attachment if present
+      if (purchaseFile && savedTask?.id) {
+        const attachmentFormData = new FormData();
+        attachmentFormData.append("file", purchaseFile);
+
+        await fetch(
+          `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: attachmentFormData,
+          }
+        );
+      }
+
+      await fetchTasks();
+      alert("Task saved successfully!");
+      handleCloseModal();
+      setPurchaseFile(null);
+    } catch (err) {
+      console.error("Save error:", err);
+      setError(err instanceof Error ? err.message : "Failed to save task");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    console.log("Remarks to save:", remarksToSave); // Debug log
+  const handleAddRemarkInModal = async (remark: string, status: string) => {
+    if (!selectedTask) return;
 
-    const taskData = {
-      id: editingId || undefined,
-      userId,
-      taskID: formData.taskID,
-      departmentId: formData.departmentId,
-      addressBookId: formData.addressBookId,
-      siteId: formData.siteId,
-      status: taskStatus,
-      createdBy: actualUserName, // Also update main task createdBy
-      createdAt: formData.createdAt,
-      description: formData.description,
-      title: formData.title,
-
-      contacts: cleanArray(savedContacts, (c: any) => ({
-        contactName: c.contactName,
-        contactNumber: c.contactNumber,
-        contactEmail: c.contactEmail
-      })),
-
-      workscopeDetails: savedWorkscopeDetails.length > 0
-        ? savedWorkscopeDetails.map(w => ({
-          workscopeCategoryId: Number(w.workscopeCategoryId),
-          workscopeDetails: w.workscopeDetails,
-          extraNote: w.extraNote || ""
-        }))
-        : undefined,
-
-      schedule: cleanArray(savedSchedule, (s: any) => ({
-        proposedDateTime: s.proposedDateTime,
-        priority: s.priority
-      })),
-
-      // ✅ FIX: INCLUDE REMARKS IN PAYLOAD
-      remarks: remarksToSave.length > 0
-        ? remarksToSave
-        : undefined,
-
-      taskInventories: inventories.length
-        ? inventories.map(inv => ({
-          serviceContractId: 0,
-          productTypeId: Number(inv.productTypeId),
-          makeModel: inv.makeModel,
-          snMac: inv.snMac,
-          description: inv.description,
-          purchaseDate: inv.purchaseDate,
-          warrantyPeriod: inv.warrantyPeriod,
-          thirdPartyPurchase: inv.thirdPartyPurchase,
-          warrantyStatus: inv.warrantyStatus
-            ? String(inv.warrantyStatus).trim()
-            : "Active"
-        }))
-        : undefined,
-    };
-
-    console.log("DEBUG PAYLOAD:", JSON.stringify(taskData, null, 2));
-
-    const url = editingId
-      ? `http://localhost:8000/task/${editingId}`
-      : `http://localhost:8000/task`;
-
-    const method = editingId ? "PATCH" : "POST";
-
-    const token = getAuthToken();
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(taskData),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to save task: ${errorText}`);
-    }
-
-    await fetchTasks();
-    alert("Task saved successfully!");
-    handleCloseModal();
-  } catch (err) {
-    console.error("Save error:", err);
-    setError(err instanceof Error ? err.message : "Failed to save task");
-  } finally {
-    setLoading(false);
-  }
-};
-
- const handleAddRemarkInModal = async (remark: string, status: string) => {
-  if (!selectedTask) return;
-
-  // Show immediate feedback
-  const submitButton = document.activeElement as HTMLButtonElement;
-  const originalText = submitButton?.textContent;
+    // Show immediate feedback
+    const submitButton = document.activeElement as HTMLButtonElement;
+    const originalText = submitButton?.textContent;
 
 
-  try {
-    const token = getAuthToken();
-    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+    try {
+      const token = getAuthToken();
+      const actualUserName = localStorage.getItem("username") || currentUserName || "User";
 
-    // OPTIMIZATION: Optimistic update
-    const tempRemark = {
-      id: Date.now(), // Temporary ID
-      taskId: selectedTask.id!,
-      remark,
-      status,
-      createdBy: actualUserName,
-      createdAt: new Date().toISOString(),
-      description: ""
-    };
-
-    // Update UI immediately (optimistic update)
-    const updatedRemarks = [tempRemark, ...savedRemarks];
-    setSavedRemarks(updatedRemarks);
-    
-    // Update the task in local state immediately
-    if (selectedTask) {
-      const updatedTask = {
-        ...selectedTask,
-        status,
-        remarks: updatedRemarks
-      };
-      setSelectedTask(updatedTask);
-    }
-
-    // Update tasks list optimistically
-    setTasks(prev => prev.map(task => 
-      task.id === selectedTask.id 
-        ? { ...task, status, remarks: updatedRemarks }
-        : task
-    ));
-
-    // Then make API call
-    const response = await fetch(`http://localhost:8000/tasks-remarks`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        taskId: selectedTask.id,
+      // OPTIMIZATION: Optimistic update
+      const tempRemark = {
+        id: Date.now(), // Temporary ID
+        taskId: selectedTask.id!,
         remark,
         status,
         createdBy: actualUserName,
-      }),
-    });
+        createdAt: new Date().toISOString(),
+        description: ""
+      };
 
-    if (!response.ok) {
-      throw new Error("Failed to add remark");
-    }
+      // Update UI immediately (optimistic update)
+      const updatedRemarks = [tempRemark, ...savedRemarks];
+      setSavedRemarks(updatedRemarks);
 
-    const newRemark = await response.json();
+      // Update the task in local state immediately
+      if (selectedTask) {
+        const updatedTask = {
+          ...selectedTask,
+          status,
+          remarks: updatedRemarks
+        };
+        setSelectedTask(updatedTask);
+      }
 
-    // Replace temporary remark with actual one from server
-    const finalUpdatedRemarks = [newRemark, ...savedRemarks];
-    setSavedRemarks(finalUpdatedRemarks);
+      // Update tasks list optimistically
+      setTasks(prev => prev.map(task =>
+        task.id === selectedTask.id
+          ? { ...task, status, remarks: updatedRemarks }
+          : task
+      ));
 
-    // Update with real data
-    setTasks(prev => prev.map(task => 
-      task.id === selectedTask.id 
-        ? { 
-            ...task, 
-            status, 
-            remarks: finalUpdatedRemarks 
+      // Then make API call
+      const response = await fetch(`http://localhost:8000/tasks-remarks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          taskId: selectedTask.id,
+          remark,
+          status,
+          createdBy: actualUserName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add remark");
+      }
+
+      const newRemark = await response.json();
+
+      // Replace temporary remark with actual one from server
+      const finalUpdatedRemarks = [newRemark, ...savedRemarks];
+      setSavedRemarks(finalUpdatedRemarks);
+
+      // Update with real data
+      setTasks(prev => prev.map(task =>
+        task.id === selectedTask.id
+          ? {
+            ...task,
+            status,
+            remarks: finalUpdatedRemarks
           }
-        : task
-    ));
+          : task
+      ));
 
-    // Only fetch if you need to sync with other users
-    // await fetchTasks(); // REMOVE or keep if needed for real-time sync
+      // Only fetch if you need to sync with other users
+      // await fetchTasks(); // REMOVE or keep if needed for real-time sync
 
-  } catch (err) {
-    console.error(err);
-    setError("Failed to add remark");
-    
-    // Revert optimistic update on error
-    setSavedRemarks(savedRemarks);
-    setTasks(prev => prev.map(task => 
-      task.id === selectedTask.id 
-        ? { ...task, status: selectedTask.status, remarks: savedRemarks }
-        : task
-    ));
-  } finally {
-    // Restore button state
-    if (submitButton) {
-      submitButton.textContent = originalText;
-      submitButton.disabled = false;
+    } catch (err) {
+      console.error(err);
+      setError("Failed to add remark");
+
+      // Revert optimistic update on error
+      setSavedRemarks(savedRemarks);
+      setTasks(prev => prev.map(task =>
+        task.id === selectedTask.id
+          ? { ...task, status: selectedTask.status, remarks: savedRemarks }
+          : task
+      ));
+    } finally {
+      // Restore button state
+      if (submitButton) {
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+      }
     }
-  }
-};
+  };
 
   const handleRemoveRemarkInModal = async (id: number) => {
     try {
@@ -2280,26 +3059,14 @@ const fetchLoggedUser = async (uid: number) => {
   };
 
   // In the handleEditTask function, update the inventory loading part:
-  const handleEditTask = (task: Task) => {
-   const sortedRemarks = task.remarks
-    ? [...task.remarks].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    : [];
-
-  const formattedSchedule = (task.schedule || []).map(schedule => ({
-    ...schedule,
-    proposedDateTime: schedule.proposedDateTime ?
-      new Date(schedule.proposedDateTime).toISOString().slice(0, 16) : ''
-  }));
-
-  let taskStatus = 'Open';
-  if (task.remarks && task.remarks.length > 0) {
-    const sortedRemarks = [...task.remarks].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    taskStatus = sortedRemarks[0]?.status || 'Open';
-  }
+  const handleEditTask = async (task: Task) => {
+    let taskStatus = 'Open';
+    if (task.remarks && task.remarks.length > 0) {
+      const sortedRemarks = [...task.remarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      taskStatus = sortedRemarks[0]?.status || 'Open';
+    }
 
     const actualUserName = localStorage.getItem("username") || currentUserName || "User";
 
@@ -2311,7 +3078,7 @@ const fetchLoggedUser = async (uid: number) => {
       addressBookId: task.addressBookId,
       siteId: task.siteId,
       status: taskStatus,
-    createdBy: actualUserName, // Use actual user name
+      createdBy: actualUserName, // Use actual user name
       createdAt: task.createdAt,
       description: task.description || '',
       title: task.title || '',
@@ -2325,13 +3092,34 @@ const fetchLoggedUser = async (uid: number) => {
           priority: "Medium",
         }
       ],
+      taskType: task.taskType || "SERVICE",
+      purchase: task.purchase
+        ? {
+          purchaseType: task.purchase.purchaseType,
+          customerName: task.purchase.customerName || "",
+          address: task.purchase.address || "",
+          products: (task.purchase.products || []).map((p: any) => ({
+            make: p.make || "",
+            model: p.model || "",
+            description: p.description || "",
+            warranty: p.warranty || "",
+            rate: p.rate ?? "",
+            vendor: p.vendor || "",
+            validity: p.validity
+              ? new Date(p.validity).toISOString().slice(0, 16)
+              : "",
+            availability: p.availability || "",
+          })),
+        }
+        : undefined,
+
 
       // Start with one empty remark for adding new ones
       remarks: [{
         taskId: 0,
         remark: '',
         status: 'Open',
-    createdBy: actualUserName, // Use actual user name
+        createdBy: actualUserName, // Use actual user name
         createdAt: new Date().toISOString()
       }]
     });
@@ -2346,7 +3134,26 @@ const fetchLoggedUser = async (uid: number) => {
         extraNote: w.extraNote || ""
       }))
     );
+    // Always fetch fresh task details (so attachments definitely come)
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`http://localhost:8000/task/${task.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
+      const fullTask = res.ok ? await res.json() : task;
+
+      // attachments may come either at root OR inside purchase (depends on your backend include)
+      const attachments =
+        fullTask?.taskPurchaseAttachments ||
+        fullTask?.purchase?.taskPurchaseAttachments ||
+        [];
+
+      setSavedPurchaseAttachments(Array.isArray(attachments) ? attachments : []);
+    } catch (e) {
+      console.error("Failed to load task details for attachments", e);
+      setSavedPurchaseAttachments(task.taskPurchaseAttachments || []);
+    }
     setSavedSchedule(task.schedule || []);
     setSavedRemarks(task.remarks || []);
 
@@ -2491,7 +3298,7 @@ const fetchLoggedUser = async (uid: number) => {
       setEditingIndex(null);
     };
 
-  
+
 
     const handleSave = () => {
       if (!form.productTypeId || !form.makeModel || !form.snMac) {
@@ -2734,8 +3541,8 @@ const fetchLoggedUser = async (uid: number) => {
               onClick={handleOpenModal}
               disabled={!taskPermissions.create}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 ${taskPermissions.create
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
             >
               <PlusIcon className="h-5 w-5" />
@@ -2790,179 +3597,179 @@ const fetchLoggedUser = async (uid: number) => {
                     </th>
                   </tr>
                 </thead>
-  <tbody className="bg-white divide-y divide-gray-200">
-    {paginatedTasks.map((task) => {
-
-      
-   const isOverdueOpen =
-      isTaskOpen(task) && 
-      isTaskOlderThan24Hours(task) && 
-      !hasTaskBeenAttempted(task);
-
-      return (
-        <tr
-          key={task.id}
-          className={`
-            border-b transition-all
-            ${isOverdueOpen
-              ? "bg-red-50 border-l-4 border-red-600"
-              : "hover:bg-gray-50"}
-          `}
-        >
-          <td className="p-3 font-medium text-gray-900">
-            {task.taskID}
-            {isOverdueOpen && (
-              <span className="ml-2 text-xs font-semibold text-red-600">
-                ⚠ Open &gt; 24h
-              </span>
-            )}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-            {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-            {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || 'N/A'}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-            {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
-          </td>
-
-          <td className="px-6 py-4 whitespace-nowrap">
-            {(() => {
-              // No remarks at all → default Open
-              if (!task.remarks || task.remarks.length === 0) {
-                return (
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                    Open
-                  </span>
-                );
-              }
-
-              // Sort remarks by latest
-              const sortedRemarks = [...task.remarks].sort(
-                (a, b) => (b.id || 0) - (a.id || 0)
-              );
-
-              const latestRemark = sortedRemarks[0];
-              const status = latestRemark?.status || 'Open';
-
-              return (
-                <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status === 'Completed'
-                      ? 'bg-green-100 text-green-800'
-                      : status === 'Work in Progress'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : status === 'On-Hold'
-                          ? 'bg-orange-100 text-orange-800'
-                          : status === 'Rescheduled'
-                            ? 'bg-purple-100 text-purple-800'
-                            : status === 'Scheduled'
-                              ? 'bg-blue-100 text-blue-800'
-                              : status === 'Reopen'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800' // Open + fallback
-                    }`}
-                >
-                  {status}
-                </span>
-              );
-            })()}
-          </td>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedTasks.map((task) => {
 
 
-          <td className="px-6 py-4 text-sm text-gray-900 align-top w-64">
-            {task.remarks && task.remarks.length > 0 ? (
-              <div className="flex flex-col space-y-1">
-                <div className="font-medium break-words leading-snug">
-                  {(() => {
-                    const sortedRemarks = [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0));
-                    const latestRemark = sortedRemarks[0];
+                    const isOverdueOpen =
+                      isTaskOpen(task) &&
+                      isTaskOlderThan24Hours(task) &&
+                      !hasTaskBeenAttempted(task);
 
                     return (
-                      <span className="block text-gray-800">
-                        {latestRemark.remark}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-            ) : (
-              <span className="text-gray-400">No remarks</span>
-            )}
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <div className="flex gap-2">
-              <a
-                            href={`/tasks/view/${task.taskID}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-900 underline"
-                          >
-                            View
-                          </a>
+                      <tr
+                        key={task.id}
+                        className={`
+            border-b transition-all
+            ${isOverdueOpen
+                            ? "bg-red-50 border-l-4 border-red-600"
+                            : "hover:bg-gray-50"}
+          `}
+                      >
+                        <td className="p-3 font-medium text-gray-900">
+                          {task.taskID}
+                          {isOverdueOpen && (
+                            <span className="ml-2 text-xs font-semibold text-red-600">
+                              ⚠ Open &gt; 24h
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || task.purchase?.customerName || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
+                        </td>
 
-              <button
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {(() => {
+                            // No remarks at all → default Open
+                            if (!task.remarks || task.remarks.length === 0) {
+                              return (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                  Open
+                                </span>
+                              );
+                            }
 
-                onClick={() => taskPermissions.edit && handleEditTask(task)}
-                disabled={!taskPermissions.edit}
-                className={`transition-colors
+                            // Sort remarks by latest
+                            const sortedRemarks = [...task.remarks].sort(
+                              (a, b) => (b.id || 0) - (a.id || 0)
+                            );
+
+                            const latestRemark = sortedRemarks[0];
+                            const status = latestRemark?.status || 'Open';
+
+                            return (
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status === 'Completed'
+                                  ? 'bg-green-100 text-green-800'
+                                  : status === 'Work in Progress'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : status === 'On-Hold'
+                                      ? 'bg-orange-100 text-orange-800'
+                                      : status === 'Rescheduled'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : status === 'Scheduled'
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : status === 'Reopen'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-gray-100 text-gray-800' // Open + fallback
+                                  }`}
+                              >
+                                {status}
+                              </span>
+                            );
+                          })()}
+                        </td>
+
+                        <td className="px-6 py-4 text-sm text-gray-900 align-top w-64">
+                          {task.remarks && task.remarks.length > 0 ? (
+                            <div className="flex flex-col space-y-1">
+                              <div className="font-medium break-words leading-snug">
+                                {(() => {
+                                  const sortedRemarks = [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0));
+                                  const latestRemark = sortedRemarks[0];
+
+                                  return (
+                                    <span className="block text-gray-800">
+                                      {latestRemark.remark}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No remarks</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex gap-2">
+                            <a
+                              href={`/tasks/view/${task.taskID}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+
+                            >
+                              View
+                            </a>
+
+                            <button
+
+                              onClick={() => taskPermissions.edit && handleEditTask(task)}
+                              disabled={!taskPermissions.edit}
+                              className={`transition-colors
                   ${taskPermissions.edit
-                    ? "text-blue-600 hover:text-blue-900"
-                    : "text-gray-400 cursor-not-allowed"
-                  }`}
-                title={
-                  taskPermissions.edit ? "Edit Task" : "No permission to edit"
-                }
-              >
+                                  ? "text-blue-600 hover:text-blue-900"
+                                  : "text-gray-400 cursor-not-allowed"
+                                }`}
+                              title={
+                                taskPermissions.edit ? "Edit Task" : "No permission to edit"
+                              }
+                            >
 
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                onClick={() =>
-                  taskPermissions.create && handleOpenRemarksModal(task)
-                }
-                disabled={!taskPermissions.create}
-                className={`transition-colors
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() =>
+                                taskPermissions.create && handleOpenRemarksModal(task)
+                              }
+                              disabled={!taskPermissions.create}
+                              className={`transition-colors
                   ${taskPermissions.create
-                    ? "text-green-600 hover:text-green-900"
-                    : "text-gray-400 cursor-not-allowed"
-                  }`}
-                title={
-                  taskPermissions.create
-                    ? "View / Add Remarks"
-                    : "No permission to add remarks"
-                }
-              >
+                                  ? "text-green-600 hover:text-green-900"
+                                  : "text-gray-400 cursor-not-allowed"
+                                }`}
+                              title={
+                                taskPermissions.create
+                                  ? "View / Add Remarks"
+                                  : "No permission to add remarks"
+                              }
+                            >
 
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => taskPermissions.delete && handleDeleteTask(task.id!)}
-                disabled={!taskPermissions.delete}
-                className={`transition-colors
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => taskPermissions.delete && handleDeleteTask(task.id!)}
+                              disabled={!taskPermissions.delete}
+                              className={`transition-colors
                   ${taskPermissions.delete
-                    ? "text-red-600 hover:text-red-900"
-                    : "text-gray-400 cursor-not-allowed"
-                  }`}
-                title={
-                  taskPermissions.delete ? "Delete Task" : "No permission to delete"
-                }
-              >
+                                  ? "text-red-600 hover:text-red-900"
+                                  : "text-gray-400 cursor-not-allowed"
+                                }`}
+                              title={
+                                taskPermissions.delete ? "Delete Task" : "No permission to delete"
+                              }
+                            >
 
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </td>
-        </tr>
-      );
-    })}
-    {tasks.length === 0 && (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {tasks.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                         No tasks found. Create your first task!
@@ -2994,13 +3801,20 @@ const fetchLoggedUser = async (uid: number) => {
                   </button>
                 </div>
               </div>
-
             </div>
           )}
         </div>
 
         {/* Task Modal */}
         <TaskModal
+          purchaseFile={purchaseFile}
+          setPurchaseFile={setPurchaseFile}
+          savedPurchaseAttachments={savedPurchaseAttachments}
+          isPurchaseDepartment={isPurchaseDepartment}
+          isBillingDepartment={isBillingDepartment}
+          isSalesDepartment={isSalesDepartment}
+          isHRAdminDepartment={isHRAdminDepartment}
+          isTechnicalDepartment={isTechnicalDepartment}
           showModal={showModal}
           editingId={editingId}
           formData={formData}

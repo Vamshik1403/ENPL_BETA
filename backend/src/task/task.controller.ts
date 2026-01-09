@@ -1,7 +1,9 @@
-import { Controller, Get, Param, ParseIntPipe, Post, Body, Req, Patch, Delete } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe, Post, Body, Req, Patch, Delete, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { CreateTaskDto } from "./dto/create-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
 import { TaskService } from "./task.service";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
 
 @Controller('task')
 export class TaskController {
@@ -47,6 +49,26 @@ export class TaskController {
   create(@Body() dto: CreateTaskDto) {
     return this.taskService.create(dto, dto.userId);
   }
+@Post(':taskId/purchase-attachment')
+@UseInterceptors(
+  FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/purchase',
+      filename: (req, file, cb) => {
+        const uniqueName =
+          Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `${uniqueName}-${file.originalname}`);
+      },
+    }),
+  }),
+)
+async uploadPurchaseAttachment(
+  @Param('taskId', ParseIntPipe) taskId: number,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.taskService.addPurchaseAttachment(taskId, file);
+}
+
 
   @Get()
   findAll() {
