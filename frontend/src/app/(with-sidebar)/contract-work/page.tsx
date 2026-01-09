@@ -66,8 +66,8 @@ export default function ContractWorkPage() {
   const [itemsPerPage] = useState(10);
   const [filteredCategories, setFilteredCategories] = useState<ContractWorkCategory[]>([]);
 
-  const API_URL = 'https://enplerp.electrohelps.in/contractworkcategory';
-  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/user-permissions';
+  const API_URL = 'https://enplerp.electrohelps.in/backend/api/contractworkcategory';
+  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/backend/api/user-permissions';
 
   // Fetch permissions
 const fetchPermissions = async (uid: number) => {

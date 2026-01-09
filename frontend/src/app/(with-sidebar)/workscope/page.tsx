@@ -63,8 +63,8 @@ export default function WorkscopeCategoryPage() {
   const [itemsPerPage] = useState(10);
   const [filteredCategories, setFilteredCategories] = useState<WorkscopeCategory[]>([]);
 
-  const API_URL = 'https://enplerp.electrohelps.in/workscope-category';
-  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/user-permissions';
+  const API_URL = 'https://enplerp.electrohelps.in/backend/api/workscope-category';
+  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/backend/api/user-permissions';
 
 const fetchPermissions = async (uid: number) => {
     try {

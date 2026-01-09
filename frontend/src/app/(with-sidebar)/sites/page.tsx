@@ -99,7 +99,7 @@ export default function SitesPage() {
       // Try to get token from localStorage
       const token = localStorage.getItem('access_token') || localStorage.getItem('token');
       
-      const response = await fetch(`https://enplerp.electrohelps.in/user-permissions/${userId}`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/user-permissions/${userId}`, {
         headers: token ? {
           'Authorization': `Bearer ${token}`
         } : {}
@@ -195,7 +195,7 @@ export default function SitesPage() {
       setLoading(true);
       console.log('Fetching sites from backend...');
 
-      const response = await fetch('https://enplerp.electrohelps.in/sites');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/sites');
       if (response.ok) {
         const data = await response.json();
         setSites(data);
@@ -262,7 +262,7 @@ export default function SitesPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('https://enplerp.electrohelps.in/address-book', {
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/address-book', {
         signal: controller.signal
       });
 
@@ -402,7 +402,7 @@ export default function SitesPage() {
 
       if (editingId) {
         // Update existing site
-        const response = await fetch(`https://enplerp.electrohelps.in/sites/${editingId}`, {
+        const response = await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${editingId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -416,7 +416,7 @@ export default function SitesPage() {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
               if (contact.id) {
                 // Update existing contact
-                await fetch(`https://enplerp.electrohelps.in/sites/contacts/${contact.id}`, {
+                await fetch(`https://enplerp.electrohelps.in/backend/api/sites/contacts/${contact.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -428,7 +428,7 @@ export default function SitesPage() {
                 });
               } else {
                 // Create new contact
-                await fetch(`https://enplerp.electrohelps.in/sites/${editingId}/contacts`, {
+                await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${editingId}/contacts`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -447,7 +447,7 @@ export default function SitesPage() {
         }
       } else {
         // Create new site
-        const response = await fetch('https://enplerp.electrohelps.in/sites', {
+        const response = await fetch('https://enplerp.electrohelps.in/backend/api/sites', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -461,7 +461,7 @@ export default function SitesPage() {
           // Create site contacts
           for (const contact of formContacts) {
             if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              await fetch(`https://enplerp.electrohelps.in/sites/${newSite.id}/contacts`, {
+              await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${newSite.id}/contacts`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -506,7 +506,7 @@ export default function SitesPage() {
 
       // Fetch existing site contacts
       try {
-        const response = await fetch(`https://enplerp.electrohelps.in/sites/${id}/contacts`);
+        const response = await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${id}/contacts`);
         if (response.ok) {
           const contactsData = await response.json();
           setFormContacts(contactsData);
@@ -530,7 +530,7 @@ export default function SitesPage() {
     if (confirm('Are you sure you want to delete this site?')) {
       try {
         setLoading(true);
-        const response = await fetch(`https://enplerp.electrohelps.in/sites/${id}`, {
+        const response = await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${id}`, {
           method: 'DELETE',
         });
 
@@ -550,7 +550,7 @@ export default function SitesPage() {
 
   const fetchCustomerFullData = async (id: number) => {
     try {
-      const res = await fetch(`https://enplerp.electrohelps.in/address-book/${id}`);
+      const res = await fetch(`https://enplerp.electrohelps.in/backend/api/address-book/${id}`);
       const data = await res.json();
 
       if (!data) return;

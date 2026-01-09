@@ -73,13 +73,13 @@ type PermissionsJson = Record<string, CrudPerm>;
    API Endpoints
 ------------------------------------------------------- */
 const API = {
-  LIST: "https://enplerp.electrohelps.in/auth/users",
-  REGISTER: "https://enplerp.electrohelps.in/auth/register",
-  UPDATE: "https://enplerp.electrohelps.in/auth/users",
-  DELETE: "https://enplerp.electrohelps.in/auth/users",
-  PERMISSION: (userId: number) => `https://enplerp.electrohelps.in/user-permissions/${userId}`,
-  USER_DETAIL: (userId: number) => `https://enplerp.electrohelps.in/auth/users/${userId}`,
-  DEPARTMENTS: "https://enplerp.electrohelps.in/department"
+  LIST: "https://enplerp.electrohelps.in/backend/api/auth/users",
+  REGISTER: "https://enplerp.electrohelps.in/backend/api/auth/register",
+  UPDATE: "https://enplerp.electrohelps.in/backend/api/auth/users",
+  DELETE: "https://enplerp.electrohelps.in/backend/api/auth/users",
+  PERMISSION: (userId: number) => `https://enplerp.electrohelps.in/backend/api/user-permissions/${userId}`,
+  USER_DETAIL: (userId: number) => `https://enplerp.electrohelps.in/backend/api/auth/users/${userId}`,
+  DEPARTMENTS: "https://enplerp.electrohelps.in/backend/api/department"
 };
 
 /* -------------------------------------------------------

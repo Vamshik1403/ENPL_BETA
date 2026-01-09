@@ -709,7 +709,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
                           <div className="flex gap-3 text-sm">
                             <a
-                              href={`https://enplerp.electrohelps.in/${String(att.filepath).replace(/\\/g, "/")}`}
+                              href={`https://enplerp.electrohelps.in/backend/api/${String(att.filepath).replace(/\\/g, "/")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline"
@@ -1833,7 +1833,7 @@ export default function TasksPage() {
 
   const fetchProductTypes = async () => {
     try {
-      const res = await fetch("https://enplerp.electrohelps.in/producttype");
+      const res = await fetch("https://enplerp.electrohelps.in/backend/api/producttype");
       const data = await res.json();
       setProductTypes(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -2062,7 +2062,7 @@ export default function TasksPage() {
 
     const fetchSiteContacts = async () => {
       try {
-        const res = await fetch(`https://enplerp.electrohelps.in/sites/${formData.siteId}`);
+        const res = await fetch(`https://enplerp.electrohelps.in/backend/api/sites/${formData.siteId}`);
         const data = await res.json();
 
         if (data?.contacts?.length > 0) {
@@ -2093,7 +2093,7 @@ export default function TasksPage() {
         localStorage.getItem("token");
 
       const res = await fetch(
-        `https://enplerp.electrohelps.in/user-permissions/${uid}`,
+        `https://enplerp.electrohelps.in/backend/api/user-permissions/${uid}`,
         {
           headers: token
             ? { Authorization: `Bearer ${token}` }
@@ -2160,7 +2160,7 @@ export default function TasksPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/department');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/department');
       const data = await response.json();
       setDepartments(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2185,7 +2185,7 @@ export default function TasksPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/address-book');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/address-book');
       const data = await response.json();
       setAddressBooks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2196,7 +2196,7 @@ export default function TasksPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/sites');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/sites');
       const data = await response.json();
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2207,7 +2207,7 @@ export default function TasksPage() {
 
   const fetchServiceWorkscopeCategories = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/workscope-category');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/workscope-category');
       if (!response.ok) {
         throw new Error('Failed to fetch service workscope categories');
       }
@@ -2223,7 +2223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const res = await fetch("https://enplerp.electrohelps.in/auth/users", {
+      const res = await fetch("https://enplerp.electrohelps.in/backend/api/auth/users", {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const users = await res.json();
@@ -2244,7 +2244,7 @@ export default function TasksPage() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://enplerp.electrohelps.in/task');
+      const response = await fetch('https://enplerp.electrohelps.in/backend/api/task');
       const data = await response.json();
 
       // Only sort if needed
@@ -2269,7 +2269,7 @@ export default function TasksPage() {
 
   const fetchNextTaskId = async () => {
     try {
-      const res = await fetch(`https://enplerp.electrohelps.in/task/next-id`);
+      const res = await fetch(`https://enplerp.electrohelps.in/backend/api/task/next-id`);
       const data = await res.json();
       return data.taskId;
     } catch (err) {
@@ -2560,8 +2560,8 @@ export default function TasksPage() {
 
 
       const url = editingId
-        ? `https://enplerp.electrohelps.in/task/${editingId}`
-        : `https://enplerp.electrohelps.in/task`;
+        ? `https://enplerp.electrohelps.in/backend/api/task/${editingId}`
+        : `https://enplerp.electrohelps.in/backend/api/task`;
 
       const method = editingId ? "PATCH" : "POST";
 
@@ -2589,7 +2589,7 @@ export default function TasksPage() {
         attachmentFormData.append("file", purchaseFile);
 
         await fetch(
-          `https://enplerp.electrohelps.in/task/${savedTask.id}/purchase-attachment`,
+          `https://enplerp.electrohelps.in/backend/api/task/${savedTask.id}/purchase-attachment`,
           {
             method: "POST",
             headers: {
@@ -2657,7 +2657,7 @@ export default function TasksPage() {
       ));
 
       // Then make API call
-      const response = await fetch(`https://enplerp.electrohelps.in/tasks-remarks`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/tasks-remarks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2766,7 +2766,7 @@ export default function TasksPage() {
 
         const token = getAuthToken();
 
-        const response = await fetch(`https://enplerp.electrohelps.in/task/${selectedTask.id}`, {
+        const response = await fetch(`https://enplerp.electrohelps.in/backend/api/task/${selectedTask.id}`, {
           method: 'PATCH',
           headers: {
             "Content-Type": "application/json",
@@ -2799,7 +2799,7 @@ export default function TasksPage() {
 
     try {
 
-      const response = await fetch(`https://enplerp.electrohelps.in/task/${id}`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/task/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3137,7 +3137,7 @@ export default function TasksPage() {
     // Always fetch fresh task details (so attachments definitely come)
     try {
       const token = getAuthToken();
-      const res = await fetch(`https://enplerp.electrohelps.in/task/${task.id}`, {
+      const res = await fetch(`https://enplerp.electrohelps.in/backend/api/task/${task.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
@@ -3223,7 +3223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const response = await fetch(`https://enplerp.electrohelps.in/tasks-remarks/${remarkToEdit.id}`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/tasks-remarks/${remarkToEdit.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
