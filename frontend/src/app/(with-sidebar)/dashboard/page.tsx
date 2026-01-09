@@ -79,15 +79,15 @@ export default function Dashboard() {
         taskRes,
         tasksRemarksRes
       ] = await Promise.all([
-        fetch("https://enplerp.electrohelps.in/backend/api/sites"),
-        fetch("https://enplerp.electrohelps.in/backend/api/address-book"),
-        fetch("https://enplerp.electrohelps.in/backend/api/service-contract"),
-        fetch("https://enplerp.electrohelps.in/backend/api/contractworkcategory"),
-        fetch("https://enplerp.electrohelps.in/backend/api/department"),
-        fetch("https://enplerp.electrohelps.in/backend/api/producttype"),
-        fetch("https://enplerp.electrohelps.in/backend/api/workscope-category"),
-        fetch("https://enplerp.electrohelps.in/backend/api/task"),
-        fetch("https://enplerp.electrohelps.in/backend/api/tasks-remarks"),
+        fetch("https://enplerp.electrohelps.in/backend/sites"),
+        fetch("https://enplerp.electrohelps.in/backend/address-book"),
+        fetch("https://enplerp.electrohelps.in/backend/service-contract"),
+        fetch("https://enplerp.electrohelps.in/backend/contractworkcategory"),
+        fetch("https://enplerp.electrohelps.in/backend/department"),
+        fetch("https://enplerp.electrohelps.in/backend/producttype"),
+        fetch("https://enplerp.electrohelps.in/backend/workscope-category"),
+        fetch("https://enplerp.electrohelps.in/backend/task"),
+        fetch("https://enplerp.electrohelps.in/backend/tasks-remarks"),
       ]);
 
       const sitesData = await sitesRes.json();

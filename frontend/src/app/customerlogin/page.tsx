@@ -15,7 +15,7 @@ export default function CustomerLoginPage() {
     setLoading(true);
 
     const res = await fetch(
-      `https://enplerp.electrohelps.in/backend/api/customer-contact/by-email?email=${email}`,
+      `https://enplerp.electrohelps.in/backend/customer-contact/by-email?email=${email}`,
     );
 
     if (!res.ok) {

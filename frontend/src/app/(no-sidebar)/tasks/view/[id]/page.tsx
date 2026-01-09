@@ -132,7 +132,7 @@ export default function ViewTaskPage() {
     console.log('Decoded task ID:', decodedTaskId);
     
     // Fetch all tasks and find the one with matching taskID
-    const tasksRes = await fetch('https://enplerp.electrohelps.in/backend/api/task');
+    const tasksRes = await fetch('https://enplerp.electrohelps.in/backend/task');
     
     if (!tasksRes.ok) {
       throw new Error('Failed to fetch tasks');
@@ -147,11 +147,11 @@ export default function ViewTaskPage() {
     
     // Now fetch related data using the actual task ID from the task data
     const [imagesRes, deptRes, addressRes, sitesRes, workscopeRes] = await Promise.all([
-      fetch(`https://enplerp.electrohelps.in/backend/api/task-images/${taskData.id}`),
-      fetch('https://enplerp.electrohelps.in/backend/api/department'),
-      fetch('https://enplerp.electrohelps.in/backend/api/address-book'),
-      fetch('https://enplerp.electrohelps.in/backend/api/sites'),
-      fetch('https://enplerp.electrohelps.in/backend/api/workscope-category')
+      fetch(`https://enplerp.electrohelps.in/backend/task-images/${taskData.id}`),
+      fetch('https://enplerp.electrohelps.in/backend/department'),
+      fetch('https://enplerp.electrohelps.in/backend/address-book'),
+      fetch('https://enplerp.electrohelps.in/backend/sites'),
+      fetch('https://enplerp.electrohelps.in/backend/workscope-category')
     ]);
 
     const imagesData = imagesRes.ok ? await imagesRes.json() : [];
@@ -190,7 +190,7 @@ export default function ViewTaskPage() {
     }
 
     // Use the actual numeric task ID for image upload
-    const response = await fetch(`https://enplerp.electrohelps.in/backend/api/task-images/${task.id}/upload`, {
+    const response = await fetch(`https://enplerp.electrohelps.in/backend/task-images/${task.id}/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -212,7 +212,7 @@ export default function ViewTaskPage() {
     if (!confirm('Are you sure you want to delete this image?')) return;
 
     try {
-      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/task-images/${imageId}`, {
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/task-images/${imageId}`, {
         method: 'DELETE',
       });
 
@@ -231,7 +231,7 @@ export default function ViewTaskPage() {
 
   const handleDownloadImage = async (image: TaskImage) => {
     try {
-      const response = await fetch(`https://enplerp.electrohelps.in/backend/api/task-images/image/${image.filename}`);
+      const response = await fetch(`https://enplerp.electrohelps.in/backend/task-images/image/${image.filename}`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -558,7 +558,7 @@ export default function ViewTaskPage() {
         ) : (
           <>
             <img
-              src={`https://enplerp.electrohelps.in/backend/api/task-images/image/${image.filename}`}
+              src={`https://enplerp.electrohelps.in/backend/task-images/image/${image.filename}`}
               alt={`Task image ${image.id}`}
               className="w-full h-full object-cover rounded-lg border border-gray-200 cursor-pointer"
               onClick={() => openFullScreenImage(image)}
@@ -654,7 +654,7 @@ export default function ViewTaskPage() {
         </div>
       ) : (
         <img
-          src={`https://enplerp.electrohelps.in/backend/api/task-images/image/${selectedImage.filename}`}
+          src={`https://enplerp.electrohelps.in/backend/task-images/image/${selectedImage.filename}`}
           alt={`Task image ${selectedImage.id}`}
           className="max-w-full max-h-full object-contain rounded-lg"
         />

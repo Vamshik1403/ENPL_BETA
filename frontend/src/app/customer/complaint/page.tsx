@@ -476,7 +476,7 @@ export default function CustomerComplaintPage() {
   const fetchTasksByCustomers = async (customerIds: number[]) => {
     setIsLoading(true);
     try {
-      const res = await fetch('https://enplerp.electrohelps.in/backend/api/task/by-customers', {
+      const res = await fetch('https://enplerp.electrohelps.in/backend/task/by-customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerIds }),
@@ -502,7 +502,7 @@ export default function CustomerComplaintPage() {
     const parsed = JSON.parse(data);
     setSession(parsed);
 
-    fetch('https://enplerp.electrohelps.in/backend/api/department')
+    fetch('https://enplerp.electrohelps.in/backend/department')
       .then(res => res.json())
       .then(setDepartments);
 
@@ -518,7 +518,7 @@ export default function CustomerComplaintPage() {
 
   const fetchMappedCustomers = async (customerIds: number[]) => {
     try {
-      const res = await fetch('https://enplerp.electrohelps.in/backend/api/address-book');
+      const res = await fetch('https://enplerp.electrohelps.in/backend/address-book');
       const allCustomers = await res.json();
 
       const mappedCustomers = allCustomers.filter((customer: any) =>
@@ -540,7 +540,7 @@ export default function CustomerComplaintPage() {
   const fetchCustomerSites = async (addressBookId: number) => {
     try {
       const res = await fetch(
-        `https://enplerp.electrohelps.in/backend/api/sites/based-on-cust?addressBookId=${addressBookId}`,
+        `https://enplerp.electrohelps.in/backend/sites/based-on-cust?addressBookId=${addressBookId}`,
       );
       const data = await res.json();
       setCustomerSites(data);
@@ -586,7 +586,7 @@ export default function CustomerComplaintPage() {
         title: title
       };
 
-      const response = await fetch('https://enplerp.electrohelps.in/backend/api/task', {
+      const response = await fetch('https://enplerp.electrohelps.in/backend/task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -673,7 +673,7 @@ export default function CustomerComplaintPage() {
       console.log('Sending completion payload:', payload);
 
       const response = await fetch(
-        `https://enplerp.electrohelps.in/backend/api/task/${taskToComplete.id}/customer-remark`,
+        `https://enplerp.electrohelps.in/backend/task/${taskToComplete.id}/customer-remark`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1373,7 +1373,7 @@ export default function CustomerComplaintPage() {
                           };
 
                           const response = await fetch(
-                            `https://enplerp.electrohelps.in/backend/api/task/${activeTask.id}/customer-remark`,
+                            `https://enplerp.electrohelps.in/backend/task/${activeTask.id}/customer-remark`,
                             {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
@@ -1416,7 +1416,7 @@ export default function CustomerComplaintPage() {
                             };
 
                             const response = await fetch(
-                              `https://enplerp.electrohelps.in/backend/api/task/${activeTask.id}/customer-remark`,
+                              `https://enplerp.electrohelps.in/backend/task/${activeTask.id}/customer-remark`,
                               {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
