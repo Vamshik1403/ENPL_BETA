@@ -709,7 +709,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
                           <div className="flex gap-3 text-sm">
                             <a
-                              href={`http://localhost:8000/${String(att.filepath).replace(/\\/g, "/")}`}
+                              href={`https://ristarerp.openwan.in/backend/${String(att.filepath).replace(/\\/g, "/")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline"
@@ -1833,7 +1833,7 @@ export default function TasksPage() {
 
   const fetchProductTypes = async () => {
     try {
-      const res = await fetch("http://localhost:8000/producttype");
+      const res = await fetch("https://ristarerp.openwan.in/backend/producttype");
       const data = await res.json();
       setProductTypes(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -2062,7 +2062,7 @@ export default function TasksPage() {
 
     const fetchSiteContacts = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
+        const res = await fetch(`https://ristarerp.openwan.in/backend/sites/${formData.siteId}`);
         const data = await res.json();
 
         if (data?.contacts?.length > 0) {
@@ -2093,7 +2093,7 @@ export default function TasksPage() {
         localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:8000/user-permissions/${uid}`,
+        `https://ristarerp.openwan.in/backend/user-permissions/${uid}`,
         {
           headers: token
             ? { Authorization: `Bearer ${token}` }
@@ -2160,7 +2160,7 @@ export default function TasksPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:8000/department');
+      const response = await fetch('https://ristarerp.openwan.in/backend/department');
       const data = await response.json();
       setDepartments(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2185,7 +2185,7 @@ export default function TasksPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/address-book');
+      const response = await fetch('https://ristarerp.openwan.in/backend/address-book');
       const data = await response.json();
       setAddressBooks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2196,7 +2196,7 @@ export default function TasksPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('http://localhost:8000/sites');
+      const response = await fetch('https://ristarerp.openwan.in/backend/sites');
       const data = await response.json();
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2207,7 +2207,7 @@ export default function TasksPage() {
 
   const fetchServiceWorkscopeCategories = async () => {
     try {
-      const response = await fetch('http://localhost:8000/workscope-category');
+      const response = await fetch('https://ristarerp.openwan.in/backend/workscope-category');
       if (!response.ok) {
         throw new Error('Failed to fetch service workscope categories');
       }
@@ -2223,7 +2223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const res = await fetch("http://localhost:8000/auth/users", {
+      const res = await fetch("https://ristarerp.openwan.in/backend/auth/users", {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const users = await res.json();
@@ -2244,7 +2244,7 @@ export default function TasksPage() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/task');
+      const response = await fetch('https://ristarerp.openwan.in/backend/task');
       const data = await response.json();
 
       // Only sort if needed
@@ -2269,7 +2269,7 @@ export default function TasksPage() {
 
   const fetchNextTaskId = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/task/next-id`);
+      const res = await fetch(`https://ristarerp.openwan.in/backend/task/next-id`);
       const data = await res.json();
       return data.taskId;
     } catch (err) {
@@ -2560,8 +2560,8 @@ export default function TasksPage() {
 
 
       const url = editingId
-        ? `http://localhost:8000/task/${editingId}`
-        : `http://localhost:8000/task`;
+        ? `https://ristarerp.openwan.in/backend/task/${editingId}`
+        : `https://ristarerp.openwan.in/backend/task`;
 
       const method = editingId ? "PATCH" : "POST";
 
@@ -2589,7 +2589,7 @@ export default function TasksPage() {
         attachmentFormData.append("file", purchaseFile);
 
         await fetch(
-          `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
+          `https://ristarerp.openwan.in/backend/task/${savedTask.id}/purchase-attachment`,
           {
             method: "POST",
             headers: {
@@ -2657,7 +2657,7 @@ export default function TasksPage() {
       ));
 
       // Then make API call
-      const response = await fetch(`http://localhost:8000/tasks-remarks`, {
+      const response = await fetch(`https://ristarerp.openwan.in/backend/tasks-remarks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2766,7 +2766,7 @@ export default function TasksPage() {
 
         const token = getAuthToken();
 
-        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
+        const response = await fetch(`https://ristarerp.openwan.in/backend/task/${selectedTask.id}`, {
           method: 'PATCH',
           headers: {
             "Content-Type": "application/json",
@@ -2799,7 +2799,7 @@ export default function TasksPage() {
 
     try {
 
-      const response = await fetch(`http://localhost:8000/task/${id}`, {
+      const response = await fetch(`https://ristarerp.openwan.in/backend/task/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3137,7 +3137,7 @@ export default function TasksPage() {
     // Always fetch fresh task details (so attachments definitely come)
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:8000/task/${task.id}`, {
+      const res = await fetch(`https://ristarerp.openwan.in/backend/task/${task.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
@@ -3223,7 +3223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const response = await fetch(`http://localhost:8000/tasks-remarks/${remarkToEdit.id}`, {
+      const response = await fetch(`https://ristarerp.openwan.in/backend/tasks-remarks/${remarkToEdit.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

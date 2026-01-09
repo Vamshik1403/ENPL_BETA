@@ -99,8 +99,8 @@ const RemoveIcon = () => (
 /* ========================================================= */
 
 export default function CustomerContactPage() {
-  const API = 'http://localhost:8000/customer-contact';
-  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
+  const API = 'https://ristarerp.openwan.in/backend/customer-contact';
+  const PERMISSIONS_API = 'https://ristarerp.openwan.in/backend/user-permissions';
 
   const [records, setRecords] = useState<CustomerContact[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -149,7 +149,7 @@ export default function CustomerContactPage() {
   };
 
   const fetchCustomers = async () => {
-    const res = await fetch('http://localhost:8000/address-book');
+    const res = await fetch('https://ristarerp.openwan.in/backend/address-book');
     setCustomers(await res.json());
   };
 
@@ -159,7 +159,7 @@ export default function CustomerContactPage() {
       return;
     }
     const res = await fetch(
-      `http://localhost:8000/sites/based-on-cust?addressBookId=${customerId}`,
+      `https://ristarerp.openwan.in/backend/sites/based-on-cust?addressBookId=${customerId}`,
     );
     setSites(await res.json());
   };
@@ -396,7 +396,7 @@ useEffect(() => {
     
     if (!confirm('Remove this site from contact?')) return;
     await fetch(
-      `http://localhost:8000/customer-contact/site/${mappingId}`,
+      `https://ristarerp.openwan.in/backend/customer-contact/site/${mappingId}`,
       { method: 'DELETE' },
     );
     fetchAll();

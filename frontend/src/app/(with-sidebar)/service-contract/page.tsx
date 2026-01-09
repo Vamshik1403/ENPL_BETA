@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 // Simple API helper
 async function apiFetch(url: string, method = 'GET', body?: any) {
   try {
-    const res = await fetch(`http://localhost:8000${url}`, {
+    const res = await fetch(`https://ristarerp.openwan.in/backend${url}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
@@ -353,7 +353,7 @@ const fetchUserPermissions = async (userId: number) => {
       localStorage.getItem('token');
 
     const res = await fetch(
-      `http://localhost:8000/user-permissions/${userId}`,
+      `https://ristarerp.openwan.in/backend/user-permissions/${userId}`,
       {
         headers: token
           ? { Authorization: `Bearer ${token}` }

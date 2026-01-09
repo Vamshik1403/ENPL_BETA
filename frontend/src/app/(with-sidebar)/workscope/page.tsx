@@ -63,8 +63,8 @@ export default function WorkscopeCategoryPage() {
   const [itemsPerPage] = useState(10);
   const [filteredCategories, setFilteredCategories] = useState<WorkscopeCategory[]>([]);
 
-  const API_URL = 'http://localhost:8000/workscope-category';
-  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
+  const API_URL = 'https://ristarerp.openwan.in/backend/workscope-category';
+  const PERMISSIONS_API = 'https://ristarerp.openwan.in/backend/user-permissions';
 
 const fetchPermissions = async (uid: number) => {
     try {

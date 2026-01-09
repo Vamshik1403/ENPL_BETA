@@ -73,13 +73,13 @@ type PermissionsJson = Record<string, CrudPerm>;
    API Endpoints
 ------------------------------------------------------- */
 const API = {
-  LIST: "http://localhost:8000/auth/users",
-  REGISTER: "http://localhost:8000/auth/register",
-  UPDATE: "http://localhost:8000/auth/users",
-  DELETE: "http://localhost:8000/auth/users",
-  PERMISSION: (userId: number) => `http://localhost:8000/user-permissions/${userId}`,
-  USER_DETAIL: (userId: number) => `http://localhost:8000/auth/users/${userId}`,
-  DEPARTMENTS: "http://localhost:8000/department"
+  LIST: "https://ristarerp.openwan.in/backend/auth/users",
+  REGISTER: "https://ristarerp.openwan.in/backend/auth/register",
+  UPDATE: "https://ristarerp.openwan.in/backend/auth/users",
+  DELETE: "https://ristarerp.openwan.in/backend/auth/users",
+  PERMISSION: (userId: number) => `https://ristarerp.openwan.in/backend/user-permissions/${userId}`,
+  USER_DETAIL: (userId: number) => `https://ristarerp.openwan.in/backend/auth/users/${userId}`,
+  DEPARTMENTS: "https://ristarerp.openwan.in/backend/department"
 };
 
 /* -------------------------------------------------------

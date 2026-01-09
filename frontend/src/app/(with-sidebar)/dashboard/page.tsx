@@ -79,15 +79,15 @@ export default function Dashboard() {
         taskRes,
         tasksRemarksRes
       ] = await Promise.all([
-        fetch("http://localhost:8000/sites"),
-        fetch("http://localhost:8000/address-book"),
-        fetch("http://localhost:8000/service-contract"),
-        fetch("http://localhost:8000/contractworkcategory"),
-        fetch("http://localhost:8000/department"),
-        fetch("http://localhost:8000/producttype"),
-        fetch("http://localhost:8000/workscope-category"),
-        fetch("http://localhost:8000/task"),
-        fetch("http://localhost:8000/tasks-remarks"),
+        fetch("https://ristarerp.openwan.in/backend/sites"),
+        fetch("https://ristarerp.openwan.in/backend/address-book"),
+        fetch("https://ristarerp.openwan.in/backend/service-contract"),
+        fetch("https://ristarerp.openwan.in/backend/contractworkcategory"),
+        fetch("https://ristarerp.openwan.in/backend/department"),
+        fetch("https://ristarerp.openwan.in/backend/producttype"),
+        fetch("https://ristarerp.openwan.in/backend/workscope-category"),
+        fetch("https://ristarerp.openwan.in/backend/task"),
+        fetch("https://ristarerp.openwan.in/backend/tasks-remarks"),
       ]);
 
       const sitesData = await sitesRes.json();

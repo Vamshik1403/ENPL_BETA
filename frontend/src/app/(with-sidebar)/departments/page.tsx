@@ -230,8 +230,8 @@ emails: [{ id: nanoid(), email: '' }]
   const [itemsPerPage] = useState(10);
   const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
 
-  const API_URL = 'http://localhost:8000/department';
-  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
+  const API_URL = 'https://ristarerp.openwan.in/backend/department';
+  const PERMISSIONS_API = 'https://ristarerp.openwan.in/backend/user-permissions';
 
   // Fetch permissions
 const fetchPermissions = async (uid: number) => {
