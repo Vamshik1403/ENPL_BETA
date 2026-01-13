@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 // Simple API helper
 async function apiFetch(url: string, method = 'GET', body?: any) {
   try {
-    const res = await fetch(`https://enplerp.electrohelps.in/backend${url}`, {
+    const res = await fetch(`http://localhost:8000${url}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
@@ -48,11 +48,15 @@ interface ServiceContract {
   serviceContractTypeId?: number;
   preventiveMaintenanceCycle: string;
   contractDescription: string;
-  contractType?: string;       // "Free" or "Paid"
-  billingType?: string;        // "Prepaid" or "Postpaid"
-  billingCycle?: string;       // number of days, e.g. 90
-  paymentStatus?: string;      // "Paid" or "Unpaid"
-  billingSchedule?: any[];     // array of generated billing periods
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentMimeType?: string;
+  attachmentSize?: number;
+  contractType?: string;
+  billingType?: string;
+  billingCycle?: string;
+  paymentStatus?: string;
+  billingSchedule?: any[];
   customerName?: string;
   branchName?: string;
   periods?: any[];
@@ -61,6 +65,7 @@ interface ServiceContract {
   inventories?: any[];
   histories?: any[];
 }
+
 type CrudPerm = {
   read: boolean;
   create: boolean;
@@ -105,7 +110,7 @@ interface ServiceContractInventory {
   warrantyPeriod: string;
   warrantyStatus: string;
   thirdPartyPurchase: boolean;
-  productTypeName?: string;
+  productName?: string;
   productTypeId?: number;
 }
 
@@ -176,6 +181,8 @@ export default function ServiceContractPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // 👈 adjust how many contracts per page
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
 
   const [billingSchedule, setBillingSchedule] = useState<
     { dueDate: string; paymentStatus: string; overdueDays: number }[]
@@ -184,15 +191,15 @@ export default function ServiceContractPage() {
 
   type PermissionsJson = Record<string, CrudPerm>;
 
-const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
-const [userId, setUserId] = useState<number | null>(null);
+  const [permissions, setPermissions] = useState<PermissionsJson | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
-useEffect(() => {
-  const storedUserId = localStorage.getItem('userId');
-  if (storedUserId) {
-    setUserId(Number(storedUserId));
-  }
-}, []);
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(Number(storedUserId));
+    }
+  }, []);
 
 
   const [showManagerSuggestions, setShowManagerSuggestions] = useState(false);
@@ -211,7 +218,7 @@ useEffect(() => {
     serviceDetails: '',
   });
 
-  
+
 
   const handleAddHistory = () => {
     if (historyFormModal.taskId && historyFormModal.serviceDate) {
@@ -340,53 +347,53 @@ useEffect(() => {
     return schedule;
   }
 
-useEffect(() => {
-  if (userId) {
-    fetchUserPermissions(userId);
-  }
-}, [userId]);
+  useEffect(() => {
+    if (userId) {
+      fetchUserPermissions(userId);
+    }
+  }, [userId]);
 
-const fetchUserPermissions = async (userId: number) => {
-  try {
-    const token =
-      localStorage.getItem('access_token') ||
-      localStorage.getItem('token');
+  const fetchUserPermissions = async (userId: number) => {
+    try {
+      const token =
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('token');
 
-    const res = await fetch(
-      `https://enplerp.electrohelps.in/backend/user-permissions/${userId}`,
-      {
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
+      const res = await fetch(
+        `http://localhost:8000/user-permissions/${userId}`,
+        {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : {},
+        }
+      );
+
+      if (!res.ok) throw new Error('Permission fetch failed');
+
+      const data = await res.json();
+
+      let perms = null;
+
+      if (data?.permissions?.permissions) {
+        perms = data.permissions.permissions;
+      } else if (data?.permissions) {
+        perms = data.permissions;
+      } else {
+        perms = data;
       }
-    );
 
-    if (!res.ok) throw new Error('Permission fetch failed');
-
-    const data = await res.json();
-
-    let perms = null;
-
-    if (data?.permissions?.permissions) {
-      perms = data.permissions.permissions;
-    } else if (data?.permissions) {
-      perms = data.permissions;
-    } else {
-      perms = data;
+      setPermissions(perms);
+      localStorage.setItem('userPermissions', JSON.stringify(perms));
+    } catch (err) {
+      console.error(err);
+      const stored = localStorage.getItem('userPermissions');
+      if (stored) {
+        setPermissions(JSON.parse(stored));
+      } else {
+        setPermissions({});
+      }
     }
-
-    setPermissions(perms);
-    localStorage.setItem('userPermissions', JSON.stringify(perms));
-  } catch (err) {
-    console.error(err);
-    const stored = localStorage.getItem('userPermissions');
-    if (stored) {
-      setPermissions(JSON.parse(stored));
-    } else {
-      setPermissions({});
-    }
-  }
-};
+  };
 
 
   useEffect(() => {
@@ -441,14 +448,14 @@ const fetchUserPermissions = async (userId: number) => {
   }, []);
 
 
-const serviceContractPerm = {
-  read: permissions?.SERVICE_CONTRACTS?.read ?? false,
-  create: permissions?.SERVICE_CONTRACTS?.create ?? false,
-  edit: permissions?.SERVICE_CONTRACTS?.edit ?? false,
-  delete: permissions?.SERVICE_CONTRACTS?.delete ?? false,
-};
+  const serviceContractPerm = {
+    read: permissions?.SERVICE_CONTRACTS?.read ?? false,
+    create: permissions?.SERVICE_CONTRACTS?.create ?? false,
+    edit: permissions?.SERVICE_CONTRACTS?.edit ?? false,
+    delete: permissions?.SERVICE_CONTRACTS?.delete ?? false,
+  };
 
-console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
+  console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
 
   // Add to the useEffect that loads data
   useEffect(() => {
@@ -479,7 +486,7 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
   useEffect(() => {
     const fetchProductTypes = async () => {
       try {
-        const res = await apiFetch('/producttype');
+        const res = await apiFetch('/products');
         setProductTypes(res);
       } catch (err) {
         console.error('Error fetching product types', err);
@@ -566,6 +573,8 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
     });
     setShowForm(true);
     setEditingId(null);
+    setAttachmentFile(null);
+
   };
 
 
@@ -632,12 +641,26 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
 
       if (editingId) {
         // 🟡 UPDATE EXISTING CONTRACT
-        await apiFetch(`/service-contract/${editingId}`, 'PATCH', {
-          customerId: formData.customerId,
-          branchId: formData.branchId,
-          salesManagerName: formData.salesManagerName,
-          amcType: formData.amcType,
+        const fdUpdate = new FormData();
+        fdUpdate.append("customerId", String(formData.customerId));
+        fdUpdate.append("branchId", String(formData.branchId));
+        fdUpdate.append("salesManagerName", formData.salesManagerName);
+        fdUpdate.append("amcType", formData.amcType || "");
+
+        if (attachmentFile) {
+          fdUpdate.append("attachment", attachmentFile);
+        }
+
+        const resUpdate = await fetch(`http://localhost:8000/service-contract/${editingId}`, {
+          method: "PATCH",
+          body: fdUpdate,
         });
+
+        if (!resUpdate.ok) {
+          const errText = await resUpdate.text();
+          throw new Error(`Update failed: ${resUpdate.status} ${errText}`);
+        }
+
 
         // 🔹 Update or create period
         await apiFetch(`/service-contract-period`, 'POST', {
@@ -672,13 +695,29 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
         await apiFetch(`/service-contract-services/contract/${editingId}`, 'DELETE');
         await apiFetch(`/service-contract-inventory/contract/${editingId}`, 'DELETE');
       } else {
-        // 🟢 CREATE NEW CONTRACT
-        const main = await apiFetch('/service-contract', 'POST', {
-          customerId: formData.customerId,
-          branchId: formData.branchId,
-          salesManagerName: formData.salesManagerName,
-          amcType: formData.amcType,
+        // 🟢 CREATE NEW CONTRACT (multipart for attachment)
+        const fd = new FormData();
+        fd.append("customerId", String(formData.customerId));
+        fd.append("branchId", String(formData.branchId));
+        fd.append("salesManagerName", formData.salesManagerName);
+        fd.append("amcType", formData.amcType || "");
+
+        if (attachmentFile) {
+          fd.append("attachment", attachmentFile);
+        }
+
+        const res = await fetch("http://localhost:8000/service-contract", {
+          method: "POST",
+          body: fd,
         });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Create failed: ${res.status} ${errText}`);
+        }
+
+        const main = await res.json();
+
 
         serviceContractId = main.id;
 
@@ -778,6 +817,8 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
 
       alert(editingId ? '✅ Service Contract updated!' : '✅ Service Contract created!');
       setShowForm(false);
+      setAttachmentFile(null);
+
       await loadContracts();
       await loadServiceHistories();
     } catch (err) {
@@ -798,8 +839,8 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
       const period = main.periods?.[0] || {};
       const term = main.terms?.[0] || {};
 
-      // 2️⃣ Set base form values
-      setFormData({
+      // 2️⃣ Set base form values with defaults for billing fields
+      const initialFormData = {
         ...main,
         startDate: period?.startDate?.slice(0, 10) || '',
         endDate: period?.endDate?.slice(0, 10) || '',
@@ -809,8 +850,15 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
         maxPreventiveMaintenanceVisit: term?.maxPreventiveMaintenanceVisit || '',
         inclusiveInOnSiteVisitCounts: term?.inclusiveInOnSiteVisitCounts || false,
         preventiveMaintenanceCycle: term?.preventiveMaintenanceCycle || '',
-      });
+        // Set default billing values
+        contractType: 'Free',
+        billingType: '',
+        billingCycle: '',
+        paymentStatus: 'Paid',
+        serviceContractTypeId: undefined,
+      };
 
+      setFormData(initialFormData);
       setSites(sites);
 
       // 3️⃣ Services
@@ -838,58 +886,77 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
           warrantyPeriod: i.warrantyPeriod || '',
           warrantyStatus: i.warrantyStatus || '',
           thirdPartyPurchase: i.thirdPartyPurchase || false,
-          productTypeName: productType?.productTypeName || 'Unknown Type',
+          productName: productType?.productName || 'Unknown Type',
         };
       });
       setInventories(enhancedInventories);
 
       // 5️⃣ Service History
-      // 5️⃣ Service History
       const historiesData = main.histories || [];
-      if (historiesData.length > 0) {
-        const mappedHistories = historiesData.map((h: any) => ({
-          id: h.id,
-          serviceContractId: id,
-          taskId: h.taskId || '',
-          serviceType: h.serviceType || 'On-Site Visit',
-          serviceDate: h.serviceDate ? h.serviceDate.slice(0, 10) : '',
-          startTime: h.startTime || '',
-          endTime: h.endTime || '',
-          serviceDetails: h.serviceDetails || '',
-        }));
-        setServiceHistoryList(mappedHistories); // ✅ display them in table
-      }
+      const mappedHistories = historiesData.map((h: any) => ({
+        id: h.id,
+        serviceContractId: id,
+        taskId: h.taskId || '',
+        serviceType: h.serviceType || 'On-Site Visit',
+        serviceDate: h.serviceDate ? h.serviceDate.slice(0, 10) : '',
+        startTime: h.startTime || '',
+        endTime: h.endTime || '',
+        serviceDetails: h.serviceDetails || '',
+      }));
+      setServiceHistoryList(mappedHistories);
 
-
-      // 6️⃣ Contract Type & Billing
+      // 6️⃣ Contract Type & Billing - with error handling and defaults
       try {
         const typeResArr = await apiFetch(`/service-contract-type?contractId=${id}`);
         const contractTypeRes = Array.isArray(typeResArr) ? typeResArr[0] : typeResArr;
 
-        // Store the correct ServiceContractType ID for update/delete operations
         if (contractTypeRes) {
-          setFormData(prev => ({
-            ...prev,
-            serviceContractTypeId: contractTypeRes.id,  // ✅ store correct ID
-          }));
-        }
+          // Store the correct ServiceContractType ID for update/delete operations
+          const updatedFormData = {
+            ...initialFormData,
+            serviceContractTypeId: contractTypeRes.id,
+            contractType: contractTypeRes.serviceContractType || 'Free',
+            billingType: contractTypeRes.billingType || '',
+            billingCycle: contractTypeRes.billingCycle?.toString() || '', // Ensure string
+            paymentStatus: contractTypeRes.paymentStatus || 'Paid',
+          };
 
+          setFormData(updatedFormData);
 
-        if (contractTypeRes) {
-          const billingRes = await apiFetch(`/service-contract-billing/type/${contractTypeRes.id}`);
+          // Fetch billing schedule
+          try {
+            const billingRes = await apiFetch(`/service-contract-billing/type/${contractTypeRes.id}`);
+            setBillingSchedule(billingRes || []);
+          } catch (billingErr) {
+            console.warn('No billing schedule found for contract', id, billingErr);
+            setBillingSchedule([]);
+          }
 
-          setFormData(prev => ({
-            ...prev,
-            contractType: contractTypeRes.serviceContractType,
-            billingType: contractTypeRes.billingType,
-            billingCycle: contractTypeRes.billingCycle,
-            paymentStatus: contractTypeRes.paymentStatus,
-          }));
-
-          setBillingSchedule(billingRes || []);
+          // If it's a Paid contract, generate billing schedule if not found
+          if (contractTypeRes.serviceContractType === 'Paid' &&
+            contractTypeRes.billingCycle &&
+            period?.startDate &&
+            period?.endDate) {
+            const cycleDays = parseInt(contractTypeRes.billingCycle);
+            if (!isNaN(cycleDays)) {
+              const schedule = generateBillingSchedule(
+                period.startDate.slice(0, 10),
+                period.endDate.slice(0, 10),
+                cycleDays
+              );
+              setBillingSchedule(prev => prev.length > 0 ? prev : schedule);
+            }
+          }
+        } else {
+          // No contract type exists, use defaults
+          setFormData(initialFormData);
+          setBillingSchedule([]);
         }
       } catch (err) {
-        console.warn('Billing info not found for contract', id, err);
+        console.warn('Contract type info not found for contract', id, err);
+        // Use defaults on error
+        setFormData(initialFormData);
+        setBillingSchedule([]);
       }
 
       // 7️⃣ Open modal
@@ -897,6 +964,7 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
       setShowForm(true);
     } catch (err) {
       console.error('Error fetching contract for edit', err);
+      alert('Failed to load contract data. Please try again.');
     }
   };
 
@@ -935,7 +1003,7 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
         ...prev,
         {
           ...inventoryForm,
-          productTypeName: productType?.productTypeName || 'Unknown Type'
+          productName: productType?.productName || 'Unknown Type'
         }
       ]);
       setInventoryForm({
@@ -980,18 +1048,17 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
       </div>
 
       <div className="mb-6">
- <button
-  type="button"
-  onClick={handleAddNew}   // ✅ THIS WAS MISSING
-  disabled={!serviceContractPerm.create}
-  className={`px-6 py-3 rounded ${
-    serviceContractPerm.create
-      ? 'bg-blue-600 text-white hover:bg-blue-700'
-      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-  }`}
->
-  Add Service Contract
-</button>
+        <button
+          type="button"
+          onClick={handleAddNew}   // ✅ THIS WAS MISSING
+          disabled={!serviceContractPerm.create}
+          className={`px-6 py-3 rounded ${serviceContractPerm.create
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+        >
+          Add Service Contract
+        </button>
 
 
       </div>
@@ -1031,6 +1098,39 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
                         icon={<Icons.Settings />}
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Service Contract Agreement
+                      </label>
+
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white text-black"
+                      />
+
+                      {/* show selected file */}
+                      {attachmentFile && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          Selected: {attachmentFile.name}
+                        </p>
+                      )}
+
+                      {/* show existing uploaded file when editing */}
+                      {!attachmentFile && editingId && formData?.attachmentUrl && (
+                        <a
+                          href={`http://localhost:8000${formData.attachmentUrl}`}
+                          target="_blank"
+                          className="text-xs text-blue-600 underline mt-1 inline-block"
+                          rel="noreferrer"
+                        >
+                          View current attachment
+                        </a>
+                      )}
+                    </div>
+
 
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -1481,7 +1581,7 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
                         <tbody>
                           {inventories.map((inv, i) => (
                             <tr key={i} className="border-t border-gray-200 hover:bg-gray-50">
-                              <td className="p-3 text-gray-700">{inv.productTypeName}</td>
+                              <td className="p-3 text-gray-700">{inv.productName}</td>
                               <td className="p-3 text-gray-700">{inv.makeModel}</td>
                               <td className="p-3 text-gray-700 font-mono">{inv.snMac}</td>
                               <td className="p-3 text-gray-700">{inv.warrantyStatus}</td>
@@ -1786,7 +1886,7 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
                   <option value="">Select Product Category</option>
                   {productTypes.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.productTypeName}
+                      {p.productName}
                     </option>
                   ))}
                 </select>
@@ -1832,27 +1932,27 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
                 className="text-black"
               />
 
-            <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Warranty Status
-  </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Warranty Status
+                </label>
 
-  <select
-    value={inventoryForm.warrantyStatus}
-    onChange={(e) =>
-      setInventoryForm({
-        ...inventoryForm,
-        warrantyStatus: e.target.value,
-      })
-    }
-    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 text-black bg-white"
-    required
-  >
-    <option value="">Select Warranty Status</option>
-    <option value="Active">Active</option>
-    <option value="Expired">Expired</option>
-  </select>
-</div>
+                <select
+                  value={inventoryForm.warrantyStatus}
+                  onChange={(e) =>
+                    setInventoryForm({
+                      ...inventoryForm,
+                      warrantyStatus: e.target.value,
+                    })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  required
+                >
+                  <option value="">Select Warranty Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
 
 
               <div>
@@ -1946,28 +2046,26 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
 
                   <td className="px-6 py-4">
                     <div className="flex gap-3">
-                     <button
-  onClick={() => handleEdit(item.id || 0)}
-  disabled={!serviceContractPerm.edit}
-  className={`p-2 rounded ${
-    serviceContractPerm.edit
-      ? 'text-blue-600 hover:bg-blue-50'
-      : 'text-gray-400 cursor-not-allowed'
-  }`}
->
+                      <button
+                        onClick={() => handleEdit(item.id || 0)}
+                        disabled={!serviceContractPerm.edit}
+                        className={`p-2 rounded ${serviceContractPerm.edit
+                            ? 'text-blue-600 hover:bg-blue-50'
+                            : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                      >
                         <Icons.Edit />
                       </button>
-                     <button
-  onClick={() => handleDelete(item.id || 0)}
-  disabled={!serviceContractPerm.delete}
-  className={`p-2 rounded ${
-    serviceContractPerm.delete
-      ? 'text-red-600 hover:bg-red-50'
-      : 'text-gray-400 cursor-not-allowed'
-  }`}
->
+                      <button
+                        onClick={() => handleDelete(item.id || 0)}
+                        disabled={!serviceContractPerm.delete}
+                        className={`p-2 rounded ${serviceContractPerm.delete
+                            ? 'text-red-600 hover:bg-red-50'
+                            : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                      >
                         <Icons.Delete />
-</button>
+                      </button>
 
                     </div>
                   </td>
@@ -1998,7 +2096,6 @@ console.log('SERVICE CONTRACT permissions:', serviceContractPerm);
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </div>

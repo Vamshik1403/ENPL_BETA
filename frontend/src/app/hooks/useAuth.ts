@@ -21,7 +21,7 @@ export const useAuth = () => {
 
     try {
       // 1️⃣ Login
-      const res = await fetch("https://enplerp.electrohelps.in/backend/auth/login", {
+      const res = await fetch("http://localhost:8000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -40,7 +40,7 @@ export const useAuth = () => {
       localStorage.setItem("access_token", data.access_token);
 
       // 2️⃣ Fetch users list
-      const usersRes = await fetch("https://enplerp.electrohelps.in/backend/auth/users", {
+      const usersRes = await fetch("http://localhost:8000/auth/users", {
         headers: { Authorization: `Bearer ${data.access_token}` },
       });
 

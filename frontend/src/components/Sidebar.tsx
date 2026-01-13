@@ -18,7 +18,30 @@ import {
   Settings,
   ChevronRight,
   User2,
-  UserCheckIcon
+  UserCheckIcon,
+  LogOut,
+  Menu,
+  ChevronLeft,
+  Warehouse,
+  ShoppingCart,
+  Layers,
+  Package2,
+  Receipt,
+  Truck,
+  CreditCard,
+  FolderTree,
+  Briefcase,
+  Wrench,
+  Shield,
+  Database,
+  Box,
+  BarChart,
+  Cog,
+  Home,
+  Contact,
+  Store,
+  FileCheck,
+  FileBarChart
 } from 'lucide-react';
 
 /* -------------------- Types -------------------- */
@@ -28,7 +51,7 @@ interface NavigationItem {
   href: string;
   icon: React.ReactNode;
   nested?: NavigationItem[];
-  permissionKey: string; // 对应API中的权限键
+  permissionKey: string;
 }
 
 interface PermissionSet {
@@ -53,8 +76,6 @@ interface UserPermissionResponse {
 }
 
 interface ExpandedSections {
-  addressbook: boolean;
-  setup: boolean;
   [key: string]: boolean;
 }
 
@@ -63,51 +84,115 @@ interface SidebarProps {
   setIsCollapsed: (collapsed: boolean) => void;
 }
 
+/* -------------------- Icons Configuration -------------------- */
+
+const iconProps = {
+  size: 18,
+  strokeWidth: 2,
+  className: "flex-shrink-0"
+};
+
 /* -------------------- Menu Items Configuration -------------------- */
 
 const mainNavigationItems: NavigationItem[] = [
   {
     name: 'Dashboard',
     href: '/dashboard',
-    icon: <LayoutDashboard className="w-4 h-4" />,
+    icon: <LayoutDashboard {...iconProps} />,
     permissionKey: 'DASHBOARD'
   },
   {
     name: 'Address Book',
     href: '/addressbook',
-    icon: <Users className="w-4 h-4" />,
+    icon: <Contact {...iconProps} />,
     permissionKey: 'ADDRESSBOOK',
     nested: [
       { 
         name: 'Customers', 
         href: '/addressbook', 
-        icon: <User className="w-4 h-4" />,
+        icon: <User {...iconProps} />,
         permissionKey: 'CUSTOMERS'
       },
       { 
         name: 'Branches', 
         href: '/sites', 
-        icon: <MapPin className="w-4 h-4" />,
+        icon: <MapPin {...iconProps} />,
         permissionKey: 'SITES'
+      },
+      {
+        name: 'Vendors',
+        href: '/vendor',
+        icon: <Store {...iconProps} />,
+        permissionKey: 'VENDORS'
       },
       { 
         name: 'Customer Registration', 
         href: '/customer-registration', 
-        icon: <Users className="w-4 h-4" />,
+        icon: <User2 {...iconProps} />,
         permissionKey: 'CUSTOMER_REGISTRATION'
+      }
+    ]
+  },
+  {
+    name: 'Inventory Management',
+    href: '/category',
+    icon: <Warehouse {...iconProps} />,
+    permissionKey: 'INVENTORY MANAGEMENT', // Changed to match your API
+    nested: [
+      { 
+        name: 'Categories', 
+        href: '/category', 
+        icon: <FolderTree {...iconProps} />,
+        permissionKey: 'CATEGORIES'
+      },
+      { 
+        name: 'Subcategories', 
+        href: '/subCategory', 
+        icon: <Layers {...iconProps} />,
+        permissionKey: 'SUBCATEGORIES'
+      },
+      { 
+        name: 'Products SKU', 
+        href: '/products-sku', 
+        icon: <Package2 {...iconProps} />,
+        permissionKey: 'PRODUCTS_SKU'
+      },
+      {
+        name: 'Inventory',
+        href: '/inventory',
+        icon: <Database {...iconProps} />,
+        permissionKey: 'INVENTORY', // This is a different key for the inventory page itself
+      },
+      {
+        name: 'Purchase Invoice',
+        href: '/purchase-invoice',
+        icon: <Receipt {...iconProps} />,
+        permissionKey: 'PURCHASE_INVOICE'
+      },
+      {
+        name: 'Material Outward',
+        href: '/material',
+        icon: <Truck {...iconProps} />,
+        permissionKey: 'MATERIAL_OUTWARD'
+      },
+      {
+        name: 'Vendors Payments',
+        href: '/vendorPayment',
+        icon: <CreditCard {...iconProps} />,
+        permissionKey: 'VENDORS_PAYMENTS'
       }
     ]
   },
   { 
     name: 'Tasks', 
     href: '/tasks', 
-    icon: <CheckSquare className="w-4 h-4" />,
+    icon: <CheckSquare {...iconProps} />,
     permissionKey: 'TASKS'
   },
   { 
     name: 'Service Contracts', 
     href: '/service-contract', 
-    icon: <FileText className="w-4 h-4" />,
+    icon: <FileCheck {...iconProps} />,
     permissionKey: 'SERVICE_CONTRACTS'
   },
 ];
@@ -116,31 +201,25 @@ const setupItems: NavigationItem[] = [
   { 
     name: 'Departments', 
     href: '/departments', 
-    icon: <Building className="w-4 h-4" />,
+    icon: <Building {...iconProps} />,
     permissionKey: 'DEPARTMENTS'
-  },
-  { 
-    name: 'Products Category', 
-    href: '/products', 
-    icon: <Package className="w-4 h-4" />,
-    permissionKey: 'PRODUCTS_CATEGORY'
   },
   { 
     name: 'Service Category', 
     href: '/contract-work', 
-    icon: <ClipboardList className="w-4 h-4" />,
+    icon: <ClipboardList {...iconProps} />,
     permissionKey: 'SERVICE_CATEGORY'
   },
   { 
     name: 'WorkScope Category', 
     href: '/workscope', 
-    icon: <BarChart3 className="w-4 h-4" />,
+    icon: <Wrench {...iconProps} />,
     permissionKey: 'WORKSCOPE_CATEGORY'
   },
   { 
     name: 'Users Permission', 
     href: '/userpermission', 
-    icon: <UserCheckIcon className="w-4 h-4" />,
+    icon: <Shield {...iconProps} />,
     permissionKey: 'USERS'
   }
 ];
@@ -155,7 +234,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   const [clientUserType, setClientUserType] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
 
-  // ✅ SUPERADMIN flag (new)
+  // ✅ SUPERADMIN flag
   const isSuperAdmin = clientUserType === "SUPERADMIN";
   
   // Permissions state
@@ -165,6 +244,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // Collapse Sections
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
     addressbook: true,
+    inventorymanagement: true,
     setup: true
   });
 
@@ -198,11 +278,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         return;
       }
 
-      // Convert to number for API call
       const userId = parseInt(storedUserId);
       
       // Fetch permissions for specific user
-      const res = await fetch(`https://enplerp.electrohelps.in/backend/user-permissions/${userId}`);
+      const res = await fetch(`http://localhost:8000/user-permissions/${userId}`);
       
       if (!res.ok) {
         console.warn(`Failed to fetch permissions for user ${userId}, using default`);
@@ -210,7 +289,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         return;
       }
 
-      // ✅ FIX: Avoid res.json() when body is empty or not JSON
       const contentType = res.headers.get("content-type") || "";
       const rawText = await res.text();
 
@@ -235,11 +313,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         return;
       }
 
-      // Extract permissions from response
       if (data && data.permissions && data.permissions.permissions) {
         const perms = data.permissions.permissions;
         setAllPermissions(perms);
-        console.log(`✅ Sidebar permissions loaded for user ${userId}:`, perms);
+        console.log('✅ Loaded permissions:', perms);
+        console.log('✅ INVENTORY MANAGEMENT permission:', perms['INVENTORY MANAGEMENT']);
+        console.log('✅ INVENTORY permission:', perms['INVENTORY']);
       } else {
         console.warn('Invalid permissions data structure:', data);
         setAllPermissions({});
@@ -254,18 +333,17 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   useEffect(() => {
     fetchPermissions();
-    // ✅ re-run when userId OR userType changes (SUPERADMIN)
-  }, [userId, isSuperAdmin]); // Re-fetch when userId changes
+  }, [userId, isSuperAdmin]);
 
-  const toggleSection = (section: keyof ExpandedSections) => {
+  const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
 
-  const getSectionKey = (itemName: string): keyof ExpandedSections =>
-    itemName.toLowerCase().replace(/\s/g, '') as keyof ExpandedSections;
+  const getSectionKey = (itemName: string): string =>
+    itemName.toLowerCase().replace(/\s/g, '');
 
   const isActive = (href: string) => pathname === href;
   const isActiveParent = (nested?: NavigationItem[]) =>
@@ -276,7 +354,26 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     // ✅ SUPERADMIN sees everything
     if (isSuperAdmin) return true;
 
-    if (loadingPermissions) return false; 
+    if (loadingPermissions) return false;
+    
+    // ✅ REMOVE special handling for Inventory sub-links
+    // This was causing all sub-links to show even when parent is hidden
+    // If you want to hide the entire inventory section, remove this special handling
+    /*
+    const inventorySubLinks = [
+      'CATEGORIES',
+      'SUBCATEGORIES',
+      'PRODUCTS_SKU',
+      'INVENTORY',
+      'PURCHASE_INVOICE',
+      'MATERIAL_OUTWARD',
+      'VENDORS_PAYMENTS'
+    ];
+    
+    if (inventorySubLinks.includes(permissionKey)) {
+      return true; // Always allow read permission for inventory sub-links
+    }
+    */
     
     const permission = allPermissions[permissionKey];
     if (!permission) {
@@ -319,7 +416,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       .filter(Boolean) as NavigationItem[];
   };
 
-  // 🔹 Render filtered navigation items
+  // 🔹 Render navigation item with enhanced UI
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
     const hasNested = !!item.nested?.length;
     const isActiveItem = isActive(item.href);
@@ -327,24 +424,33 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     const sectionKey = getSectionKey(item.name);
 
     return (
-      <div key={`${item.href}-${level}`} className={`${level > 0 ? "ml-3" : ""}`}>
+      <div key={`${item.href}-${level}`} className={`${level > 0 ? "ml-1" : ""}`}>
         {hasNested ? (
           <>
             <button
               onClick={() => toggleSection(sectionKey)}
               className={`
-                flex items-center w-full py-2 px-2 rounded-md text-sm transition-all duration-300
+                flex items-center w-full py-3 px-3 rounded-xl text-sm transition-all duration-300
+                group relative overflow-hidden
                 ${isParentActive || isActiveItem
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-                  : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
+                  ? "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-white border-l-4 border-blue-400"
+                  : "text-gray-300 hover:bg-gray-700/40 hover:text-white hover:border-l-4 hover:border-gray-500"}
               `}
             >
-              <span className="mr-2">{item.icon}</span>
-              {!isCollapsed && <span className="flex-1">{item.name}</span>}
+              {/* Active indicator */}
+              {(isParentActive || isActiveItem) && (
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10"></div>
+              )}
+              
+              {/* Hover effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-300"></div>
+              
+              <span className="mr-3 relative z-10">{item.icon}</span>
+              {!isCollapsed && <span className="flex-1 text-left font-medium relative z-10">{item.name}</span>}
               {!isCollapsed && (
                 <ChevronRight
-                  className={`w-3 h-3 transition-transform ${
-                    expandedSections[sectionKey] ? "rotate-90" : ""
+                  className={`w-4 h-4 transition-all duration-300 relative z-10 ${
+                    expandedSections[sectionKey] ? "rotate-90 transform" : ""
                   }`}
                 />
               )}
@@ -352,12 +458,21 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
             {!isCollapsed && (
               <div
-                className={`ml-4 overflow-hidden transition-all duration-300 ${
-                  expandedSections[sectionKey] ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
-                }`}
+                className={`
+                  ml-6 pl-3 border-l border-gray-700/50 overflow-hidden transition-all duration-500 ease-out
+                  ${expandedSections[sectionKey] ? "max-h-96 opacity-100 mt-2" : "max-h-0 opacity-0"}
+                `}
               >
-                <div className="border-l border-gray-600 pl-3 space-y-1 mt-1">
-                  {item.nested?.map(n => renderNavigationItem(n, 1))}
+                <div className="space-y-1">
+                  {item.nested?.map((n, index) => (
+                    <div key={n.href} className="relative">
+                      {/* Animated line indicator */}
+                      {index < (item.nested?.length || 0) - 1 && (
+                        <div className="absolute left-[-12px] top-6 w-[1px] h-6 bg-gray-700/50"></div>
+                      )}
+                      {renderNavigationItem(n, level + 1)}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -366,14 +481,33 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           <Link
             href={item.href}
             className={`
-              flex items-center py-2 px-2 rounded-md text-sm transition-all duration-300
+              flex items-center py-3 px-3 rounded-xl text-sm transition-all duration-300
+              group relative overflow-hidden
               ${isActiveItem
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-                : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
+                : "text-gray-300 hover:bg-gray-700/40 hover:text-white hover:shadow-md"}
             `}
           >
-            <span className="mr-2">{item.icon}</span>
-            {!isCollapsed && <span>{item.name}</span>}
+            {/* Active indicator glow */}
+            {isActiveItem && (
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 animate-pulse"></div>
+            )}
+            
+            {/* Hover glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/10 group-hover:to-indigo-500/10 transition-all duration-300"></div>
+            
+            <span className="mr-3 relative z-10">{item.icon}</span>
+            {!isCollapsed && (
+              <span className="relative z-10 font-medium flex-1 text-left">
+                {item.name}
+                {isActiveItem && (
+                  <span className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-ping"></span>
+                )}
+              </span>
+            )}
+            {!isCollapsed && isActiveItem && (
+              <div className="relative z-10 ml-2 w-2 h-2 bg-white rounded-full"></div>
+            )}
           </Link>
         )}
       </div>
@@ -387,124 +521,166 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   // 🔹 Check if any Setup items are visible
   const hasVisibleSetupItems = filteredSetupItems.length > 0;
 
-  // 🔹 Show loading state while fetching permissions
+  // 🔹 Show loading state
   if (loadingPermissions) {
     return (
       <div className={`
-        bg-gradient-to-b from-gray-900 to-gray-800 text-white
-        ${isCollapsed ? "w-16" : "w-64"}
-        h-screen fixed left-0 top-0 z-50 border-r border-gray-700
-        transition-all duration-300 shadow-xl
+        bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white
+        ${isCollapsed ? "w-20" : "w-72"}
+        h-screen fixed left-0 top-0 z-50 border-r border-gray-800
+        transition-all duration-500 shadow-2xl
       `}>
-        <div className="p-4 border-b border-gray-700 bg-gray-900/80 sticky top-0">
-          <h1 className="font-extrabold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            ENPL ERP
-          </h1>
+        <div className="p-5 border-b border-gray-800 bg-gray-900/90 sticky top-0 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 animate-pulse"></div>
+              {!isCollapsed && (
+                <div className="h-6 w-32 bg-gray-700 rounded animate-pulse"></div>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          <span className="ml-3 text-sm">Loading permissions...</span>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-gray-700 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-purple-500 rounded-full animate-spin animation-delay-300"></div>
+          </div>
+          {!isCollapsed && (
+            <div className="text-center">
+              <p className="text-sm text-gray-400">Loading permissions...</p>
+              <p className="text-xs text-gray-500 mt-1">Please wait</p>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  /* -------------------- Sidebar Layout -------------------- */
-
   return (
     <div
       className={`
-        bg-gradient-to-b from-gray-900 to-gray-800 text-white
-        ${isCollapsed ? "w-16" : "w-64"}
-        h-screen fixed left-0 top-0 z-50 border-r border-gray-700
-        transition-all duration-300 shadow-xl
+        bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white
+        ${isCollapsed ? "w-20" : "w-72"}
+        h-screen fixed left-0 top-0 z-50 border-r border-gray-800
+        transition-all duration-500 shadow-2xl flex flex-col
       `}
     >
-
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700 bg-gray-900/80 sticky top-0">
-        <h1
-          className={`
-            font-extrabold text-xl bg-gradient-to-r from-blue-400 to-purple-400 
-            bg-clip-text text-transparent transition-all
-            ${isCollapsed ? "opacity-0 scale-75" : "opacity-100 scale-100"}
-          `}
-        >
-          ENPL ERP
-        </h1>
-      </div>
-
-      {/* Scrollable Menu */}
-      <div className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
-
-        {/* Main Section - Only show if items exist */}
-        {filteredMainItems.length > 0 && (
-          <>
-            {filteredMainItems.map(item => renderNavigationItem(item))}
-          </>
-        )}
-
-        {/* Setup Section - Only show if items exist */}
-        {hasVisibleSetupItems && (
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <button
-              onClick={() => toggleSection("setup")}
-              className={`
-                flex items-center w-full py-2 px-2 rounded-md text-sm transition-all duration-300
-                ${filteredSetupItems.some(it => isActive(it.href))
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
-                  : "text-gray-300 hover:bg-gray-700/60 hover:text-white"}
-              `}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              {!isCollapsed && <span className="flex-1">Setup</span>}
-              {!isCollapsed && (
-                <ChevronRight
-                  className={`w-3 h-3 transition-transform ${
-                    expandedSections.setup ? "rotate-90" : ""
-                  }`}
-                />
-              )}
-            </button>
-
+      {/* Header with Collapse Toggle */}
+      <div className="p-5 border-b border-gray-800 bg-gray-900/90 sticky top-0 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">E</span>
+            </div>
             {!isCollapsed && (
-              <div
-                className={`
-                  ml-4 overflow-hidden transition-all duration-300
-                  ${expandedSections.setup ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}
-                `}
-              >
-                <div className="space-y-1 border-l border-purple-500 pl-3 mt-1">
-                  {filteredSetupItems.map(item => renderNavigationItem(item, 1))}
-                </div>
-              </div>
+              <h1 className="font-bold text-xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                ENPL ERP
+              </h1>
             )}
           </div>
-        )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? (
+              <Menu size={20} className="text-gray-400" />
+            ) : (
+              <ChevronLeft size={20} className="text-gray-400" />
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* User Footer */}
+      {/* Scrollable Menu Area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 custom-scrollbar">
+        <div className="space-y-1">
+          {/* Main Navigation Items */}
+          {filteredMainItems.length > 0 && (
+            <div className="mb-4">
+              {!isCollapsed && (
+                <div className="px-3 mb-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Main</p>
+                </div>
+              )}
+              <div className="space-y-1">
+                {filteredMainItems.map(item => renderNavigationItem(item))}
+              </div>
+            </div>
+          )}
+
+          {/* Setup Section */}
+          {hasVisibleSetupItems && (
+            <div className="mt-6 pt-4 border-t border-gray-800/50">
+              <button
+                onClick={() => toggleSection("setup")}
+                className={`
+                  flex items-center w-full py-3 px-3 rounded-xl text-sm transition-all duration-300
+                  group relative overflow-hidden
+                  ${filteredSetupItems.some(it => isActive(it.href))
+                    ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white border-l-4 border-purple-400"
+                    : "text-gray-300 hover:bg-gray-700/40 hover:text-white hover:border-l-4 hover:border-purple-500/50"}
+                `}
+              >
+                <Cog size={18} strokeWidth={2} className="mr-3 relative z-10" />
+                {!isCollapsed && <span className="flex-1 text-left font-medium relative z-10">System Setup</span>}
+                {!isCollapsed && (
+                  <ChevronRight
+                    className={`w-4 h-4 transition-all duration-300 relative z-10 ${
+                      expandedSections.setup ? "rotate-90 transform" : ""
+                    }`}
+                  />
+                )}
+              </button>
+
+              {!isCollapsed && (
+                <div
+                  className={`
+                    ml-6 pl-3 border-l border-purple-500/30 overflow-hidden transition-all duration-500 ease-out
+                    ${expandedSections.setup ? "max-h-80 opacity-100 mt-2" : "max-h-0 opacity-0"}
+                  `}
+                >
+                  <div className="space-y-1">
+                    {filteredSetupItems.map((item, index) => (
+                      <div key={item.href} className="relative">
+                        {index < filteredSetupItems.length - 1 && (
+                          <div className="absolute left-[-12px] top-6 w-[1px] h-6 bg-purple-500/20"></div>
+                        )}
+                        {renderNavigationItem(item, 1)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* User Profile Footer */}
       <div
-        className={`absolute bottom-0 left-0 w-full bg-gray-900/90 p-2 ${
-          isCollapsed ? "pl-0" : "pl-2"
-        }`}
+        className={`
+          border-t border-gray-800 bg-gray-900/90 backdrop-blur-sm p-4
+          ${isCollapsed ? "px-3" : "px-4"}
+          transition-all duration-300
+        `}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            className="
-              w-8 h-8 flex items-center justify-center rounded-full 
-              bg-gradient-to-r from-blue-500 to-purple-500 
-              text-white font-semibold text-xs
-            "
-          >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm shadow-lg flex-shrink-0 ring-2 ring-blue-500/30">
             {clientFullName.charAt(0).toUpperCase()}
           </div>
 
           {!isCollapsed && (
-            <div className="leading-tight">
-              <div className="font-medium text-xs text-white">{clientFullName}</div>
-              <div className="text-[10px] text-gray-400 capitalize">{clientUserType}</div>
-              <div className="text-[9px] text-gray-500">ID: {userId}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="leading-tight">
+                  <div className="font-semibold text-sm text-white truncate">{clientFullName}</div>
+                  <div className="text-xs text-gray-400 capitalize">{clientUserType}</div>
+                </div>
+                <div className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded">
+                  ID: {userId}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -515,14 +691,42 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             window.location.href = "/login";
           }}
           className={`
-            w-full flex items-center justify-center py-1 rounded-md
-            bg-red-500 hover:bg-red-500 text-white transition-all duration-200
-            ${isCollapsed ? "text-[10px]" : "text-xs"}
+            mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
+            bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700
+            text-white font-medium transition-all duration-300 shadow-lg hover:shadow-xl
+            group
+            ${isCollapsed ? "text-xs p-2" : "text-sm"}
           `}
         >
-          Logout
+          <LogOut size={16} className={isCollapsed ? "" : "group-hover:rotate-12 transition-transform"} />
+          {!isCollapsed && "Logout"}
         </button>
       </div>
+
+      {/* Add CSS for custom scrollbar */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(75, 85, 99, 0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #2563eb, #7c3aed);
+        }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+      `}</style>
     </div>
   );
 }

@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
- //url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 model AddressBook {
@@ -25,6 +25,10 @@ model AddressBook {
   tasks    Task[]
   customerContactSites CustomerContactSite[]
   complaintRegistrations ComplaintRegistration[]
+    materialDelivery MaterialDelivery[]
+      vendorPayment    VendorPayment[]
+
+
 }
 
 model AddressBookContact {
@@ -55,6 +59,8 @@ model Site {
   tasks       Task[]
   customerContactSites CustomerContactSite[]
   complaintRegistrations ComplaintRegistration[]
+    materialDelivery MaterialDelivery[]
+
 }
 
 model SiteContact {
@@ -99,6 +105,12 @@ model ServiceContract {
   branchId          Int
   salesManagerName  String
   amcType           String?
+
+    attachmentUrl       String?     // file location
+  attachmentName      String?     // original file name
+  attachmentMimeType  String?     // "application/pdf", "image/png"
+  attachmentSize      Int?        // bytes
+
   serviceContractType ServiceContractType[]
   periods           ServiceContractPeriod[]
   terms             ServiceContractTerms[]
@@ -476,4 +488,202 @@ model UserPermission {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+
+
+
+
+
+
+
+
+model Category {
+  id            Int           @id @default(autoincrement())
+  categoryName  String
+  categoryId    String?
+  subCategories SubCategory[] @relation("CategoryToSubCategory")
+  products      Product[]
+}
+
+model SubCategory {
+  id              Int       @id @default(autoincrement())
+  subCategoryName String
+  subCategoryId   String
+  categoryId      Int
+  category        Category  @relation(name: "CategoryToSubCategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  products        Product[]
+}
+
+model Product {
+  id                 Int    @id @default(autoincrement())
+  productId          String @unique
+  productName        String
+  productDescription String
+  HSN                String
+  unit               String
+  gstRate            String
+  categoryId         Int
+  subCategoryId      Int
+
+  category             Category               @relation(fields: [categoryId], references: [id])
+  subCategory          SubCategory            @relation(fields: [subCategoryId], references: [id])
+  productInventories   ProductInventory[] // ✅ Join table entries
+  materialDeliveryItem MaterialDeliveryItem[] // ✅ Link to material delivery items
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Inventory {
+  id                 Int      @id @default(autoincrement())
+  vendorId           Int
+  purchaseDate       DateTime
+  purchaseInvoice    String   @unique
+  creditTerms        String
+  dueDate            String
+  invoiceNetAmount   String
+  gstAmount          String
+  dueAmount          Float?
+  invoiceGrossAmount String
+  status             String?
+
+  vendor               Vendor                 @relation(fields: [vendorId], references: [id])
+  products             ProductInventory[]
+  materialDeliveryItem MaterialDeliveryItem[]
+  vendorPayment        VendorPayment[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model ProductInventory {
+  id             Int    @id @default(autoincrement())
+  inventoryId    Int
+  productId      Int
+  make           String
+  model          String
+  serialNumber   String
+  macAddress     String
+  warrantyPeriod String
+  purchaseRate   String
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model MaterialDelivery {
+  id                Int     @id @default(autoincrement())
+  deliveryType      String
+  deliveryChallan   String?
+  refNumber         String?
+  salesOrderNo      String?
+  quotationNo       String?
+  purchaseInvoiceNo String?
+  siteId            Int?
+  customerId        Int?
+  vendorId          Int?
+
+  addressBook   AddressBook?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor?   @relation(fields: [vendorId], references: [id])
+
+  site Site? @relation(fields: [siteId], references: [id])
+
+  materialDeliveryItems MaterialDeliveryItem[] @relation("MaterialDeliveryToMaterialDeliveryItem") // ✅ ADD NAME
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MaterialDeliveryItem {
+  id                 Int  @id @default(autoincrement())
+  materialDeliveryId Int
+  inventoryId        Int?
+  productId          Int
+
+  serialNumber String
+  macAddress   String
+
+  materialDelivery MaterialDelivery @relation(name: "MaterialDeliveryToMaterialDeliveryItem", fields: [materialDeliveryId], references: [id])
+  inventory        Inventory?       @relation(fields: [inventoryId], references: [id])
+  product          Product          @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VendorPayment {
+  id                 Int        @id @default(autoincrement())
+  customerId           Int
+  inventoryId        Int?
+  purchaseInvoiceNo  String
+  invoiceGrossAmount String
+  dueAmount          String
+  paidAmount         String
+  balanceDue         String?
+  paymentDate        DateTime
+  paymentType        String
+  referenceNo        String
+  remark             String
+  addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  inventory          Inventory? @relation(fields: [inventoryId], references: [id])
+  vendor         Vendor[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Define the Vendor model
+model Vendor {
+  id              Int      @id @default(autoincrement())
+  vendorCode      String?  @unique
+  vendorName      String
+  registerAddress String
+  gstNo           String   @unique
+  emailId         String   @unique
+  businessType    String?
+  state           String?
+  city            String?
+  website         String?
+  products        Json?
+  creditTerms     String
+  creditLimit     String
+  remark          String
+  gstpdf          String?
+  hodId           Int?
+  managerId       Int?
+  executiveId     Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contacts         VendorContact[]    @relation("VendorContacts")
+  bankDetails      BankDetail[]       @relation("VendorBankDetails")
+  inventory        Inventory[]
+  materialDelivery MaterialDelivery[]
+  vendorPayment    VendorPayment[]
+}
+model BankDetail {
+  id            Int    @id @default(autoincrement())
+  bankName      String
+  accountNumber String
+  ifscCode      String
+  branchName    String
+  vendorId      Int
+  vendor          Vendor @relation("VendorBankDetails", fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model VendorContact {
+  id                 Int     @id @default(autoincrement())
+  title              String
+  firstName          String
+  lastName           String
+  contactPhoneNumber String
+  contactEmailId     String
+  designation        String
+  department         String
+  landlineNumber     String?
+  vendorId           Int
+  vendor             Vendor  @relation("VendorContacts", fields: [vendorId], references: [id], onDelete: Cascade)
 }

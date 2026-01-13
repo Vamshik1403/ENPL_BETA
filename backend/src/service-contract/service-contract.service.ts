@@ -7,7 +7,7 @@ import { UpdateServiceContractDto } from './dto/update-service-contract.dto';
 export class ServiceContractService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createDto: CreateServiceContractDto) {
+async create(createDto: CreateServiceContractDto, file?: Express.Multer.File) {
   // 🔢 Step 1: Find last contract ID (numerically highest)
   const lastContract = await this.prisma.serviceContract.findFirst({
     orderBy: { id: 'desc' },
@@ -27,15 +27,21 @@ export class ServiceContractService {
   const nextID = `EN/CSR/${nextNumber.toString().padStart(5, '0')}`;
 
   // 🔢 Step 4: Create record with generated ID
-  return this.prisma.serviceContract.create({
-    data: {
-      serviceContractID: nextID,
-      customerId: createDto.customerId,
-      branchId: createDto.branchId,
-      salesManagerName: createDto.salesManagerName,
-      amcType: createDto.amcType,
-    },
-  });
+return this.prisma.serviceContract.create({
+  data: {
+    serviceContractID: nextID,
+    customerId: createDto.customerId,
+    branchId: createDto.branchId,
+    salesManagerName: createDto.salesManagerName,
+    amcType: createDto.amcType,
+
+    attachmentUrl: file ? `/uploads/service-contracts/${file.filename}` : null,
+    attachmentName: file?.originalname || null,
+    attachmentMimeType: file?.mimetype || null,
+    attachmentSize: file?.size || null,
+  },
+});
+
 }
 
 async getNextContractId() {
@@ -101,13 +107,39 @@ async removeByContractId(contractId: number) {
     return contract;
   }
 
-  async update(id: number, updateDto: UpdateServiceContractDto) {
-    await this.findOne(id);
-    return this.prisma.serviceContract.update({
-      where: { id },
-      data: updateDto,
-    });
+async update(
+  id: number,
+  updateDto: UpdateServiceContractDto,
+  file?: Express.Multer.File,
+) {
+  await this.findOne(id);
+
+  const updateData: any = {
+    ...updateDto,
+  };
+
+  // ✅ Convert numeric fields because FormData sends strings
+  if (updateData.customerId !== undefined) {
+    updateData.customerId = Number(updateData.customerId);
   }
+  if (updateData.branchId !== undefined) {
+    updateData.branchId = Number(updateData.branchId);
+  }
+
+  // ✅ If attachment uploaded then update attachment fields
+  if (file) {
+    updateData.attachmentUrl = `/uploads/service-contracts/${file.filename}`;
+    updateData.attachmentName = file.originalname;
+    updateData.attachmentMimeType = file.mimetype;
+    updateData.attachmentSize = file.size;
+  }
+
+  return this.prisma.serviceContract.update({
+    where: { id },
+    data: updateData,
+  });
+}
+
 
   async remove(id: number) {
     await this.findOne(id);

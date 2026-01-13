@@ -7,30 +7,26 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 ------------------------------------------------------- */
 const Icons = {
   Plus: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="20 20 24 24">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
     </svg>
   ),
   Edit: () => (
-    <svg className="w-4 h-4 bg-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
-           m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
   ),
   Delete: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
-           a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
-           m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
   Search: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M21 21l-6-6m2-5a7 7 0 11-14 0
-           7 7 0 0114 0z" />
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
   ),
   Permission: () => (
@@ -73,62 +69,80 @@ type PermissionsJson = Record<string, CrudPerm>;
    API Endpoints
 ------------------------------------------------------- */
 const API = {
-  LIST: "https://enplerp.electrohelps.in/backend/auth/users",
-  REGISTER: "https://enplerp.electrohelps.in/backend/auth/register",
-  UPDATE: "https://enplerp.electrohelps.in/backend/auth/users",
-  DELETE: "https://enplerp.electrohelps.in/backend/auth/users",
-  PERMISSION: (userId: number) => `https://enplerp.electrohelps.in/backend/user-permissions/${userId}`,
-  USER_DETAIL: (userId: number) => `https://enplerp.electrohelps.in/backend/auth/users/${userId}`,
-  DEPARTMENTS: "https://enplerp.electrohelps.in/backend/department"
+  LIST: "http://localhost:8000/auth/users",
+  REGISTER: "http://localhost:8000/auth/register",
+  UPDATE: "http://localhost:8000/auth/users",
+  DELETE: "http://localhost:8000/auth/users",
+  PERMISSION: (userId: number) => `http://localhost:8000/user-permissions/${userId}`,
+  USER_DETAIL: (userId: number) => `http://localhost:8000/auth/users/${userId}`,
+  DEPARTMENTS: "http://localhost:8000/department"
 };
 
 /* -------------------------------------------------------
-   Modules Configuration
+   Complete Modules Configuration
+   Must match ALL permission keys used in sidebar
 ------------------------------------------------------- */
 const MODULES: { key: string; label: string }[] = [
+  // Main modules
   { key: 'DASHBOARD', label: 'Dashboard' },
+  { key: 'ADDRESSBOOK', label: 'Address Book' },
   { key: 'CUSTOMERS', label: 'Customers' },
   { key: 'SITES', label: 'Sites' },
-  { key: 'SERVICE_CONTRACTS', label: 'Service Contracts' },
-  { key: 'TASKS', label: 'Tasks' },
-  { key: 'USERS', label: 'Users Permission' },
+  { key: 'VENDORS', label: 'Vendors' },
   { key: 'CUSTOMER_REGISTRATION', label: 'Customer Registration' },
+  
+  // Inventory Management module and sub-modules
+  { key: 'CATEGORIES', label: 'Categories' },
+  { key: 'SUBCATEGORIES', label: 'Subcategories' },
+  { key: 'PRODUCTS_SKU', label: 'Products SKU' },
+  { key: 'INVENTORY', label: 'Inventory' },
+  { key: 'PURCHASE_INVOICE', label: 'Purchase Invoice' },
+  { key: 'MATERIAL_OUTWARD', label: 'Material Outward' },
+  { key: 'VENDORS_PAYMENTS', label: 'Vendors Payments' },
+  
+  // Other modules
+  { key: 'TASKS', label: 'Tasks' },
+  { key: 'SERVICE_CONTRACTS', label: 'Service Contracts' },
+  
+  // Setup modules
   { key: 'DEPARTMENTS', label: 'Departments' },
-  { key: 'PRODUCTS_CATEGORY', label: 'Products Category' },
   { key: 'SERVICE_CATEGORY', label: 'Service Category' },
   { key: 'WORKSCOPE_CATEGORY', label: 'WorkScope Category' },
+  { key: 'USERS', label: 'Users Permission' },
 ];
 
 const emptyCrud = (): CrudPerm => ({ read: false, create: false, edit: false, delete: false });
 
 function normalizePermissions(raw: any): PermissionsJson {
   const base: PermissionsJson = {};
-  for (const m of MODULES) base[m.key] = emptyCrud();
+  
+  // Initialize all modules with empty permissions
+  for (const m of MODULES) {
+    base[m.key] = emptyCrud();
+  }
 
   if (!raw) return base;
 
-const p =
-  raw?.permissions?.permissions ??
-  raw?.permissions ??
-  raw;
+  // Extract permissions from different possible structures
+  const p = raw?.permissions?.permissions ?? raw?.permissions ?? raw;
 
   if (p && typeof p === 'object') {
     for (const k of Object.keys(p)) {
       const v = p[k];
       if (!v || typeof v !== 'object') continue;
 
-      base[k] = {
-        read: !!v.read,
-        create: !!v.create,
-        edit: !!v.edit,
-        delete: !!v.delete,
-      };
+      // Only update if the key exists in our MODULES
+      if (base.hasOwnProperty(k)) {
+        base[k] = {
+          read: !!v.read,
+          create: !!v.create,
+          edit: !!v.edit,
+          delete: !!v.delete,
+        };
+      }
     }
   }
 
-  for (const m of MODULES) {
-    if (!base[m.key]) base[m.key] = emptyCrud();
-  }
   return base;
 }
 
@@ -138,7 +152,7 @@ const p =
 const safeFetchJson = async (response: Response) => {
   const text = await response.text();
   if (!text.trim()) {
-    return null; // Return null for empty responses
+    return null;
   }
   try {
     return JSON.parse(text);
@@ -174,7 +188,6 @@ const UserModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center px-4">
       <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg text-black">
-
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
             {editingId ? 'Edit User' : 'Add User'}
@@ -243,6 +256,7 @@ const UserModal = ({
           <div className="mb-3">
             <label className="text-sm font-medium">Email</label>
             <input
+              type="email"
               disabled={loading}
               className="w-full mt-1 border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100 disabled:cursor-not-allowed"
               value={formData.email}
@@ -337,9 +351,25 @@ const PermissionsModal = ({
     }));
   };
 
+  // Group modules for better organization
+  const groupedModules = {
+    'Main Modules': MODULES.filter(m => [
+      'DASHBOARD', 'ADDRESSBOOK', 'CUSTOMERS', 'SITES', 'VENDORS', 
+      'CUSTOMER_REGISTRATION', 'TASKS', 'SERVICE_CONTRACTS'
+    ].includes(m.key)),
+    'Inventory Modules': MODULES.filter(m => [
+      'INVENTORY MANAGEMENT', 'CATEGORIES', 'SUBCATEGORIES', 'PRODUCTS_SKU',
+      'INVENTORY', 'PURCHASE_INVOICE', 'MATERIAL_OUTWARD', 'VENDORS_PAYMENTS'
+    ].includes(m.key)),
+    'Setup Modules': MODULES.filter(m => [
+      'DEPARTMENTS', 'PRODUCTS_CATEGORY', 'SERVICE_CATEGORY', 
+      'WORKSCOPE_CATEGORY', 'USERS'
+    ].includes(m.key))
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
           <div>
             <div className="text-xl font-bold text-gray-900">
@@ -357,7 +387,7 @@ const PermissionsModal = ({
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {permError && (
             <div className="mb-4 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
               {permError}
@@ -370,117 +400,124 @@ const PermissionsModal = ({
               <p className="text-gray-600 mt-3">Loading permissions…</p>
             </div>
           ) : (
-            <div className="border rounded-xl overflow-hidden">
-              <div className="max-h-[55vh] overflow-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                        Module
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                        All
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                        Read
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                        Create
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                        Edit
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                        Delete
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {MODULES.map(m => {
-                      const p = permissions[m.key] || emptyCrud();
-                      const all = isAllChecked(p);
-
-                      return (
-                        <tr key={m.key} className="hover:bg-blue-50/20">
-                          <td className="px-4 py-3 font-medium text-gray-900">{m.label}</td>
-
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600 cursor-pointer"
-                              checked={all}
-                              onChange={e => toggleAllForModule(m.key, e.target.checked)}
-                            />
-                          </td>
-
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600 cursor-pointer"
-                              checked={p.read}
-                              onChange={e => setModulePerm(m.key, { read: e.target.checked })}
-                            />
-                          </td>
-
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600 cursor-pointer"
-                              checked={p.create}
-                              onChange={e => setModulePerm(m.key, { create: e.target.checked })}
-                            />
-                          </td>
-
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600 cursor-pointer"
-                              checked={p.edit}
-                              onChange={e => setModulePerm(m.key, { edit: e.target.checked })}
-                            />
-                          </td>
-
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-blue-600 cursor-pointer"
-                              checked={p.delete}
-                              onChange={e => setModulePerm(m.key, { delete: e.target.checked })}
-                            />
-                          </td>
+            Object.entries(groupedModules).map(([groupName, modules]) => (
+              modules.length > 0 && (
+                <div key={groupName} className="mb-6 last:mb-0">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                    {groupName}
+                  </h3>
+                  <div className="border rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                            Module
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                            All
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                            Read
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                            Create
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                            Edit
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                            Delete
+                          </th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
 
-              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
-                <button
-                  onClick={onClose}
-                  disabled={savingPerm}
-                  className="px-5 py-2 rounded-lg border text-black border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onSave}
-                  disabled={savingPerm}
-                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2"
-                >
-                  {savingPerm ? (
-                    <>
-                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
-                      Saving…
-                    </>
-                  ) : (
-                    'Save Permissions'
-                  )}
-                </button>
-              </div>
-            </div>
+                      <tbody className="divide-y divide-gray-100">
+                        {modules.map(m => {
+                          const p = permissions[m.key] || emptyCrud();
+                          const all = isAllChecked(p);
+
+                          return (
+                            <tr key={m.key} className="hover:bg-blue-50/20">
+                              <td className="px-4 py-3 font-medium text-gray-900">{m.label}</td>
+
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-blue-600 cursor-pointer"
+                                  checked={all}
+                                  onChange={e => toggleAllForModule(m.key, e.target.checked)}
+                                />
+                              </td>
+
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-blue-600 cursor-pointer"
+                                  checked={p.read}
+                                  onChange={e => setModulePerm(m.key, { read: e.target.checked })}
+                                />
+                              </td>
+
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-blue-600 cursor-pointer"
+                                  checked={p.create}
+                                  onChange={e => setModulePerm(m.key, { create: e.target.checked })}
+                                />
+                              </td>
+
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4  accent-blue-600 cursor-pointer"
+                                  checked={p.edit}
+                                  onChange={e => setModulePerm(m.key, { edit: e.target.checked })}
+                                />
+                              </td>
+
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-blue-600 cursor-pointer"
+                                  checked={p.delete}
+                                  onChange={e => setModulePerm(m.key, { delete: e.target.checked })}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            ))
           )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
+          <button
+            onClick={onClose}
+            disabled={savingPerm}
+            className="px-5 py-2 rounded-lg border text-black border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={savingPerm}
+            className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2"
+          >
+            {savingPerm ? (
+              <>
+                <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
+                Saving…
+              </>
+            ) : (
+              'Save Permissions'
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -520,7 +557,6 @@ export default function UsersPage() {
   const [loadingPerm, setLoadingPerm] = useState(false);
   const [savingPerm, setSavingPerm] = useState(false);
   const [permError, setPermError] = useState<string>('');
-  // Loading State
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Fetch departments from API
@@ -528,7 +564,6 @@ export default function UsersPage() {
     setLoadingDepartments(true);
     try {
       const res = await fetch(API.DEPARTMENTS, {
-        cache: 'no-store',
         headers: getAuthHeaders()
       });
 
@@ -553,7 +588,6 @@ export default function UsersPage() {
     setUsersError('');
     try {
       const res = await fetch(API.LIST, {
-        cache: 'no-store',
         headers: getAuthHeaders()
       });
 
@@ -655,9 +689,7 @@ export default function UsersPage() {
         throw new Error(`Failed to save user (${res.status}): ${errorText || 'No error message'}`);
       }
 
-      // Try to parse response, but don't fail if it's empty
       await safeFetchJson(res);
-
       setUserModalOpen(false);
       fetchUsers();
     } catch (err: any) {
@@ -700,7 +732,6 @@ export default function UsersPage() {
 
     try {
       const res = await fetch(API.PERMISSION(user.id), { 
-        cache: 'no-store',
         headers: getAuthHeaders()
       });
 
@@ -752,9 +783,7 @@ export default function UsersPage() {
         throw new Error(`Failed to save permissions (${res.status}): ${errorText || 'No error message'}`);
       }
 
-      // Try to parse response, but don't fail if it's empty
       await safeFetchJson(res);
-      
       closePermModal();
     } catch (e: any) {
       console.error("Save permissions error:", e);
@@ -857,7 +886,7 @@ export default function UsersPage() {
 
         {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b  from-blue-50 to-white">
+          <div className="px-6 py-4 border-b from-blue-50 to-white">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-semibold text-gray-900">User List</div>
@@ -878,7 +907,7 @@ export default function UsersPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    {["Username", "Full Name", "User Type", "Department", "email", "Actions"].map((t) => (
+                    {["Username", "Full Name", "User Type", "Department", "Email", "Actions"].map((t) => (
                       <th
                         key={t}
                         className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
@@ -914,28 +943,28 @@ export default function UsersPage() {
                         <td className="px-6 py-4">
                           <div className="text-gray-900">{u.department || '-'}</div>
                         </td>
-                          <td className="px-6 py-4">
+                        <td className="px-6 py-4">
                           <div className="text-gray-900">{u.email || '-'}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => openEditUser(u)}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-blue-300 hover:bg-blue-600 transition-colors"
                               title="Edit User"
                             >
                               <Icons.Edit />
                             </button>
                             <button
                               onClick={() => deleteUser(u.id)}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600 transition-colors"
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-red-300 hover:bg-red-400 text-red-600 transition-colors"
                               title="Delete User"
                             >
                               <Icons.Delete />
                             </button>
                             <button
                               onClick={() => openPermissions(u)}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-blue-50 hover:bg-blue-300 text-blue-700 transition-colors"
                               title="Manage Permissions"
                             >
                               <Icons.Permission />
@@ -946,7 +975,7 @@ export default function UsersPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-600">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-600">
                         {search ? 'No users match your search' : 'No users found'}
                       </td>
                     </tr>

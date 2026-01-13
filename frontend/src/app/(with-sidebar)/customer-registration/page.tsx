@@ -99,8 +99,8 @@ const RemoveIcon = () => (
 /* ========================================================= */
 
 export default function CustomerContactPage() {
-  const API = 'https://enplerp.electrohelps.in/backend/customer-contact';
-  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/backend/user-permissions';
+  const API = 'http://localhost:8000/customer-contact';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
 
   const [records, setRecords] = useState<CustomerContact[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -149,7 +149,7 @@ export default function CustomerContactPage() {
   };
 
   const fetchCustomers = async () => {
-    const res = await fetch('https://enplerp.electrohelps.in/backend/address-book');
+    const res = await fetch('http://localhost:8000/address-book');
     setCustomers(await res.json());
   };
 
@@ -159,7 +159,7 @@ export default function CustomerContactPage() {
       return;
     }
     const res = await fetch(
-      `https://enplerp.electrohelps.in/backend/sites/based-on-cust?addressBookId=${customerId}`,
+      `http://localhost:8000/sites/based-on-cust?addressBookId=${customerId}`,
     );
     setSites(await res.json());
   };
@@ -396,7 +396,7 @@ useEffect(() => {
     
     if (!confirm('Remove this site from contact?')) return;
     await fetch(
-      `https://enplerp.electrohelps.in/backend/customer-contact/site/${mappingId}`,
+      `http://localhost:8000/customer-contact/site/${mappingId}`,
       { method: 'DELETE' },
     );
     fetchAll();

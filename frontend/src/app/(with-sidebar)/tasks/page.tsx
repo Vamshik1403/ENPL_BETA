@@ -30,7 +30,7 @@ interface Site {
 
 interface TaskInventory {
   productTypeId?: number;
-  productTypeName?: string;
+  productName?: string;
   makeModel?: string;
   snMac?: string;
   description?: string;
@@ -709,7 +709,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
                           <div className="flex gap-3 text-sm">
                             <a
-                              href={`https://enplerp.electrohelps.in/backend/${String(att.filepath).replace(/\\/g, "/")}`}
+                              href={`http://localhost:8000/${String(att.filepath).replace(/\\/g, "/")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline"
@@ -1303,7 +1303,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           <tbody>
                             {inventories.map((inv, i) => (
                               <tr key={i} className="border-t hover:bg-gray-50">
-                                <td className="p-3 text-gray-700">{inv.productTypeName}</td>
+                                <td className="p-3 text-gray-700">{inv.productName}</td>
                                 <td className="p-3 text-gray-700">{inv.makeModel}</td>
                                 <td className="p-3 text-gray-700">{inv.snMac}</td>
                                 <td className="p-3 text-gray-700">{inv.warrantyStatus}</td>
@@ -1833,7 +1833,7 @@ export default function TasksPage() {
 
   const fetchProductTypes = async () => {
     try {
-      const res = await fetch("https://enplerp.electrohelps.in/backend/producttype");
+      const res = await fetch("http://localhost:8000/products");
       const data = await res.json();
       setProductTypes(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -2062,7 +2062,7 @@ export default function TasksPage() {
 
     const fetchSiteContacts = async () => {
       try {
-        const res = await fetch(`https://enplerp.electrohelps.in/backend/sites/${formData.siteId}`);
+        const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
         const data = await res.json();
 
         if (data?.contacts?.length > 0) {
@@ -2093,7 +2093,7 @@ export default function TasksPage() {
         localStorage.getItem("token");
 
       const res = await fetch(
-        `https://enplerp.electrohelps.in/backend/user-permissions/${uid}`,
+        `http://localhost:8000/user-permissions/${uid}`,
         {
           headers: token
             ? { Authorization: `Bearer ${token}` }
@@ -2160,7 +2160,7 @@ export default function TasksPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/backend/department');
+      const response = await fetch('http://localhost:8000/department');
       const data = await response.json();
       setDepartments(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2185,7 +2185,7 @@ export default function TasksPage() {
 
   const fetchAddressBooks = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/backend/address-book');
+      const response = await fetch('http://localhost:8000/address-book');
       const data = await response.json();
       setAddressBooks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2196,7 +2196,7 @@ export default function TasksPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/backend/sites');
+      const response = await fetch('http://localhost:8000/sites');
       const data = await response.json();
       setSites(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -2207,7 +2207,7 @@ export default function TasksPage() {
 
   const fetchServiceWorkscopeCategories = async () => {
     try {
-      const response = await fetch('https://enplerp.electrohelps.in/backend/workscope-category');
+      const response = await fetch('http://localhost:8000/workscope-category');
       if (!response.ok) {
         throw new Error('Failed to fetch service workscope categories');
       }
@@ -2223,7 +2223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const res = await fetch("https://enplerp.electrohelps.in/backend/auth/users", {
+      const res = await fetch("http://localhost:8000/auth/users", {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const users = await res.json();
@@ -2244,7 +2244,7 @@ export default function TasksPage() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://enplerp.electrohelps.in/backend/task');
+      const response = await fetch('http://localhost:8000/task');
       const data = await response.json();
 
       // Only sort if needed
@@ -2269,7 +2269,7 @@ export default function TasksPage() {
 
   const fetchNextTaskId = async () => {
     try {
-      const res = await fetch(`https://enplerp.electrohelps.in/backend/task/next-id`);
+      const res = await fetch(`http://localhost:8000/task/next-id`);
       const data = await res.json();
       return data.taskId;
     } catch (err) {
@@ -2560,8 +2560,8 @@ export default function TasksPage() {
 
 
       const url = editingId
-        ? `https://enplerp.electrohelps.in/backend/task/${editingId}`
-        : `https://enplerp.electrohelps.in/backend/task`;
+        ? `http://localhost:8000/task/${editingId}`
+        : `http://localhost:8000/task`;
 
       const method = editingId ? "PATCH" : "POST";
 
@@ -2589,7 +2589,7 @@ export default function TasksPage() {
         attachmentFormData.append("file", purchaseFile);
 
         await fetch(
-          `https://enplerp.electrohelps.in/backend/task/${savedTask.id}/purchase-attachment`,
+          `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
           {
             method: "POST",
             headers: {
@@ -2657,7 +2657,7 @@ export default function TasksPage() {
       ));
 
       // Then make API call
-      const response = await fetch(`https://enplerp.electrohelps.in/backend/tasks-remarks`, {
+      const response = await fetch(`http://localhost:8000/tasks-remarks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2766,7 +2766,7 @@ export default function TasksPage() {
 
         const token = getAuthToken();
 
-        const response = await fetch(`https://enplerp.electrohelps.in/backend/task/${selectedTask.id}`, {
+        const response = await fetch(`http://localhost:8000/task/${selectedTask.id}`, {
           method: 'PATCH',
           headers: {
             "Content-Type": "application/json",
@@ -2799,7 +2799,7 @@ export default function TasksPage() {
 
     try {
 
-      const response = await fetch(`https://enplerp.electrohelps.in/backend/task/${id}`, {
+      const response = await fetch(`http://localhost:8000/task/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3137,7 +3137,7 @@ export default function TasksPage() {
     // Always fetch fresh task details (so attachments definitely come)
     try {
       const token = getAuthToken();
-      const res = await fetch(`https://enplerp.electrohelps.in/backend/task/${task.id}`, {
+      const res = await fetch(`http://localhost:8000/task/${task.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
@@ -3161,7 +3161,7 @@ export default function TasksPage() {
     if (task.taskInventories) {
       setInventories(task.taskInventories.map((inv: any) => ({
         productTypeId: inv.productTypeId,
-        productTypeName: productTypes.find(pt => pt.id === inv.productTypeId)?.productTypeName || 'Unknown',
+        productName: productTypes.find(pt => pt.id === inv.productTypeId)?.productName || 'Unknown',
         makeModel: inv.makeModel,
         snMac: inv.snMac,
         description: inv.description,
@@ -3223,7 +3223,7 @@ export default function TasksPage() {
     const token = getAuthToken();
 
     try {
-      const response = await fetch(`https://enplerp.electrohelps.in/backend/tasks-remarks/${remarkToEdit.id}`, {
+      const response = await fetch(`http://localhost:8000/tasks-remarks/${remarkToEdit.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -3313,7 +3313,7 @@ export default function TasksPage() {
       const newInventoryItem = {
         ...form,
         productTypeId: Number(form.productTypeId),
-        productTypeName: selectedProduct?.productTypeName,
+        productName: selectedProduct?.productName,
         warrantyStatus: form.warrantyStatus,
       };
 
@@ -3370,13 +3370,13 @@ export default function TasksPage() {
                   onChange={(e) =>
                     setForm({ ...form, productTypeId: e.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="w-full border border-gray-300 text-black rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-50"
                   required
                 >
                   <option value="">Select Product Type</option>
                   {productTypes.map((pt: any) => (
                     <option key={pt.id} value={pt.id}>
-                      {pt.productTypeName}
+                      {pt.productName}
                     </option>
                   ))}
                 </select>
@@ -3424,10 +3424,9 @@ export default function TasksPage() {
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 >
+                  <option value="">select status</option>
                   <option value="Active">Active</option>
                   <option value="Expired">Expired</option>
-                  <option value="Void">Void</option>
-                  <option value="Unknown">Unknown</option>
                 </select>
               </div>
             </div>

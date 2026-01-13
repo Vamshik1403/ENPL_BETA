@@ -33,6 +33,13 @@ import { CustomerContactModule } from './customer-contact/customer-contact.modul
 import { UserPermissionModule } from './user-permission/user-permission.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { CategoryModule } from './category/category.module';
+import { SubcategoryModule } from './subcategory/subcategory.module';
+import { ProductsModule } from './products/products.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { MaterialDeliveryModule } from './material-delivery/material-delivery.module';
+import { VendorModule } from './vendor/vendor.module';
+import { VendorPaymentModule } from './vendor-payment/vendor-payment.module';
 
 @Module({
   imports:
@@ -48,7 +55,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
   },
 }),
 
-    AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule,  ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule, CustomerContactModule, UserPermissionModule],
+    AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule,  ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule, CustomerContactModule, UserPermissionModule, CategoryModule, SubcategoryModule, ProductsModule, InventoryModule, MaterialDeliveryModule, VendorModule, VendorPaymentModule],
   controllers: [
     AppController,
     AddressBookController,

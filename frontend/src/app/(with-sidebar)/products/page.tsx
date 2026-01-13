@@ -68,8 +68,8 @@ export default function ProductsPage() {
   const [itemsPerPage] = useState(10);
   const [filteredProducts, setFilteredProducts] = useState<ProductType[]>([]);
 
-  const API_URL = 'https://enplerp.electrohelps.in/backend/producttype';
-  const PERMISSIONS_API = 'https://enplerp.electrohelps.in/backend/user-permissions';
+  const API_URL = 'http://localhost:8000/producttype';
+  const PERMISSIONS_API = 'http://localhost:8000/user-permissions';
 
   // Fetch permissions
 const fetchPermissions = async (uid: number) => {
