@@ -29,6 +29,8 @@ app.enableCors({
   origin: (origin, callback) => {
     const allowedOrigins = [
       'https://enplerp.electrohelps.in',
+      'http://40.0.0.12:3000',
+      'http://40.0.0.12',
       'http://localhost:3000', // dev
     ];
 

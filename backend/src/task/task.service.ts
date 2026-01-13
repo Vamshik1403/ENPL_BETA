@@ -213,11 +213,15 @@ export class TaskService {
   /* --------------------------------------------------
      EMAIL BODY BUILDERS
   -------------------------------------------------- */
-  private buildInternalEmail(task: any): string {
-    const description =
-      task.description || task.remarks?.[0]?.remark || 'N/A';
+private buildInternalEmail(task: any): string {
+  const description =
+    task.description || task.remarks?.[0]?.remark || 'N/A';
+  
+  // Fallback to purchase data if addressBook/site are null
+  const customerName = task.addressBook?.customerName || task.purchase?.customerName || 'N/A';
+  const siteName = task.site?.siteName || task.purchase?.address || 'N/A';
 
-    return `
+  return `
 New Task Created (Internal)
 
 Task ID:
@@ -230,10 +234,10 @@ Department:
 ${task.department?.departmentName}
 
 Customer:
-${task.addressBook?.customerName}
+${customerName}
 
 Site:
-${task.site?.siteName}
+${siteName}
 
 Description:
 ${description}
@@ -241,13 +245,13 @@ ${description}
 ---
 Internal Notification
 `;
-  }
+}
 
-  private buildCustomerEmail(task: any): string {
-    const description =
-      task.description || task.remarks?.[0]?.remark || 'N/A';
+private buildCustomerEmail(task: any): string {
+  const description =
+    task.description || task.remarks?.[0]?.remark || 'N/A';
 
-    return `
+  return `
 Your request has been registered successfully.
 
 Task ID:
@@ -264,12 +268,12 @@ We will contact you shortly.
 ---
 Support Team
 `;
-  }
+}
 
   /* --------------------------------------------------
      EMAIL SENDER (FIXED LOGIC)
   -------------------------------------------------- */
-  private async sendTaskCreatedEmail(task: any) {
+ private async sendTaskCreatedEmail(task: any) {
   // 1️⃣ Department emails (ALWAYS)
   const departmentEmails =
     task.department?.emails?.map(e => e.email) || [];
@@ -278,10 +282,18 @@ Support Team
   const internalCreatorEmail =
     task.user?.email ? [task.user.email] : [];
 
-  // 3️⃣ Customer emails (resolved from DB)
-  const customerEmails = await this.getCustomerEmailsByAddressBook(
-    task.addressBookId,
-  );
+  // 3️⃣ Customer emails - check both sources
+  let customerEmails: string[] = [];
+  
+  if (task.addressBookId) {
+    // Use DB contacts if addressBookId exists
+    customerEmails = await this.getCustomerEmailsByAddressBook(task.addressBookId);
+  } else if (task.purchase?.customerName) {
+    // If no addressBookId but purchase has customer, check if we have customer email in purchase
+    // You might need to adjust this based on your purchase data structure
+    // For now, we'll use the internal creator email for notification
+    customerEmails = internalCreatorEmail;
+  }
 
   // 4️⃣ Merge recipients
   const recipients = Array.from(
@@ -302,7 +314,11 @@ Support Team
     task.remarks?.[0]?.remark ||
     'N/A';
 
-  // 6️⃣ Email body
+  // 6️⃣ Customer and Site info fallback
+  const customerName = task.addressBook?.customerName || task.purchase?.customerName || 'N/A';
+  const siteName = task.site?.siteName || task.purchase?.address || 'N/A';
+
+  // 7️⃣ Email body
   const title = task.title ? task.title.trim() : 'No Title';
 
   const subject = `ENPL | SUPPORT TICKET | - ${task.taskID} | ${title}`;
@@ -321,10 +337,10 @@ Department:
 ${task.department?.departmentName}
 
 Customer:
-${task.addressBook?.customerName}
+${customerName}
 
 Site:
-${task.site?.siteName}
+${siteName}
 
 Description:
 ${description}
@@ -450,26 +466,28 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
   }
 
 
-  async findAll() {
-    return this.prisma.task.findMany({
-      include: {
-        department: true,
-        addressBook: true,
-        site: true,
-        contacts: true,
-        workscopeCat: true,
-        workscopeDetails: true,
-        schedule: true,
-        remarks: true,
-        taskInventories: true,
-        purchase: { include: { 
+ async findAll() {
+  return this.prisma.task.findMany({
+    include: {
+      department: true,
+      addressBook: true,
+      site: true,
+      contacts: true,
+      workscopeCat: true,
+      workscopeDetails: true,
+      schedule: true,
+      remarks: true,
+      taskInventories: true,
+      purchase: { 
+        include: { 
           products: true,
           taskPurchaseAttachments: true
-        } }, // 🔥 NEW
+        } 
       },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
 
   async findOne(id: number) {
     const task = await this.prisma.task.findUnique({

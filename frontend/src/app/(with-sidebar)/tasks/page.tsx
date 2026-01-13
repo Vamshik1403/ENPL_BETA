@@ -174,6 +174,7 @@ interface TaskFormData {
 
 // TaskModal Component
 interface TaskModalProps {
+    loading: boolean;
   isPurchaseDepartment: boolean;
   isTechnicalDepartment: boolean;
   isBillingDepartment: boolean;
@@ -260,6 +261,7 @@ const getAuthToken = () =>
 
 // TaskModal Component - Updated structure
 const TaskModal: React.FC<TaskModalProps> = ({
+  loading,
   isPurchaseDepartment,
   isTechnicalDepartment,
   isBillingDepartment,
@@ -311,7 +313,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   if (!showModal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0  bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
@@ -320,7 +322,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+              className="text-gray-400  cursor-pointer hover:text-gray-600 text-2xl"
             >
               ×
             </button>
@@ -1436,12 +1438,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {editingId ? 'Update Task' : 'Create Task'}
-              </button>
+      <button
+  type="submit"
+  disabled={loading}
+  className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+>
+  {loading && (
+    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+  )}
+  {!loading && (editingId ? "Update Task" : "Create Task")}
+</button>
+
             </div>
           </form>
         </div>
@@ -1545,6 +1552,7 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
   // Update handleSubmit:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
 
     if (isSubmitting) return; // Prevent double submit
 
@@ -1561,7 +1569,6 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
       } catch (error) {
         console.error("Failed to add remark:", error);
       } finally {
-        setIsSubmitting(false);
       }
     }
   };
@@ -1711,6 +1718,9 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+const [successOpen, setSuccessOpen] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [inventories, setInventories] = useState<any[]>([]);
   const [showInventoryModal, setShowInventoryModal] = useState(false);
@@ -2394,223 +2404,212 @@ export default function TasksPage() {
 
   // Form submission - FIXED TO INCLUDE REMARKS
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    const cleanArray = (arr: any[], mapper: any) =>
-      arr.length ? arr.map(mapper) : undefined;
+  const cleanArray = (arr: any[], mapper: any) =>
+    arr.length ? arr.map(mapper) : undefined;
 
-    try {
-      // Get the actual user name from localStorage or state
-      const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+  try {
+    // Get the actual user name from localStorage or state
+    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
 
-      // Determine task status from saved remarks
-      let taskStatus = 'Open';
-      let remarksToSave: any[] = [];
+    // Determine task status from saved remarks
+    let taskStatus = 'Open';
+    let remarksToSave: any[] = [];
 
-      // First check saved remarks
-      if (savedRemarks.length > 0) {
-        const sortedRemarks = [...savedRemarks].sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        taskStatus = sortedRemarks[0]?.status || 'Open';
-        remarksToSave = sortedRemarks.map(r => ({
-          remark: r.remark,
-          status: r.status,
-          createdBy: r.createdBy || actualUserName, // Use actual user name
-          createdAt: r.createdAt || new Date().toISOString(),
-          description: r.description || "",
+    // First check saved remarks
+    if (savedRemarks.length > 0) {
+      const sortedRemarks = [...savedRemarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      taskStatus = sortedRemarks[0]?.status || 'Open';
+      remarksToSave = sortedRemarks.map(r => ({
+        remark: r.remark,
+        status: r.status,
+        createdBy: r.createdBy || actualUserName, // Use actual user name
+        createdAt: r.createdAt || new Date().toISOString(),
+        description: r.description || "",
+      }));
+    }
+    // Then check if there's a new remark in the form (for Add Task)
+    else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
+      const newRemark = {
+        remark: formData.remarks[0].remark,
+        status: 'Open', // Always "Open" for new tasks
+        createdBy: actualUserName, // Use actual user name
+        createdAt: new Date().toISOString(),
+        description: ""
+      };
+      remarksToSave = [newRemark];
+      taskStatus = 'Open';
+    }
 
-        }));
-      }
-      // Then check if there's a new remark in the form (for Add Task)
-      else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
-        const newRemark = {
-          remark: formData.remarks[0].remark,
-          status: 'Open', // Always "Open" for new tasks
-          createdBy: actualUserName, // Use actual user name
-          createdAt: new Date().toISOString(),
-          description: ""
-        };
-        remarksToSave = [newRemark];
-        taskStatus = 'Open';
-      }
+    const taskData: any = {
+      id: editingId || undefined,
+      userId,
+      taskID: formData.taskID,
+      departmentId: formData.departmentId,
+      status: taskStatus,
+      createdBy: actualUserName,
+      createdAt: formData.createdAt,
+      description: formData.description,
+      title: formData.title,
+      contacts: cleanArray(savedContacts, (c: any) => ({
+        contactName: c.contactName,
+        contactNumber: c.contactNumber,
+        contactEmail: c.contactEmail,
+      })),
+      workscopeDetails: savedWorkscopeDetails.length > 0
+        ? savedWorkscopeDetails.map(w => ({
+          workscopeCategoryId: Number(w.workscopeCategoryId),
+          workscopeDetails: w.workscopeDetails,
+          extraNote: w.extraNote || "",
+        }))
+        : undefined,
+      schedule: cleanArray(savedSchedule, (s: any) => ({
+        proposedDateTime: s.proposedDateTime,
+        priority: s.priority,
+      })),
+      remarks: remarksToSave.length > 0 ? remarksToSave : undefined,
+      taskType: isPurchaseDepartment
+        ? ((formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY"
+          ? "PRODUCT_INQUIRY"
+          : "PURCHASE_ORDER")
+        : "SERVICE",
+      taskInventories: inventories.length
+        ? inventories.map(inv => ({
+          serviceContractId: 0,
+          productTypeId: Number(inv.productTypeId),
+          makeModel: inv.makeModel,
+          snMac: inv.snMac,
+          description: inv.description,
+          purchaseDate: inv.purchaseDate,
+          warrantyPeriod: inv.warrantyPeriod,
+          thirdPartyPurchase: inv.thirdPartyPurchase,
+          warrantyStatus: inv.warrantyStatus
+            ? String(inv.warrantyStatus).trim()
+            : "Active",
+        }))
+        : undefined,
+    };
 
+    const addressBookIdNum = Number(formData.addressBookId);
+    if (Number.isInteger(addressBookIdNum) && addressBookIdNum > 0) {
+      taskData.addressBookId = addressBookIdNum;
+    }
 
-      const taskData: any = {
-        id: editingId || undefined,
-        userId,
-        taskID: formData.taskID,
-        departmentId: formData.departmentId,
-        addressBookId:
-          formData.addressBookId && formData.addressBookId > 0
-            ? formData.addressBookId
+    const siteIdNum = Number(formData.siteId);
+    if (Number.isInteger(siteIdNum) && siteIdNum > 0) {
+      taskData.siteId = siteIdNum;
+    }
+
+    /* ---------------------------------------------------
+       🔥 PURCHASE PAYLOAD — ADD CONDITIONALLY (CRITICAL)
+    --------------------------------------------------- */
+    const hasProducts =
+      Array.isArray(formData.purchase?.products) &&
+      formData.purchase.products.length > 0;
+
+    const hasPurchaseMetaChanges =
+      !!formData.purchase?.customerName ||
+      !!formData.purchase?.address ||
+      !!formData.purchase?.purchaseType;
+
+    // 🔥 SEND PURCHASE IF ANY PURCHASE DATA EXISTS
+    if (isPurchaseDepartment && formData.purchase && (hasProducts || hasPurchaseMetaChanges)) {
+      taskData.purchase = {
+        purchaseType: formData.purchase.purchaseType || "INQUIRY",
+        customerName:
+          formData.purchase.purchaseType === "INQUIRY"
+            ? formData.purchase.customerName || ""
             : null,
-
-        siteId:
-          formData.siteId && formData.siteId > 0
-            ? formData.siteId
+        address:
+          formData.purchase.purchaseType === "INQUIRY"
+            ? formData.purchase.address || ""
             : null,
-
-        status: taskStatus,
-        createdBy: actualUserName,
-        createdAt: formData.createdAt,
-        description: formData.description,
-        title: formData.title,
-
-        contacts: cleanArray(savedContacts, (c: any) => ({
-          contactName: c.contactName,
-          contactNumber: c.contactNumber,
-          contactEmail: c.contactEmail,
-        })),
-
-        workscopeDetails: savedWorkscopeDetails.length > 0
-          ? savedWorkscopeDetails.map(w => ({
-            workscopeCategoryId: Number(w.workscopeCategoryId),
-            workscopeDetails: w.workscopeDetails,
-            extraNote: w.extraNote || "",
-          }))
-          : undefined,
-
-        schedule: cleanArray(savedSchedule, (s: any) => ({
-          proposedDateTime: s.proposedDateTime,
-          priority: s.priority,
-        })),
-
-        remarks: remarksToSave.length > 0 ? remarksToSave : undefined,
-
-        taskType: isPurchaseDepartment
-          ? ((formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY"
-            ? "PRODUCT_INQUIRY"
-            : "PURCHASE_ORDER")
-          : "SERVICE",
-
-        taskInventories: inventories.length
-          ? inventories.map(inv => ({
-            serviceContractId: 0,
-            productTypeId: Number(inv.productTypeId),
-            makeModel: inv.makeModel,
-            snMac: inv.snMac,
-            description: inv.description,
-            purchaseDate: inv.purchaseDate,
-            warrantyPeriod: inv.warrantyPeriod,
-            thirdPartyPurchase: inv.thirdPartyPurchase,
-            warrantyStatus: inv.warrantyStatus
-              ? String(inv.warrantyStatus).trim()
-              : "Active",
+        products: hasProducts
+          ? formData.purchase.products.map((p: any) => ({
+            make: p.make || null,
+            model: p.model || null,
+            description: p.description || null,
+            warranty: p.warranty || null,
+            rate: p.rate === "" || p.rate == null ? null : Number(p.rate),
+            vendor: p.vendor || null,
+            validity:
+              formData.purchase && formData.purchase.purchaseType === "INQUIRY" && p.validity
+                ? p.validity
+                : null,
+            availability:
+              formData.purchase && formData.purchase.purchaseType === "INQUIRY"
+                ? p.availability || null
+                : null,
           }))
           : undefined,
       };
-
-      /* ---------------------------------------------------
-         🔥 PURCHASE PAYLOAD — ADD CONDITIONALLY (CRITICAL)
-      --------------------------------------------------- */
-
-      // RULE:
-      // ✔ CREATE → require products
-      // ✔ UPDATE → send purchase ONLY if products exist
-      // ❌ NEVER send empty purchase on update
-
-      const hasProducts =
-        Array.isArray(formData.purchase?.products) &&
-        formData.purchase.products.length > 0;
-
-      const hasPurchaseMetaChanges =
-        !!formData.purchase?.customerName ||
-        !!formData.purchase?.address ||
-        !!formData.purchase?.purchaseType;
-
-      // 🔥 SEND PURCHASE IF ANY PURCHASE DATA EXISTS
-      if (isPurchaseDepartment && formData.purchase && (hasProducts || hasPurchaseMetaChanges)) {
-        taskData.purchase = {
-          purchaseType: formData.purchase.purchaseType || "INQUIRY",
-
-          customerName:
-            formData.purchase.purchaseType === "INQUIRY"
-              ? formData.purchase.customerName || ""
-              : null,
-
-          address:
-            formData.purchase.purchaseType === "INQUIRY"
-              ? formData.purchase.address || ""
-              : null,
-
-          // 🔥 IMPORTANT: send products ONLY if present
-          products: hasProducts
-            ? formData.purchase.products.map((p: any) => ({
-              make: p.make || null,
-              model: p.model || null,
-              description: p.description || null,
-              warranty: p.warranty || null,
-              rate: p.rate === "" || p.rate == null ? null : Number(p.rate),
-              vendor: p.vendor || null,
-              validity:
-                formData.purchase && formData.purchase.purchaseType === "INQUIRY" && p.validity
-                  ? p.validity
-                  : null,
-              availability:
-                formData.purchase && formData.purchase.purchaseType === "INQUIRY"
-                  ? p.availability || null
-                  : null,
-            }))
-            : undefined, // 🔥 THIS IS THE KEY
-        };
-      }
-
-
-      const url = editingId
-        ? `http://localhost:8000/task/${editingId}`
-        : `http://localhost:8000/task`;
-
-      const method = editingId ? "PATCH" : "POST";
-
-      const token = getAuthToken();
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(taskData),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save task: ${errorText}`);
-      }
-
-      const savedTask = await response.json();
-
-      // 🔥 Upload attachment if present
-      if (purchaseFile && savedTask?.id) {
-        const attachmentFormData = new FormData();
-        attachmentFormData.append("file", purchaseFile);
-
-        await fetch(
-          `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: attachmentFormData,
-          }
-        );
-      }
-
-      await fetchTasks();
-      alert("Task saved successfully!");
-      handleCloseModal();
-      setPurchaseFile(null);
-    } catch (err) {
-      console.error("Save error:", err);
-      setError(err instanceof Error ? err.message : "Failed to save task");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const url = editingId
+      ? `http://localhost:8000/task/${editingId}`
+      : `http://localhost:8000/task`;
+
+    const method = editingId ? "PATCH" : "POST";
+    const token = getAuthToken();
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(taskData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to save task: ${errorText}`);
+    }
+
+    const savedTask = await response.json();
+
+    // 🔥 Upload attachment if present
+    if (purchaseFile && savedTask?.id) {
+      const attachmentFormData = new FormData();
+      attachmentFormData.append("file", purchaseFile);
+
+      await fetch(
+        `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: attachmentFormData,
+        }
+      );
+    }
+
+    // ✅ Auto-close modal after successful save
+    handleCloseModal();
+    
+    // ✅ Show success message
+    setSuccessMessage(editingId ? "Task updated successfully!" : "Task created successfully!");
+    setSuccessOpen(true);
+    
+    // ✅ Reset file and refresh tasks
+    setPurchaseFile(null);
+    await fetchTasks();
+    
+    // ✅ Reset loading state
+    setLoading(false);
+    
+  } catch (err) {
+    console.error("Save error:", err);
+    setError(err instanceof Error ? err.message : "Failed to save task");
+    setLoading(false);
+  }
+};
 
   const handleAddRemarkInModal = async (remark: string, status: string) => {
     if (!selectedTask) return;
@@ -3539,7 +3538,7 @@ export default function TasksPage() {
             <button
               onClick={handleOpenModal}
               disabled={!taskPermissions.create}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${taskPermissions.create
+              className={`px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 ${taskPermissions.create
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
@@ -3561,6 +3560,33 @@ export default function TasksPage() {
             className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 text-sm bg-white text-gray-800 focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
+
+        {/* ✅ Success Modal */}
+{/* ✅ Success Modal */}
+{successOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-2">Success</h2>
+      <p className="text-gray-700 mb-6">
+        {successMessage}
+      </p>
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => {
+            setSuccessOpen(false);
+            setSuccessMessage(null);
+            // Only refresh tasks, modal is already closed
+            fetchTasks();
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Tasks Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -3806,6 +3832,7 @@ export default function TasksPage() {
 
         {/* Task Modal */}
         <TaskModal
+         loading={loading}
           purchaseFile={purchaseFile}
           setPurchaseFile={setPurchaseFile}
           savedPurchaseAttachments={savedPurchaseAttachments}

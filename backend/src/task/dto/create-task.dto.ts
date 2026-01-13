@@ -99,12 +99,15 @@ export class TaskInventoryDto {
 
 export class CreateTaskDto {
   @IsInt()
+  @IsOptional()
   departmentId: number;
 
   @IsInt()
+  @IsOptional()
   addressBookId: number;
 
   @IsInt()
+  @IsOptional()
   siteId: number;
 
   @IsOptional()
