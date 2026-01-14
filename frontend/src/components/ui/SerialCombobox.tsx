@@ -117,7 +117,7 @@ React.useEffect(() => {
                       setOpen(false);
                       setInput(""); // Clear search input after selection
                     }}
-                    className="flex items-center px-3 py-2 hover:bg-blue-100 cursor-pointer rounded-md transition-all"
+                    className="flex items-center px-3 py-2 text-black hover:bg-blue-100 cursor-pointer rounded-md transition-all"
                   >
                     <Check
                       className={cn(

@@ -42,9 +42,19 @@ export function CustomerCombobox({
   React.useEffect(() => {
     async function fetchCustomers() {
       try {
-        const res = await fetch("http://localhost:8000/customers");
-        const data = await res.json();
-        setCustomers(data);
+        const res = await fetch("http://localhost:8000/address-book");
+const data = await res.json();
+
+if (Array.isArray(data)) {
+  setCustomers(data);
+} else if (Array.isArray(data.customers)) {
+  setCustomers(data.customers);
+} else if (Array.isArray(data.data)) {
+  setCustomers(data.data);
+} else {
+  console.error("Unexpected customers response shape:", data);
+  setCustomers([]);
+}
       } catch (error) {
         console.error("Failed to fetch customers:", error);
       }
@@ -68,23 +78,23 @@ export function CustomerCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[300px] justify-between text-left font-medium bg-white border border-gray-300 shadow-sm hover:shadow-md rounded-lg px-4 py-2 text-black"
+          className="w-[300px] justify-between text-black text-left font-medium bg-white border border-gray-300 shadow-sm hover:shadow-md rounded-lg px-4 py-2 text-black"
         >
           {selectedLabel || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-4 w-4 text-black shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0  border border-gray-300 bg-white shadow-lg rounded-lg">
+      <PopoverContent className="w-[300px] p-0 text-black  border border-gray-300 bg-white shadow-lg rounded-lg">
         <Command>
           <CommandInput
             placeholder="Type to search customer..."
             value={input}
             onValueChange={setInput}
-            className="px-3 py-2 text-sm focus:outline-none"
+            className="px-3 py-2 text-sm text-black focus:outline-none"
           />
-          <CommandList className="max-h-60 overflow-y-auto">
+          <CommandList className="max-h-60 text-black overflow-y-auto">
             {input.length === 0 ? (
-              <div className="p-3 text-sm text-gray-500">
+              <div className="p-3 text-sm text-black">
                 Start typing to see suggestions...
               </div>
             ) : filteredCustomers.length === 0 ? (
@@ -100,7 +110,7 @@ export function CustomerCombobox({
                       setOpen(false);
                       setInput(""); // reset search input
                     }}
-                    className="flex items-center px-3 py-2 hover:bg-blue-100 cursor-pointer rounded-md transition-all"
+                    className="flex items-center px-3 py-2 text-black hover:bg-blue-100 cursor-pointer rounded-md transition-all"
                   >
                     <Check
                       className={cn(

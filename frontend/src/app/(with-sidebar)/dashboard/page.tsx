@@ -14,12 +14,31 @@ interface Task {
   id: number;
   status: string;
   createdAt: string;
+  userId?: number | null;
+  departmentId?: number | null;
+  createdBy?: number | null;
+  createdById?: number | null;
+  created_by?: number | null;
+  created_by_id?: number | null;
 }
 
 interface TaskRemark {
   taskId: number;
   status: string;
   createdAt: string;
+}
+
+interface UserInfo {
+  id: number;
+  username: string;
+  fullName: string;
+  userType: string;
+  departmentId?: number | null;
+  addressBookId?: number | null;
+  department?: {
+    id: number;
+    departmentName: string;
+  } | null;
 }
 
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'all' | 'custom';
@@ -81,6 +100,30 @@ export default function Dashboard() {
   // Permissions
   const { permissions, loading: permissionsLoading, refreshPermissions } = useDashboardPermissions();
   const router = useRouter();
+
+  // Logged user information
+  const [loggedUserInfo, setLoggedUserInfo] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+  // Debug: Show logged user info when it changes
+  if (loggedUserInfo) {
+  console.log("👤 Logged User Info Updated:", loggedUserInfo);
+  }
+}, [loggedUserInfo]);
+
+useEffect(() => {
+  // Debug: Show task filtering results
+  console.log("🔍 DEBUG - Task Filtering Stats:", {
+    allTasksCount: allTasks.length,
+    filteredTasksCount: filteredTasks.length,
+    departmentTasks: allTasks.filter(t => t.departmentId === loggedUserInfo?.departmentId).length,
+    userCreatedTasks: allTasks.filter(t => 
+      t.userId === loggedUserInfo?.id || 
+      t.createdBy === loggedUserInfo?.id ||
+      t.createdById === loggedUserInfo?.id
+    ).length
+  });
+}, [allTasks, filteredTasks, loggedUserInfo]);
 
   // Helper to get date range boundaries
   const getDateRange = (range: DateRange, customStart?: string, customEnd?: string) => {
@@ -231,6 +274,159 @@ export default function Dashboard() {
     }
   };
 
+  // Load logged user info with department
+ const loadLoggedUserInfo = async () => {
+  try {
+    const token = localStorage.getItem("access_token");
+    const storedUserId = Number(localStorage.getItem("userId"));
+    const storedUserType = localStorage.getItem("userType");
+    
+    if (!token || !storedUserId || Number.isNaN(storedUserId)) {
+      console.warn("Missing access_token or userId in localStorage");
+      return;
+    }
+
+    console.log("🔄 Loading user info for userId:", storedUserId);
+
+    // Fetch users list
+    const usersRes = await fetch("http://localhost:8000/auth/users", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!usersRes.ok) {
+      console.warn("Failed to fetch users list:", usersRes.status);
+      return;
+    }
+
+    const users = await usersRes.json();
+    console.log("📋 All users from API:", users);
+
+    const loggedUser = users?.find((u: any) => Number(u.id) === storedUserId);
+
+    if (!loggedUser) {
+      console.warn("Logged user not found in /auth/users list");
+      return;
+    }
+
+    console.log("✅ Found logged user:", loggedUser);
+
+    // Now fetch departments list to match department name with department ID
+    const departmentsRes = await fetch("http://localhost:8000/department", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    let departmentId: number | null = null;
+    let departmentObj: any = null;
+
+    if (departmentsRes.ok) {
+      const departments = await departmentsRes.json();
+      console.log("📋 All departments:", departments);
+      
+      // Find department by name from user data
+      if (loggedUser.department && typeof loggedUser.department === 'string') {
+        const foundDept = departments.find((d: any) => 
+          d.departmentName === loggedUser.department
+        );
+        
+        if (foundDept) {
+          departmentId = foundDept.id;
+          departmentObj = foundDept;
+          console.log(`✅ Matched department "${loggedUser.department}" to ID: ${departmentId}`);
+        } else {
+          console.warn(`❌ Department "${loggedUser.department}" not found in departments list`);
+        }
+      }
+    }
+
+    // Extract user info
+    const userInfo: UserInfo = {
+      id: loggedUser.id,
+      username: loggedUser.username,
+      fullName: loggedUser.fullName,
+      userType: loggedUser.userType,
+      departmentId: departmentId,
+      addressBookId: loggedUser.addressBookId || loggedUser.address_book_id || null,
+      department: departmentObj
+    };
+
+    console.log("✅ FINAL User Info with Department Mapping:", userInfo);
+    
+ 
+    
+    // Cache in localStorage
+    localStorage.setItem("userData", JSON.stringify(userInfo));
+    if (userInfo.departmentId) {
+      localStorage.setItem("departmentId", String(userInfo.departmentId));
+    }
+    if (userInfo.department?.departmentName) {
+      localStorage.setItem("departmentName", userInfo.department.departmentName);
+    }
+    
+    setLoggedUserInfo(userInfo);
+  } catch (err) {
+    console.error("Error loading logged user info:", err);
+  }
+};
+
+  // Filter tasks based on user permissions and department
+ // Filter tasks based on user permissions and department
+const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
+  if (!loggedUserInfo) return tasks;
+  
+  const isSuperAdmin = loggedUserInfo.userType?.toUpperCase() === "SUPERADMIN";
+  const isAdmin = loggedUserInfo.userType?.toUpperCase() === "ADMIN";
+  
+  // SUPERADMIN sees all tasks
+  if (isSuperAdmin) {
+    console.log("👑 SUPERADMIN: Showing all tasks");
+    return tasks;
+  }
+  
+  // ADMIN might see all or department-specific based on your rules
+  if (isAdmin) {
+    console.log("👔 ADMIN: Showing all tasks");
+    return tasks;
+  }
+  
+  // Regular users: filter by userId OR departmentId
+  const filteredTasks = tasks.filter((task: any) => {
+    // Extract task's userId from various possible field names
+    const taskUserId = 
+      task.userId ?? 
+      task.createdBy ?? 
+      task.createdById ?? 
+      task.created_by ?? 
+      task.created_by_id ?? 
+      null;
+    
+    // Extract task's departmentId
+    const taskDepartmentId =
+      task.departmentId ??
+      task.department_id ??
+      task.department?.id ??
+      task.department?.departmentId ??
+      task.department?.department_id ??
+      null;
+    
+    // User created the task
+    const createdByMe = loggedUserInfo.id != null && 
+                       taskUserId != null && 
+                       Number(taskUserId) === Number(loggedUserInfo.id);
+    
+    // Task belongs to user's department
+    const sameDepartment = loggedUserInfo.departmentId != null && 
+                          taskDepartmentId != null && 
+                          Number(taskDepartmentId) === Number(loggedUserInfo.departmentId);
+    
+    return createdByMe || sameDepartment;
+  });
+
+  console.log(`🔍 User Filter Results: ${filteredTasks.length} of ${tasks.length} tasks visible`);
+  console.log(`   User Dept ID: ${loggedUserInfo.departmentId}, User ID: ${loggedUserInfo.id}`);
+  
+  return filteredTasks;
+};
+
   // Fetch all data
   const fetchDashboardData = async () => {
     try {
@@ -263,7 +459,6 @@ export default function Dashboard() {
         departmentData,
         productTypeData,
         workscopeData,
-
       ] = originalResults.map((result, index) => {
         if (result.status === 'fulfilled') {
           return result.value;
@@ -287,8 +482,18 @@ export default function Dashboard() {
         const taskResponse = await fetch("http://localhost:8000/task");
         if (taskResponse.ok) {
           const tasksArray = await taskResponse.json();
-          setAllTasks(Array.isArray(tasksArray) ? tasksArray : []);
-          setTotalTasks(Array.isArray(tasksArray) ? tasksArray.length : 0);
+          const allTasksRaw = Array.isArray(tasksArray) ? tasksArray : [];
+
+          // Apply user-based filtering
+          const visibleTasks = filterTasksByUserAccess(allTasksRaw);
+          
+          setAllTasks(visibleTasks);
+          setTotalTasks(visibleTasks.length);
+          
+          // Apply date filter
+          updateTaskFilter(dateFilter, visibleTasks);
+          
+          console.log(`Tasks filtered: ${visibleTasks.length} of ${allTasksRaw.length} visible to user`);
         } else {
           setAllTasks([]);
           setTotalTasks(0);
@@ -312,9 +517,6 @@ export default function Dashboard() {
         console.error("Failed to fetch task remarks:", error);
         setAllRemarks([]);
       }
-
-      // Apply initial filter
-      updateTaskFilter(dateFilter);
 
       // Fetch inventory data if permission exists
       if (permissions.inventory) {
@@ -385,8 +587,9 @@ export default function Dashboard() {
   };
 
   // Update task filter
-  const updateTaskFilter = (filter: DateFilter) => {
-    const filtered = filterTasksByDate(allTasks, filter);
+  const updateTaskFilter = (filter: DateFilter, tasksToUse: Task[] = allTasks) => {
+    const filtered = filterTasksByDate(tasksToUse, filter);
+
     setFilteredTasks(filtered);
     setDateFilter(filter);
     
@@ -525,14 +728,54 @@ export default function Dashboard() {
     }).format(value);
   };
 
-useEffect(() => {
-  if (!permissionsLoading) {
-    fetchDashboardData();
-  }
-}, [permissionsLoading, permissions]);
+  // Show user info in header
+  const renderUserInfo = () => {
+    if (!loggedUserInfo) return null;
 
 
-  // StatCard Component
+    
+    
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+            <span className="text-blue-600 font-medium">
+              {loggedUserInfo.fullName?.charAt(0) || 'U'}
+            </span>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {loggedUserInfo.fullName}
+            </div>
+            <div className="text-xs text-gray-600">
+              {loggedUserInfo.department?.departmentName || 'No Department'} • 
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                loggedUserInfo.userType === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
+                loggedUserInfo.userType === 'ADMIN' ? 'bg-blue-100 text-blue-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {loggedUserInfo.userType}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    // Load user info once
+    loadLoggedUserInfo();
+  }, []);
+
+  useEffect(() => {
+    // Fetch data when permissions are loaded and user info is available
+    if (!permissionsLoading && loggedUserInfo) {
+      fetchDashboardData();
+    }
+  }, [permissionsLoading, permissions, loggedUserInfo]);
+
+  // StatCard Component (keep as is)
   const StatCard = ({ 
     title, 
     value, 
@@ -608,7 +851,7 @@ useEffect(() => {
     );
   };
 
-  // Inventory Cards Array
+  // Inventory Cards Array (keep as is)
   const inventoryCards = [
     { 
       title: "Vendors", 
@@ -676,7 +919,7 @@ useEffect(() => {
     },
   ];
 
-  // Status Indicator Component
+  // Status Indicator Component (keep as is)
   const StatusIndicator = ({ status, count, color }: any) => (
     <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center gap-3">
@@ -717,7 +960,7 @@ useEffect(() => {
           </div>
           
           <div className="flex items-center gap-3">
-
+            {renderUserInfo()}
             
             <div className="text-sm text-gray-500">
               Data updated just now
@@ -726,6 +969,7 @@ useEffect(() => {
               onClick={() => {
                 fetchDashboardData();
                 refreshPermissions();
+                loadLoggedUserInfo(); // Refresh user info too
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
@@ -758,7 +1002,7 @@ useEffect(() => {
       )}
 
       {/* No Permissions Message */}
-{!permissionsLoading && !loading && !permissions.hasAnyPermission && (
+      {!permissionsLoading && !loading && !permissions.hasAnyPermission && (
         <div className="bg-white rounded-2xl shadow-lg p-12 text-center mb-8">
           <div className="text-5xl mb-4">🔒</div>
           <h3 className="text-2xl font-bold text-gray-800 mb-2">No Dashboard Access</h3>
@@ -785,10 +1029,9 @@ useEffect(() => {
 
       {/* Main Statistics Grid */}
       <DashboardSection
-  requiredPermission="metrics"
-  permissions={permissions}
->
-
+        requiredPermission="metrics"
+        permissions={permissions}
+      >
         <div className="mb-10">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Key Metrics</h2>
@@ -828,18 +1071,18 @@ useEffect(() => {
               color="#374151"
               onClick={() => router.push("/tasks")}
               icon={TrendingUp}
-              subtitle="All time tasks"
+              subtitle={`${loggedUserInfo?.department?.departmentName || 'Your'} tasks`}
               trend={taskTrend}
             />
           </div>
         </div>
       </DashboardSection>
 
+      {/* Rest of the code remains the same... */}
       {/* Inventory & Business Metrics */}
       <DashboardSection 
         requiredPermission="inventory" 
         permissions={permissions}
-       
       >
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-8">
@@ -886,7 +1129,6 @@ useEffect(() => {
       <DashboardSection 
         requiredPermission="tasks" 
         permissions={permissions}
-       
       >
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           {/* Task Header with Filter Controls */}
@@ -904,6 +1146,11 @@ useEffect(() => {
                 <span className="text-sm">
                   ({filteredTasks.length} of {totalTasks} tasks)
                 </span>
+                {loggedUserInfo?.department && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                    Dept: {loggedUserInfo.department.departmentName}
+                  </span>
+                )}
               </div>
             </div>
             
@@ -1035,6 +1282,9 @@ useEffect(() => {
                 <h3 className="text-lg font-semibold">Task Summary</h3>
                 <div className="text-sm opacity-90">
                   {dateFilter.range === 'custom' ? 'Custom Range' : 'Current Period'}
+                  {loggedUserInfo?.department && (
+                    <div className="mt-1">Department: {loggedUserInfo.department.departmentName}</div>
+                  )}
                 </div>
               </div>
               

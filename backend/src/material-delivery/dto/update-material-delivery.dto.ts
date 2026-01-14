@@ -22,6 +22,12 @@ class UpdateMaterialDeliveryItemDto {
   id?: number; // optional if updating existing items
 }
 
+export enum DeliveryType {
+  Sale = 'Sale',
+  Demo = 'Demo',
+  PurchaseReturn = 'Purchase Return',
+}
+
 
 export class UpdateMaterialDeliveryDto {
   @IsOptional()

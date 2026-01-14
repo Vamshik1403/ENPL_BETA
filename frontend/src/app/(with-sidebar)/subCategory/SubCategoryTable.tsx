@@ -25,9 +25,9 @@ const SubCategoryTable: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof SubCategory | null; direction: "asc" | "desc" }>({
-  key: null,
-  direction: "asc",
-});
+    key: null,
+    direction: "asc",
+  });
 
   const [formData, setFormData] = useState({
     categoryId: 0, // Initially empty
@@ -84,6 +84,7 @@ const SubCategoryTable: React.FC = () => {
   //  Create or Update a subcategory
   // Open Create Modal
   const openCreateModal = () => {
+    setSelectedSubCategory(null);
     setFormData({
       categoryId: 0,
       subCategoryName: "",
@@ -100,7 +101,7 @@ const SubCategoryTable: React.FC = () => {
 
     const suffix =
       fullId.startsWith(`${categoryCode}-`) &&
-      fullId.length > categoryCode.length + 1
+        fullId.length > categoryCode.length + 1
         ? fullId.slice(categoryCode.length + 1) // grab only what's after `${categoryCode}-`
         : "";
 
@@ -151,6 +152,7 @@ const SubCategoryTable: React.FC = () => {
       fetchSubCategories();
       setIsCreateModalOpen(false);
       setIsUpdateModalOpen(false);
+      setSelectedSubCategory(null);
       setFormData({
         categoryId: 0,
         subCategoryName: "",
@@ -170,33 +172,33 @@ const SubCategoryTable: React.FC = () => {
   }, []);
 
   const handleSort = (key: keyof SubCategory) => {
-  let direction: "asc" | "desc" = "asc";
-  if (sortConfig.key === key && sortConfig.direction === "asc") {
-    direction = "desc";
-  }
-  setSortConfig({ key, direction });
-};
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
   const filteredCategories = subCategories
-  .filter(
-    (subCategory) =>
-      subCategory.subCategoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subCategory.category.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .sort((a, b) => {
-    if (!sortConfig.key) return 0;
+    .filter(
+      (subCategory) =>
+        subCategory.subCategoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subCategory.category.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortConfig.key) return 0;
 
-    const getValue = (obj: SubCategory, key: keyof SubCategory) => {
-      if (key === "category") return obj.category.categoryName.toLowerCase();
-      return (obj[key] as string)?.toString().toLowerCase();
-    };
+      const getValue = (obj: SubCategory, key: keyof SubCategory) => {
+        if (key === "category") return obj.category.categoryName.toLowerCase();
+        return (obj[key] as string)?.toString().toLowerCase();
+      };
 
-    const aVal = getValue(a, sortConfig.key);
-    const bVal = getValue(b, sortConfig.key);
+      const aVal = getValue(a, sortConfig.key);
+      const bVal = getValue(b, sortConfig.key);
 
-    if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
 
 
   const indexOfLastUser = currentPage * itemsPerPage;
@@ -209,167 +211,166 @@ const SubCategoryTable: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
-  <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
-   
-        <div className="flex justify-between items-center mb-5 mt-16">
-          <button
-            onClick={openCreateModal}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
-          >
-            Add Product Subcategory
-          </button>
-          <div className="relative w-full md:w-64">
-            <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
-              <FaSearch />
-            </span>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
-            />
-          </div>
+    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+
+      <div className="flex justify-between items-center mb-5 mt-16">
+        <button
+          onClick={openCreateModal}
+          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
+        >
+          Add Product Subcategory
+        </button>
+        <div className="relative w-full md:w-64">
+          <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+            <FaSearch />
+          </span>
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
+          />
         </div>
+      </div>
 
-<div className="bg-white rounded-xl shadow-md overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-    <h2 className="text-xl font-semibold text-white">Sub Categories</h2>
-  </div>
-            <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
-           <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
-  <tr className="bg-gray-200">
-<th
-  className="border border-gray-300 p-2 cursor-pointer select-none"
-  onClick={() => handleSort("subCategoryId")}
->
-  Sub Category Id{" "}
-  <span className="ml-1">
-    <span className={sortConfig.key === "subCategoryId" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▲
-    </span>
-    <span className={sortConfig.key === "subCategoryId" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▼
-    </span>
-  </span>
-</th>
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+          <h2 className="text-xl font-semibold text-white">Sub Categories</h2>
+        </div>
+        <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
+          <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+            <tr className="bg-gray-200">
+              <th
+                className="border border-gray-300 p-2 cursor-pointer select-none"
+                onClick={() => handleSort("subCategoryId")}
+              >
+                Sub Category Id{" "}
+                <span className="ml-1">
+                  <span className={sortConfig.key === "subCategoryId" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▲
+                  </span>
+                  <span className={sortConfig.key === "subCategoryId" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▼
+                  </span>
+                </span>
+              </th>
 
-<th
-  className="border border-gray-300 p-2 cursor-pointer select-none"
-  onClick={() => handleSort("category")}
->
-  Category Name{" "}
-  <span className="ml-1">
-    <span className={sortConfig.key === "category" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▲
-    </span>
-    <span className={sortConfig.key === "category" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▼
-    </span>
-  </span>
-</th>
+              <th
+                className="border border-gray-300 p-2 cursor-pointer select-none"
+                onClick={() => handleSort("category")}
+              >
+                Category Name{" "}
+                <span className="ml-1">
+                  <span className={sortConfig.key === "category" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▲
+                  </span>
+                  <span className={sortConfig.key === "category" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▼
+                  </span>
+                </span>
+              </th>
 
-<th
-  className="border border-gray-300 p-2 cursor-pointer select-none"
-  onClick={() => handleSort("subCategoryName")}
->
-  Sub Category Name{" "}
-  <span className="ml-1">
-    <span className={sortConfig.key === "subCategoryName" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▲
-    </span>
-    <span className={sortConfig.key === "subCategoryName" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
-      ▼
-    </span>
-  </span>
-</th>
+              <th
+                className="border border-gray-300 p-2 cursor-pointer select-none"
+                onClick={() => handleSort("subCategoryName")}
+              >
+                Sub Category Name{" "}
+                <span className="ml-1">
+                  <span className={sortConfig.key === "subCategoryName" && sortConfig.direction === "asc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▲
+                  </span>
+                  <span className={sortConfig.key === "subCategoryName" && sortConfig.direction === "desc" ? "font-bold text-blue-600" : "text-gray-400"}>
+                    ▼
+                  </span>
+                </span>
+              </th>
 
-    <th className="border border-gray-300 p-2">Actions</th>
-  </tr>
-</thead>
+              <th className="border border-gray-300 p-2">Actions</th>
+            </tr>
+          </thead>
 
-            <tbody>
-              {currentSubcategories.length > 0 ? (
-                currentSubcategories.map((subCategory) => (
-                  <tr
-                    key={subCategory.subCategoryId}
-                    className="hover:bg-gray-100"
-                  >
-                    <td className="border border-gray-300 p-2">
-                      {subCategory.subCategoryId}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      {subCategory.category.categoryName}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      {subCategory.subCategoryName}
-                    </td>
-                    <td className="border border-gray-300 p-2 text-center">
-                      <div className="flex justify-center items-center gap-3">
-                        <button
-                          onClick={() => openUpdateModal(subCategory)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Edit"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(subCategory.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Delete"
-                        >
-                          <FaTrashAlt />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="p-3 text-gray-500">
-                    No subcategories available.
+          <tbody>
+            {currentSubcategories.length > 0 ? (
+              currentSubcategories.map((subCategory) => (
+                <tr
+                  key={subCategory.subCategoryId}
+                  className="hover:bg-gray-100"
+                >
+                  <td className="border border-gray-300 p-2">
+                    {subCategory.subCategoryId}
+                  </td>
+                  <td className="border border-gray-300 p-2">
+                    {subCategory.category.categoryName}
+                  </td>
+                  <td className="border border-gray-300 p-2">
+                    {subCategory.subCategoryName}
+                  </td>
+                  <td className="border border-gray-300 p-2 text-center">
+                    <div className="flex justify-center items-center gap-3">
+                      <button
+                        onClick={() => openUpdateModal(subCategory)}
+                        className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(subCategory.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
+                        title="Delete"
+                      >
+                        <FaTrashAlt />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="p-3 text-gray-500">
+                  No subcategories available.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={() => paginate(currentPage - 1)}
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          {/* Page Numbers */}
-          {[...Array(Math.ceil(filteredCategories.length / itemsPerPage))].map(
-            (_, index) => (
-              <button
-                key={index}
-                onClick={() => paginate(index + 1)}
-                className={`mx-1 px-4 py-2 rounded ${
-                  currentPage === index + 1
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-300 text-gray-700"
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => paginate(currentPage - 1)}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+        {/* Page Numbers */}
+        {[...Array(Math.ceil(filteredCategories.length / itemsPerPage))].map(
+          (_, index) => (
+            <button
+              key={index}
+              onClick={() => paginate(index + 1)}
+              className={`mx-1 px-4 py-2 rounded ${currentPage === index + 1
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-300 text-gray-700"
                 } hover:bg-blue-400`}
-              >
-                {index + 1}
-              </button>
-            )
-          )}
-          <button
-            onClick={() => paginate(currentPage + 1)}
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
-            disabled={
-              currentPage ===
-              Math.ceil(filteredCategories.length / itemsPerPage)
-            }
-          >
-            Next
-          </button>
-        </div>
+            >
+              {index + 1}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => paginate(currentPage + 1)}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
+          disabled={
+            currentPage ===
+            Math.ceil(filteredCategories.length / itemsPerPage)
+          }
+        >
+          Next
+        </button>
+      </div>
 
       {/* Create/Update Subcategory Modal */}
       {(isCreateModalOpen || isUpdateModalOpen) && (
@@ -404,7 +405,7 @@ const SubCategoryTable: React.FC = () => {
                   className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="">Select Category</option>
+                  <option value="0">Select Category</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.categoryName}
@@ -487,15 +488,17 @@ const SubCategoryTable: React.FC = () => {
                   ? "Update Subcategory"
                   : "Create Subcategory"}
               </button>
-              <button
-                onClick={() => {
-                  setIsCreateModalOpen(false);
-                  setIsUpdateModalOpen(false);
-                }}
-                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
+           <button
+  onClick={() => {
+    setIsCreateModalOpen(false);
+    setIsUpdateModalOpen(false);
+    setSelectedSubCategory(null); // ✅ reset here too
+  }}
+  className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+>
+  Cancel
+</button>
+
             </div>
           </div>
         </div>

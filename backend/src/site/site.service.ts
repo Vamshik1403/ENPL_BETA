@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
@@ -45,12 +45,21 @@ export class SitesService {
     return this.prisma.site.findMany({ include: { contacts: true } });
   }
 
-  findOne(id: number): Promise<Site | null> {
-    return this.prisma.site.findUnique({
-      where: { id },
-      include: { contacts: true, addressBook:true, tasks: true },
-    });
+ findOne(id: number): Promise<Site | null> {
+  if (!id || Number.isNaN(id)) {
+    throw new BadRequestException("Site id is required");
   }
+
+  return this.prisma.site.findUnique({
+    where: { id },
+    include: {
+      contacts: true,
+      addressBook: true,
+      tasks: true,
+    },
+  });
+}
+
 
 findAllBasedOnCust(addressBookId?: string) {
   return this.prisma.site.findMany({

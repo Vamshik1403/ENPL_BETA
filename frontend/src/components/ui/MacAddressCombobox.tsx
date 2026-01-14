@@ -90,7 +90,7 @@ export default function MacAddressCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 mt-2 border border-gray-300 bg-white shadow-lg rounded-lg">
+      <PopoverContent className="w-[300px] text-black p-0 mt-2 border border-gray-300 bg-white shadow-lg rounded-lg">
         <Command>
           <CommandInput
             placeholder="Type to search MAC address..."
@@ -99,11 +99,11 @@ export default function MacAddressCombobox({
               setInput(value);
               onInputChange?.(value); 
             }}
-            className="px-3 py-2 text-sm focus:outline-none"
+            className="px-3 py-2 text-sm text-black focus:outline-none"
           />
-          <CommandList className="max-h-60 overflow-y-auto">
+          <CommandList className="max-h-60 text-black overflow-y-auto">
             {input.length === 0 ? (
-              <div className="p-3 text-sm text-gray-500">
+              <div className="p-3 text-sm text-black">
                 Start typing to see suggestions...
               </div>
             ) : filteredMacAddressNumbers.length === 0 ? (
@@ -119,7 +119,7 @@ export default function MacAddressCombobox({
                       setOpen(false);
                       setInput(""); // Clear search input after selection
                     }}
-                    className="flex items-center px-3 py-2 hover:bg-blue-100 cursor-pointer rounded-md transition-all"
+                    className="flex items-center px-3 py-2 text-black hover:bg-blue-100 cursor-pointer rounded-md transition-all"
                   >
                     <Check
                       className={cn(

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, ParseIntPipe } from '@nestjs/common';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { CreateSiteContactDto } from './dto/create-site-contact.dto';
 import { UpdateSiteContactDto } from './dto/update-site-contact.dto';
@@ -8,6 +8,11 @@ import { CreateSiteDto } from './dto/create-site.dto';
 @Controller('sites')
 export class SiteController {
   constructor(private readonly siteService: SitesService) {}
+
+   @Get(':id')
+findOne(@Param('id', ParseIntPipe) id: number) {
+  return this.siteService.findOne(id);
+}
 
     @Post()
   create(@Body() dto: CreateSiteDto) {
@@ -31,11 +36,7 @@ export class SiteController {
     return this.siteService.findAllBasedOnCust(addressBookId);
   }
   
-    @Get(':id')
-    findOne(@Param('id') id: string) {
-      return this.siteService.findOne(Number(id));
-    }
-  
+
 
   // Contact endpoints
   @Get(':id/contacts')

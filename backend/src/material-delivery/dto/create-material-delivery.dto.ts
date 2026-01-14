@@ -24,9 +24,11 @@ export class MaterialDeliveryItemDto {
 }
 
 export enum DeliveryType {
-  Customer = 'Customer',
-  Vendor = 'Vendor',
+  Sale = 'Sale',
+  Demo = 'Demo',
+  PurchaseReturn = 'Purchase Return',
 }
+
 
 export class CreateMaterialDeliveryDto {
   @IsEnum(DeliveryType)

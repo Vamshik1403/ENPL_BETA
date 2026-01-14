@@ -7,7 +7,8 @@ import { VendorCombobox } from "@/components/ui/VendorCombobox";
 import SerialCombobox from "@/components/ui/SerialCombobox";
 import MacAddressCombobox from "@/components/ui/MacAddressCombobox";
 import Papa from "papaparse";
-import { FaDownload, FaEdit, FaSearch, FaTrashAlt } from "react-icons/fa";
+import { FaDownload, FaEdit, FaSearch, FaTrashAlt, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { Plus, X } from "lucide-react";
 
 interface Vendor {
   id: number;
@@ -17,13 +18,13 @@ interface Vendor {
 interface Site {
   id: number;
   siteName: string;
-  customerId: number;
+  addressBookId: number;
 }
 
 interface Customer {
   id: number;
   customerName: string;
-  Sites: Site[];
+  sites: Site[];
 }
 
 interface Product {
@@ -93,106 +94,74 @@ const MaterialDeliveryForm: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Change as needed
+  const [itemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-
-  const headers = [
-    { label: "Delivery Type", key: "deliveryType" },
-    { label: "Delivery Challan", key: "deliveryChallan" },
-    { label: "Sales Order No", key: "salesOrderNo" },
-    { label: "Quotation No", key: "quotationNo" },
-    { label: "Purchase Invoice No", key: "purchaseInvoiceNo" },
-    { label: "Ref Number", key: "refNumber" },
-    { label: "Customer Name", key: "customerName" },
-    { label: "Site Name", key: "siteName" },
-    { label: "Vendor Name", key: "vendorName" },
-    { label: "Serial Number", key: "serialNumber" },
-    { label: "Product", key: "product" },
-    { label: "MAC Address", key: "macAddress" },
-    { label: "Actions", key: "actions" },
-  ];
-
-  const sortedDeliveries = React.useMemo(() => {
-    if (!sortField) return deliveryList;
-
-    return [...deliveryList].sort((a, b) => {
-      let aField = a[sortField as keyof typeof a];
-      let bField = b[sortField as keyof typeof b];
-
-      // Handle undefined or null
-      if (aField === undefined || aField === null) aField = "";
-      if (bField === undefined || bField === null) bField = "";
-
-      // Check if fields are dates — adjust if you have date columns
-      if (
-        sortField.toLowerCase().includes("date") ||
-        sortField.toLowerCase().includes("challan")
-      ) {
-        const dateA = new Date(aField).getTime();
-        const dateB = new Date(bField).getTime();
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      }
-
-      // Numeric compare if numbers
-      if (typeof aField === "number" && typeof bField === "number") {
-        return sortOrder === "asc" ? aField - bField : bField - aField;
-      }
-
-      // String compare fallback
-      return sortOrder === "asc"
-        ? String(aField).localeCompare(String(bField))
-        : String(bField).localeCompare(String(aField));
-    });
-  }, [deliveryList, sortField, sortOrder]);
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDeliveries = sortedDeliveries.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(sortedDeliveries.length / itemsPerPage);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [itemErrors, setItemErrors] = useState<Record<number, Record<string, string>>>({});
 
   const isSaleOrDemo =
     formData.deliveryType === "Sale" || formData.deliveryType === "Demo";
   const isPurchaseReturn = formData.deliveryType === "Purchase Return";
 
   useEffect(() => {
-    axios
-      .get("http://localhost:8000/address-book")
-      .then((res) => setCustomers(res.data));
-    axios
-      .get("http://localhost:8000/vendors")
-      .then((res) => setVendors(res.data));
-    axios
-      .get("http://localhost:8000/products")
-      .then((res) => setProducts(res.data));
-    axios
-      .get("http://localhost:8000/inventory")
-      .then((res) => setInventory(res.data));
-    fetchDeliveries(); // Fetch deliveries on component mount
+    fetchData();
   }, []);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/inventory").then((res) => {
-      console.log("Raw inventory response:", res.data); // ✅ log raw response
+    handleSearch(search);
+  }, [deliveryList, search]);
 
-      const flattened = res.data.flatMap((inv: any) =>
-        (inv.products || []).map((prod: any) => ({
-          id: prod.id,
-          serialNumber: prod.serialNumber,
-          macAddress: prod.macAddress,
-          productId: prod.productId,
-          product: prod.product,
-          vendorId: inv.vendorId,
-        }))
-      );
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        fetchCustomers(),
+        fetchVendors(),
+        fetchProducts(),
+        fetchInventory(),
+        fetchDeliveries(),
+      ]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      alert("Failed to load data. Please refresh the page.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setInventory(flattened);
-      setInventoryList(flattened);
-    });
-  }, []);
+  const fetchCustomers = async () => {
+    const res = await axios.get("http://localhost:8000/address-book");
+    setCustomers(res.data);
+  };
+
+  const fetchVendors = async () => {
+    const res = await axios.get("http://localhost:8000/vendors");
+    setVendors(res.data);
+  };
+
+  const fetchProducts = async () => {
+    const res = await axios.get("http://localhost:8000/products");
+    setProducts(res.data);
+  };
+
+  const fetchInventory = async () => {
+    const res = await axios.get("http://localhost:8000/inventory");
+    const flattened = res.data.flatMap((inv: any) =>
+      (inv.products || []).map((prod: any) => ({
+        id: prod.id,
+        serialNumber: prod.serialNumber,
+        macAddress: prod.macAddress,
+        productId: prod.productId,
+        product: prod.product,
+        vendorId: inv.vendorId,
+      }))
+    );
+    setInventory(flattened);
+    setInventoryList(flattened);
+  };
 
   const fetchDeliveries = async () => {
     const res = await axios.get("http://localhost:8000/material-delivery");
@@ -203,12 +172,64 @@ const MaterialDeliveryForm: React.FC = () => {
     const selectedCustomer = customers.find(
       (c) => c.id === formData.customerId
     );
+
     if (selectedCustomer) {
-      setSites(selectedCustomer.Sites || []);
+      setSites(selectedCustomer.sites || []);
     } else {
       setSites([]);
     }
+
+    setFormData((prev) => ({ ...prev, siteId: undefined }));
   }, [formData.customerId, customers]);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    const newItemErrors: Record<number, Record<string, string>> = {};
+
+    // Validate form fields
+    if (!formData.deliveryType) {
+      newErrors.deliveryType = "Delivery type is required";
+    }
+
+    if (isSaleOrDemo && !formData.customerId) {
+      newErrors.customerId = "Customer is required for Sale or Demo";
+    }
+
+    if (isSaleOrDemo && formData.customerId && !formData.siteId) {
+      newErrors.siteId = "Site is required when customer is selected";
+    }
+
+    if (isPurchaseReturn && !formData.vendorId) {
+      newErrors.vendorId = "Vendor is required for Purchase Return";
+    }
+
+    // Validate items
+    if (items.length === 0) {
+      newErrors.items = "At least one item is required";
+    }
+
+    items.forEach((item, index) => {
+      const itemError: Record<string, string> = {};
+      
+      if (!item.serialNumber?.trim() && !item.macAddress?.trim()) {
+        itemError.serialNumber = "Either Serial Number or MAC Address is required";
+        itemError.macAddress = "Either Serial Number or MAC Address is required";
+      }
+
+      if (!item.productId) {
+        itemError.productId = "Product is required";
+      }
+
+      if (Object.keys(itemError).length > 0) {
+        newItemErrors[index] = itemError;
+      }
+    });
+
+    setErrors(newErrors);
+    setItemErrors(newItemErrors);
+    
+    return Object.keys(newErrors).length === 0 && Object.keys(newItemErrors).length === 0;
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -222,74 +243,88 @@ const MaterialDeliveryForm: React.FC = () => {
           ? parseInt(value)
           : name === "siteId" && value === ""
           ? undefined
-          : value, // Allow undefined siteId
+          : value,
     }));
+
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleDownloadCSV = () => {
-    if (!deliveryList.length) return;
+    if (deliveryList.length === 0) {
+      alert("No delivery data to download.");
+      return;
+    }
 
-    // Flatten all sites from all customers
-    const allSites: Site[] = customers.flatMap((c) => c.Sites || []);
+    try {
+      const allSites: Site[] = customers.flatMap((c) => c.sites || []);
 
-    const csvData = deliveryList.map((delivery) => {
-      const customerName =
-        customers.find((c) => c.id === delivery.customerId)?.customerName ||
-        "N/A";
+      const csvData = deliveryList.map((delivery) => {
+        const customerName =
+          customers.find((c) => c.id === delivery.customerId)?.customerName ||
+          "N/A";
 
-      const siteName =
-        allSites.find((s) => s.id === delivery.siteId)?.siteName || "N/A";
+        const siteName =
+          allSites.find((s) => s.id === delivery.siteId)?.siteName || "N/A";
 
-      const vendorName =
-        vendors.find((v) => v.id === delivery.vendorId)?.vendorName || "N/A";
+        const vendorName =
+          vendors.find((v) => v.id === delivery.vendorId)?.vendorName || "N/A";
 
-      const productDetails = (delivery.materialDeliveryItems || [])
-        .map((item: any) => {
-          const inventoryItem = inventory.find(
-            (inv) => inv.id === item.inventoryId
-          );
+        const productDetails = (delivery.materialDeliveryItems || [])
+          .map((item: any) => {
+            const inventoryItem = inventory.find(
+              (inv) => inv.id === item.inventoryId
+            );
 
-          const productName =
-            products.find((p) => p.id === item.productId)?.productName ||
-            inventoryItem?.product?.productName ||
-            "N/A";
+            const productName =
+              products.find((p) => p.id === item.productId)?.productName ||
+              inventoryItem?.product?.productName ||
+              "N/A";
 
-          const serial =
-            inventoryItem?.serialNumber || item.serialNumber || "N/A";
-          const mac = inventoryItem?.macAddress || item.macAddress || "N/A";
+            const serial =
+              inventoryItem?.serialNumber || item.serialNumber || "N/A";
+            const mac = inventoryItem?.macAddress || item.macAddress || "N/A";
 
-          return `${productName} (SN: ${serial}, MAC: ${mac})`;
-        })
-        .join("; ");
+            return `${productName} (SN: ${serial}, MAC: ${mac})`;
+          })
+          .join("; ");
 
-      return {
-        DeliveryType: delivery.deliveryType || "N/A",
-        RefNumber: delivery.refNumber ? `="${delivery.refNumber}"` : "N/A",
-        SalesOrderNo: delivery.salesOrderNo
-          ? `="${delivery.salesOrderNo}"`
-          : "N/A",
-        QuotationNo: delivery.quotationNo
-          ? `="${delivery.quotationNo}"`
-          : "N/A",
-        PurchaseInvoiceNo: delivery.purchaseInvoiceNo
-          ? `="${delivery.purchaseInvoiceNo}"`
-          : "N/A",
-        Customer: customerName,
-        Site: siteName,
-        Vendor: vendorName,
-        Products: productDetails || "N/A",
-      };
-    });
+        return {
+          DeliveryType: delivery.deliveryType || "N/A",
+          RefNumber: delivery.refNumber ? `="${delivery.refNumber}"` : "N/A",
+          SalesOrderNo: delivery.salesOrderNo
+            ? `="${delivery.salesOrderNo}"`
+            : "N/A",
+          QuotationNo: delivery.quotationNo
+            ? `="${delivery.quotationNo}"`
+            : "N/A",
+          PurchaseInvoiceNo: delivery.purchaseInvoiceNo
+            ? `="${delivery.purchaseInvoiceNo}"`
+            : "N/A",
+          DeliveryChallan: delivery.deliveryChallan || "N/A",
+          Customer: customerName,
+          Site: siteName,
+          Vendor: vendorName,
+          Products: productDetails || "N/A",
+        };
+      });
 
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const csv = Papa.unparse(csvData);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "material-deliveries.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `material_deliveries_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      alert("CSV downloaded successfully!");
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      alert("Failed to download CSV. Please try again.");
+    }
   };
 
   const handleItemChange = (
@@ -313,15 +348,29 @@ const MaterialDeliveryForm: React.FC = () => {
         updatedItems[index].inventoryId = found.id;
         updatedItems[index].serialNumber = found.serialNumber;
         updatedItems[index].macAddress = found.macAddress;
-        updatedItems[index].productName =
-          found.product?.productName || "Unknown";
+        updatedItems[index].productName = found.product?.productName || "Unknown";
         updatedItems[index].vendorId = found.vendorId;
-        updatedItems[index].customerId = formData.customerId || 0; // Set customerId from formData
-        updatedItems[index].siteId = formData.siteId || 0; // Set siteId from formData
+        updatedItems[index].customerId = formData.customerId || 0;
+        updatedItems[index].siteId = formData.siteId || 0;
       }
     }
 
     setItems(updatedItems);
+
+    // Clear error for this field
+    if (itemErrors[index]?.[field]) {
+      setItemErrors(prev => {
+        const newErrors = { ...prev };
+        if (newErrors[index]) {
+          newErrors[index] = { ...newErrors[index] };
+          delete newErrors[index][field];
+          if (Object.keys(newErrors[index]).length === 0) {
+            delete newErrors[index];
+          }
+        }
+        return newErrors;
+      });
+    }
   };
 
   const addItem = () => {
@@ -329,50 +378,66 @@ const MaterialDeliveryForm: React.FC = () => {
   };
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    if (items.length === 1) {
+      alert("At least one item is required");
+      return;
+    }
+    
+    const updatedItems = items.filter((_, i) => i !== index);
+    setItems(updatedItems);
+    
+    // Clear errors for removed item
+    setItemErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[index];
+      
+      // Re-index remaining errors
+      const reindexed: Record<number, Record<string, string>> = {};
+      Object.keys(newErrors).forEach(key => {
+        const numKey = parseInt(key);
+        if (numKey > index) {
+          reindexed[numKey - 1] = newErrors[numKey];
+        } else {
+          reindexed[numKey] = newErrors[numKey];
+        }
+      });
+      
+      return reindexed;
+    });
   };
 
   const handleSave = async () => {
-    const isEdit = !!formData.id;
-
-    if (!formData.deliveryType) {
-      alert("Please select a delivery type");
+    if (!validateForm()) {
+      alert("Please fix the errors in the form before submitting.");
       return;
     }
-
-    if (isSaleOrDemo && !formData.customerId) {
-      alert("Customer is required for Sale or Demo");
-      return;
-    }
-    if (isPurchaseReturn && !formData.vendorId) {
-      alert("Vendor is required for Purchase Return");
-      return;
-    }
-
-    // Map items array to include required fields
-    const payload = {
-      ...formData,
-      customerId: isSaleOrDemo ? formData.customerId : undefined,
-      siteId: formData.siteId ? formData.siteId : undefined, // Optional siteId
-      vendorId: isPurchaseReturn ? formData.vendorId : undefined,
-      materialDeliveryItems: items // Ensure this field includes all required item data
-        .filter((item) => item.inventoryId) // Ensure items with inventoryId are included
-        .map((item) => ({
-          inventoryId: item.inventoryId,
-          serialNumber: item.serialNumber, // Map serialNumber to serialNumber
-          macAddress: item.macAddress, // Map macAddress properly
-          productId: item.productId, // Ensure productId is mapped correctly
-          productName: item.productName || "Unknown", // Default value for missing productName
-        })),
-    };
 
     try {
-      if (isEdit) {
+      setSaving(true);
+      
+      // Map items array to include required fields
+      const payload = {
+        ...formData,
+        customerId: isSaleOrDemo ? formData.customerId : undefined,
+        siteId: formData.siteId ? formData.siteId : undefined,
+        vendorId: isPurchaseReturn ? formData.vendorId : undefined,
+        materialDeliveryItems: items
+          .filter((item) => item.inventoryId)
+          .map((item) => ({
+            inventoryId: item.inventoryId,
+            serialNumber: item.serialNumber,
+            macAddress: item.macAddress,
+            productId: item.productId,
+            productName: item.productName || "Unknown",
+          })),
+      };
+
+      if (formData.id) {
         await axios.put(
           `http://localhost:8000/material-delivery/${formData.id}`,
           payload
         );
-        alert("Delivery updated sucessfully!");
+        alert("Delivery updated successfully!");
       } else {
         await axios.post("http://localhost:8000/material-delivery", payload);
         alert("Delivery created successfully!");
@@ -381,11 +446,18 @@ const MaterialDeliveryForm: React.FC = () => {
       // Reset form and table after successful submission
       setFormData(initialFormData);
       setItems([{ serialNumber: "", macAddress: "", productId: 0 }]);
+      setErrors({});
+      setItemErrors({});
       fetchDeliveries();
       setIsModalOpen(false);
-    } catch (error) {
-      console.error(error);
-      alert("Error saving delivery");
+    } catch (error: any) {
+      console.error("Error saving delivery:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          "Error saving delivery. Please try again.";
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -431,479 +503,673 @@ const MaterialDeliveryForm: React.FC = () => {
       setItems([{ serialNumber: "", macAddress: "", productId: 0 }]);
     }
 
+    setErrors({});
+    setItemErrors({});
     setIsModalOpen(true);
   };
 
   const handleDelete = (id: any): void => {
-    if (confirm("Are you sure you want to delete this delivery?")) {
-      axios
-        .delete(`http://localhost:8000/material-delivery/${id}`)
-        .then(() => {
-          alert("Delivery deleted!");
-          fetchDeliveries();
-        })
-        .catch((error) => {
-          console.error(error);
-          alert("Error deleting delivery");
-        });
-    }
+    if (!confirm("Are you sure you want to delete this delivery?")) return;
+
+    axios
+      .delete(`http://localhost:8000/material-delivery/${id}`)
+      .then(() => {
+        alert("Delivery deleted successfully!");
+        fetchDeliveries();
+      })
+      .catch((error: any) => {
+        console.error(error);
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            "Error deleting delivery";
+        alert(errorMessage);
+      });
   };
 
+  const handleSearch = (query: string) => {
+    const lowerSearch = query.toLowerCase();
+    return deliveryList.filter((delivery) => {
+      return (
+        delivery.refNumber?.toLowerCase().includes(lowerSearch) ||
+        delivery.salesOrderNo?.toLowerCase().includes(lowerSearch) ||
+        delivery.quotationNo?.toLowerCase().includes(lowerSearch) ||
+        delivery.purchaseInvoiceNo?.toLowerCase().includes(lowerSearch) ||
+        delivery.deliveryChallan?.toLowerCase().includes(lowerSearch) ||
+        delivery.deliveryType?.toLowerCase().includes(lowerSearch) ||
+        delivery.addressBook?.customerName?.toLowerCase().includes(lowerSearch) ||
+        delivery.site?.siteName?.toLowerCase().includes(lowerSearch) ||
+        delivery.vendor?.vendorName?.toLowerCase().includes(lowerSearch) ||
+        delivery.materialDeliveryItems?.some((item: any) =>
+          item.serialNumber?.toLowerCase().includes(lowerSearch) ||
+          item.product?.productName?.toLowerCase().includes(lowerSearch)
+        )
+      );
+    });
+  };
+
+  const sortedDeliveries = React.useMemo(() => {
+    const filtered = handleSearch(search);
+    
+    if (!sortField) return filtered;
+
+    return [...filtered].sort((a, b) => {
+      let aField = a[sortField as keyof typeof a];
+      let bField = b[sortField as keyof typeof b];
+
+      // Handle undefined or null
+      if (aField === undefined || aField === null) aField = "";
+      if (bField === undefined || bField === null) bField = "";
+
+      // Check if fields are dates
+      if (
+        sortField.toLowerCase().includes("date") ||
+        sortField.toLowerCase().includes("challan")
+      ) {
+        const dateA = new Date(aField).getTime();
+        const dateB = new Date(bField).getTime();
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      }
+
+      // Numeric compare if numbers
+      if (typeof aField === "number" && typeof bField === "number") {
+        return sortOrder === "asc" ? aField - bField : bField - aField;
+      }
+
+      // String compare fallback
+      return sortOrder === "asc"
+        ? String(aField).localeCompare(String(bField))
+        : String(bField).localeCompare(String(aField));
+    });
+  }, [deliveryList, search, sortField, sortOrder]);
+
+  const handleSort = (key: string) => {
+    if (sortField === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(key);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (key: string) => {
+    if (sortField !== key) return <FaSort className="ml-1 text-gray-400" />;
+    return sortOrder === "asc" ? 
+      <FaSortUp className="ml-1 text-blue-600" /> : 
+      <FaSortDown className="ml-1 text-blue-600" />;
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentDeliveries = sortedDeliveries.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedDeliveries.length / itemsPerPage);
+
   return (
-    <>
+    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">Material Outward</h1>
+      </div>
 
-  <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold text-blue-900 mb-2">Material Outward</h1>
-    </div>
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <button
+          onClick={() => openModal()}
+          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full md:w-auto flex items-center justify-center gap-2"
+        >
+          <Plus size={20} />
+          Add Delivery
+        </button>
 
-    <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-
-          {/* Add Delivery button */}
-          <button
-            onClick={() => openModal()}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
-          >
-            Add Delivery
-          </button>
-
-          {/* Search + Download grouped */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="relative w-full md:w-64">
-              <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <FaSearch />
-              </span>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
-              />
-            </div>
-            <button
-              onClick={handleDownloadCSV}
-              title="Download CSV"
-              className="text-blue-600 hover:text-blue-800 text-xl"
-            >
-              <FaDownload />
-            </button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+              <FaSearch />
+            </span>
+            <input
+              type="text"
+              placeholder="Search by reference, customer, serial..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
+            />
           </div>
+          <button
+            onClick={handleDownloadCSV}
+            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
+            title="Download CSV"
+            disabled={deliveryList.length === 0}
+          >
+            <FaDownload />
+          </button>
         </div>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
-            <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
-              <tr>
-                {headers.map(({ label, key }) => (
-                  <th
-                    key={key}
-                    className={`border p-2 ${
-                      key !== "actions" ? "cursor-pointer select-none" : ""
-                    }`}
-                    onClick={() => {
-                      if (key === "actions") return; // no sorting on actions
-                      if (sortField === key) {
-                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                      } else {
-                        setSortField(key);
-                        setSortOrder("asc");
-                      }
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>{label}</span>
-                      {key !== "actions" && (
-                        <span className="flex flex-col text-xs leading-[10px]">
-                          <span
-                            style={{
-                              color:
-                                sortField === key && sortOrder === "asc"
-                                  ? "black"
-                                  : "lightgray",
-                              lineHeight: 0,
-                            }}
-                          >
-                            ▲
-                          </span>
-                          <span
-                            style={{
-                              color:
-                                sortField === key && sortOrder === "desc"
-                                  ? "black"
-                                  : "lightgray",
-                              lineHeight: 0,
-                            }}
-                          >
-                            ▼
-                          </span>
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {currentDeliveries
-                .filter((delivery) => {
-                  const lowerSearch = search.toLowerCase();
-                  return (
-                    delivery.refNumber?.toLowerCase().includes(lowerSearch) ||
-                    delivery.salesOrderNo
-                      ?.toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.quotationNo?.toLowerCase().includes(lowerSearch) ||
-                    delivery.purchaseInvoiceNo
-                      ?.toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.deliveryChallan
-                      ?.toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.materialDeliveryItems
-                      ?.map((item: any) => item.serialNumber)
-                      .join(", ")
-                      .toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.deliveryType
-                      ?.toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.customer?.customerName
-                      ?.toLowerCase()
-                      .includes(lowerSearch) ||
-                    delivery.vendor?.vendorName
-                      ?.toLowerCase()
-                      .includes(lowerSearch)
-                  );
-                })
-                .map((delivery) => (
-                  <tr key={delivery.id}>
-                    <td className="border p-2">{delivery.deliveryType}</td>
-                    <td className="border p-2">
-                      {delivery.deliveryChallan || "No Delivery Challan"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.salesOrderNo || "No Sales Order No"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.quotationNo || "No Quotation"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.purchaseInvoiceNo || "No Invoice"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.refNumber || "No Ref No"}
-                    </td>
-
-                    <td className="border p-2">
-                      {delivery.customer?.customerName || "No Customer"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.site?.siteName || "No Sites"}
-                    </td>
-                    <td className="border p-2">
-                      {delivery.vendor?.vendorName || "No Vendor"}
-                    </td>
-
-                    <td className="border p-2">
-                      {delivery.materialDeliveryItems
-                        ?.map((item: any, idx: number) => item.serialNumber)
-                        .join(", ") || "No Serial Number"}
-                    </td>
-
-                    <td className="border p-2">
-                      {delivery.materialDeliveryItems
-                        ?.map(
-                          (item: any, idx: number) => item.product?.productName
-                        )
-                        .join(", ") || "N/A"}
-                    </td>
-
-                    <td className="border p-2">
-                      {delivery.materialDeliveryItems
-                        ?.map((item: any, idx: number) => item.macAddress)
-                        .join(", ") || "N/A"}
-                    </td>
-
-                    <td className="border p-2 text-center">
-                      <div className="flex justify-center items-center gap-3">
-                        <button
-                          onClick={() => openModal(delivery)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Edit"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(delivery.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Delete"
-                        >
-                          <FaTrashAlt />
-                        </button>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+            <table className="w-full text-sm text-gray-700">
+              <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                <tr>
+                  {[
+                    { label: "Delivery Type", key: "deliveryType" },
+                    { label: "Delivery Challan", key: "deliveryChallan" },
+                    { label: "Sales Order", key: "salesOrderNo" },
+                    { label: "Quotation", key: "quotationNo" },
+                    { label: "Purchase Invoice", key: "purchaseInvoiceNo" },
+                    { label: "Ref Number", key: "refNumber" },
+                    { label: "Customer", key: "customer" },
+                    { label: "Site", key: "site" },
+                    { label: "Vendor", key: "vendor" },
+                    { label: "Products", key: "product" },
+                    { label: "Actions", key: "" },
+                  ].map(({ label, key }) => (
+                    <th
+                      key={key || "actions"}
+                      className={`p-4 border border-gray-300 text-left ${key !== "" ? "cursor-pointer select-none" : ""}`}
+                      onClick={() => key && handleSort(key)}
+                    >
+                      <div className="flex items-center">
+                        {label}
+                        {key && getSortIcon(key)}
                       </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {currentDeliveries.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="p-8 text-center text-gray-500">
+                      {search ? "No deliveries found matching your search." : "No deliveries found. Add your first delivery!"}
                     </td>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  currentDeliveries.map((delivery) => (
+                    <tr key={delivery.id} className="border-b hover:bg-gray-50">
+                      <td className="p-4 border border-gray-300">
+                        <span className={`px-3 py-1 rounded-full text-xs ${
+                          delivery.deliveryType === "Sale" 
+                            ? "bg-green-100 text-green-800"
+                            : delivery.deliveryType === "Demo"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}>
+                          {delivery.deliveryType}
+                        </span>
+                      </td>
+                      <td className="p-4 border border-gray-300 font-medium">
+                        {delivery.deliveryChallan || (
+                          <span className="text-gray-400">No Challan</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.salesOrderNo || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.quotationNo || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.purchaseInvoiceNo || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300 font-mono">
+                        {delivery.refNumber || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.addressBook?.customerName || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.site?.siteName || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        {delivery.vendor?.vendorName || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        <div className="flex flex-col gap-1">
+                          {delivery.materialDeliveryItems?.map((item: any, idx: number) => (
+                            <div key={idx} className="flex flex-col text-xs">
+                              <span className="font-medium">{item.product?.productName || "N/A"}</span>
+                              <div className="flex gap-2 text-gray-600">
+                                {item.serialNumber && (
+                                  <span className="font-mono">SN: {item.serialNumber}</span>
+                                )}
+                                {item.macAddress && (
+                                  <span className="font-mono">MAC: {item.macAddress}</span>
+                                )}
+                              </div>
+                            </div>
+                          )) || (
+                            <span className="text-gray-400">No items</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 border border-gray-300">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => openModal(delivery)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
+                            title="Edit"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(delivery.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
+                            title="Delete"
+                          >
+                            <FaTrashAlt />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="flex justify-center mt-4 gap-2">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setCurrentPage(i + 1)}
-              className={`px-3 py-1 border rounded ${
-                currentPage === i + 1 ? "bg-blue-600 text-white" : ""
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-
-        {isModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
-              {/* Modal Title */}
-              <h3 className="text-lg font-bold mb-4">
-                {formData.id ? "Edit Delivery" : "Add Delivery"}
-              </h3>
-
-              {/* Form Inputs for Create and Edit */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  name="deliveryType"
-                  value={formData.deliveryType}
-                  onChange={handleChange}
-                  className="border p-2 rounded"
+          {sortedDeliveries.length > 0 && (
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedDeliveries.length)} of {sortedDeliveries.length} deliveries
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <option value="">Select Delivery Type</option>
-                  <option value="Sale">Sale</option>
-                  <option value="Demo">Demo</option>
-                  <option value="Purchase Return">Purchase Return</option>
-                </select>
-
-                <input
-                  type="text"
-                  name="refNumber"
-                  placeholder="Reference Number"
-                  value={formData.refNumber || ""}
-                  onChange={handleChange}
-                  className="border p-2 rounded"
-                />
-
-                {isSaleOrDemo && (
-                  <CustomerCombobox
-                    selectedValue={formData.customerId ?? 0}
-                    onSelect={(value) =>
-                      setFormData({ ...formData, customerId: value })
-                    }
-                    placeholder="Select Customer"
-                  />
-                )}
-
-                {isSaleOrDemo && (
-                  <div className="mb-4">
-                    <select
-                      name="siteId"
-                      value={formData.siteId ?? ""}
-                      onChange={handleChange}
-                      className="border p-1.5 w-72 rounded"
-                    >
-                      <option value="">Select Customer's Site</option>
-                      {sites.map((site) => (
-                        <option key={site.id} value={site.id}>
-                          {site.siteName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {isPurchaseReturn && (
-                  <VendorCombobox
-                    selectedValue={formData.vendorId ?? 0}
-                    onSelect={(value) =>
-                      setFormData({ ...formData, vendorId: value })
-                    }
-                    placeholder="Select Vendor"
-                  />
-                )}
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
               </div>
+            </div>
+          )}
+        </>
+      )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <input
-                  type="text"
-                  name="salesOrderNo"
-                  placeholder="Sales Order No"
-                  value={formData.salesOrderNo || ""}
-                  onChange={handleChange}
-                  readOnly={formData.deliveryType !== "Sale"}
-                  className={`border p-2 rounded ${
-                    formData.deliveryType !== "Sale"
-                      ? "bg-gray-100 text-gray-500"
-                      : ""
-                  }`}
-                />
-
-                <input
-                  type="text"
-                  name="quotationNo"
-                  placeholder="Quotation No"
-                  value={formData.quotationNo || ""}
-                  onChange={handleChange}
-                  readOnly={formData.deliveryType !== "Demo"}
-                  className={`border p-2 rounded ${
-                    formData.deliveryType !== "Demo"
-                      ? "bg-gray-100 text-gray-500"
-                      : ""
-                  }`}
-                />
-
-                <input
-                  type="text"
-                  name="purchaseInvoiceNo"
-                  placeholder="Purchase Invoice No"
-                  value={formData.purchaseInvoiceNo || ""}
-                  onChange={handleChange}
-                  readOnly={formData.deliveryType !== "Purchase Return"}
-                  className={`border p-2 rounded ${
-                    formData.deliveryType !== "Purchase Return"
-                      ? "bg-gray-100 text-gray-500"
-                      : ""
-                  }`}
-                />
-              </div>
-
-              {/* Items Section */}
-              <div className="mt-6 space-y-4">
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-wrap gap-4 items-center"
-                  >
-                    <div className="flex-1 min-w-[200px]">
-                      <SerialCombobox
-                        selectedValue={item.inventoryId || 0}
-                        onSelect={(value) => {
-                          const selectedInventory = inventoryList.find(
-                            (inv) => inv.id === value
-                          );
-                          if (selectedInventory) {
-                            const updatedItems = [...items];
-                            updatedItems[index] = {
-                              serialNumber: selectedInventory.serialNumber,
-                              macAddress: selectedInventory.macAddress,
-                              productId: selectedInventory.productId,
-                              inventoryId: selectedInventory.id,
-                            };
-                            setItems(updatedItems);
-                          }
-                        }}
-                        onInputChange={(value) =>
-                          handleItemChange(index, "serialNumber", value)
-                        }
-                        placeholder="Select Serial Number"
-                      />
-                    </div>
-
-                    <MacAddressCombobox
-                      selectedValue={
-                        inventoryList.find(
-                          (inv) => inv.macAddress === item.macAddress
-                        )?.id || 0
-                      }
-                      onSelect={(value) => {
-                        const selectedInventory = inventoryList.find(
-                          (inv) => inv.id === value
-                        );
-                        if (selectedInventory) {
-                          const updated = [...items];
-                          updated[index] = {
-                            ...updated[index],
-                            macAddress: selectedInventory.macAddress,
-                            serialNumber: selectedInventory.serialNumber,
-                            productId: selectedInventory.productId,
-                            inventoryId: selectedInventory.id,
-                          };
-                          setItems(updated);
-                        }
-                      }}
-                      onInputChange={(value) =>
-                        handleItemChange(index, "macAddress", value)
-                      }
-                      placeholder="Select MAC Address"
-                    />
-
-                    <input
-                      type="text"
-                      readOnly
-                      value={
-                        products.find((p) => p.id === item.productId)
-                          ?.productName || ""
-                      }
-                      placeholder="Product Name"
-                      className="border p-2 rounded bg-gray-100 text-gray-800 flex-1 min-w-[250px]"
-                    />
-
-                    <button
-                      onClick={addItem}
-                      className="text-green-600 font-bold text-2xl px-2"
-                    >
-                      +
-                    </button>
-                    {items.length > 1 && (
-                      <button
-                        onClick={() => removeItem(index)}
-                        className="text-red-600 font-bold text-2xl px-2"
-                      >
-                        −
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="mt-6 flex justify-end gap-2">
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 md:p-8">
+              <div className="flex justify-between items-center mb-6 pb-4 border-b">
+                <h3 className="text-2xl font-bold text-indigo-700">
+                  {formData.id ? "✏️ Edit Delivery" : "➕ Add New Delivery"}
+                </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded bg-gray-300"
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  disabled={saving}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="overflow-y-auto max-h-[60vh] pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="deliveryType"
+                      value={formData.deliveryType}
+                      onChange={handleChange}
+                      className={`w-full p-3 border ${errors.deliveryType ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                    >
+                      <option value="">Select Delivery Type</option>
+                      <option value="Sale">Sale</option>
+                      <option value="Demo">Demo</option>
+                      <option value="Purchase Return">Purchase Return</option>
+                    </select>
+                    {errors.deliveryType && (
+                      <p className="mt-1 text-sm text-red-600">{errors.deliveryType}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reference Number
+                    </label>
+                    <input
+                      type="text"
+                      name="refNumber"
+                      placeholder="Enter reference number"
+                      value={formData.refNumber || ""}
+                      onChange={handleChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {isSaleOrDemo && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer <span className="text-red-500">*</span>
+                      </label>
+                      <CustomerCombobox
+                        selectedValue={formData.customerId ?? 0}
+                        onSelect={(value) => {
+                          setFormData({ ...formData, customerId: value });
+                          if (errors.customerId) {
+                            setErrors(prev => ({ ...prev, customerId: "" }));
+                          }
+                        }}
+                        placeholder="Select Customer"
+                      />
+                      {errors.customerId && (
+                        <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {isSaleOrDemo && formData.customerId && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Site <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="siteId"
+                        value={formData.siteId ?? ""}
+                        onChange={handleChange}
+                        className={`w-full p-3 border ${errors.siteId ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                      >
+                        <option value="">Select Site</option>
+                        {sites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.siteName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.siteId && (
+                        <p className="mt-1 text-sm text-red-600">{errors.siteId}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {isPurchaseReturn && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Vendor <span className="text-red-500">*</span>
+                      </label>
+                      <VendorCombobox
+                        selectedValue={formData.vendorId ?? 0}
+                        onSelect={(value) => {
+                          setFormData({ ...formData, vendorId: value });
+                          if (errors.vendorId) {
+                            setErrors(prev => ({ ...prev, vendorId: "" }));
+                          }
+                        }}
+                        placeholder="Select Vendor"
+                      />
+                      {errors.vendorId && (
+                        <p className="mt-1 text-sm text-red-600">{errors.vendorId}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sales Order No
+                    </label>
+                    <input
+                      type="text"
+                      name="salesOrderNo"
+                      placeholder="Sales Order No"
+                      value={formData.salesOrderNo || ""}
+                      onChange={handleChange}
+                      disabled={formData.deliveryType !== "Sale"}
+                      className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        formData.deliveryType !== "Sale" ? "bg-gray-100 text-gray-500" : ""
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quotation No
+                    </label>
+                    <input
+                      type="text"
+                      name="quotationNo"
+                      placeholder="Quotation No"
+                      value={formData.quotationNo || ""}
+                      onChange={handleChange}
+                      disabled={formData.deliveryType !== "Demo"}
+                      className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        formData.deliveryType !== "Demo" ? "bg-gray-100 text-gray-500" : ""
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Purchase Invoice No
+                    </label>
+                    <input
+                      type="text"
+                      name="purchaseInvoiceNo"
+                      placeholder="Purchase Invoice No"
+                      value={formData.purchaseInvoiceNo || ""}
+                      onChange={handleChange}
+                      disabled={formData.deliveryType !== "Purchase Return"}
+                      className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        formData.deliveryType !== "Purchase Return" ? "bg-gray-100 text-gray-500" : ""
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Items Section */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-blue-900">
+                      Items
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      <Plus size={16} />
+                      Add Item
+                    </button>
+                  </div>
+
+                  {items.map((item, index) => (
+                    <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <div className="flex justify-between items-center mb-4">
+                        <h5 className="font-medium text-gray-700">Item {index + 1}</h5>
+                        {items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Remove item"
+                          >
+                            <X size={18} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Serial Number
+                          </label>
+                          <SerialCombobox
+                            selectedValue={item.inventoryId || 0}
+                            onSelect={(value) => {
+                              const selectedInventory = inventoryList.find(
+                                (inv) => inv.id === value
+                              );
+                              if (selectedInventory) {
+                                const updatedItems = [...items];
+                                updatedItems[index] = {
+                                  ...updatedItems[index],
+                                  serialNumber: selectedInventory.serialNumber,
+                                  macAddress: selectedInventory.macAddress,
+                                  productId: selectedInventory.productId,
+                                  inventoryId: selectedInventory.id,
+                                };
+                                setItems(updatedItems);
+                                
+                                // Clear errors
+                                setItemErrors(prev => {
+                                  const newErrors = { ...prev };
+                                  if (newErrors[index]) {
+                                    newErrors[index] = { ...newErrors[index] };
+                                    delete newErrors[index].serialNumber;
+                                    delete newErrors[index].macAddress;
+                                    delete newErrors[index].productId;
+                                    if (Object.keys(newErrors[index]).length === 0) {
+                                      delete newErrors[index];
+                                    }
+                                  }
+                                  return newErrors;
+                                });
+                              }
+                            }}
+                            onInputChange={(value) =>
+                              handleItemChange(index, "serialNumber", value)
+                            }
+                            placeholder="Select Serial Number"
+                          />
+                          {itemErrors[index]?.serialNumber && (
+                            <p className="mt-1 text-sm text-red-600">{itemErrors[index]?.serialNumber}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            MAC Address
+                          </label>
+                          <MacAddressCombobox
+                            selectedValue={
+                              inventoryList.find(
+                                (inv) => inv.macAddress === item.macAddress
+                              )?.id || 0
+                            }
+                            onSelect={(value) => {
+                              const selectedInventory = inventoryList.find(
+                                (inv) => inv.id === value
+                              );
+                              if (selectedInventory) {
+                                const updated = [...items];
+                                updated[index] = {
+                                  ...updated[index],
+                                  macAddress: selectedInventory.macAddress,
+                                  serialNumber: selectedInventory.serialNumber,
+                                  productId: selectedInventory.productId,
+                                  inventoryId: selectedInventory.id,
+                                };
+                                setItems(updated);
+                                
+                                // Clear errors
+                                setItemErrors(prev => {
+                                  const newErrors = { ...prev };
+                                  if (newErrors[index]) {
+                                    newErrors[index] = { ...newErrors[index] };
+                                    delete newErrors[index].serialNumber;
+                                    delete newErrors[index].macAddress;
+                                    delete newErrors[index].productId;
+                                    if (Object.keys(newErrors[index]).length === 0) {
+                                      delete newErrors[index];
+                                    }
+                                  }
+                                  return newErrors;
+                                });
+                              }
+                            }}
+                            onInputChange={(value) =>
+                              handleItemChange(index, "macAddress", value)
+                            }
+                            placeholder="Select MAC Address"
+                          />
+                          {itemErrors[index]?.macAddress && (
+                            <p className="mt-1 text-sm text-red-600">{itemErrors[index]?.macAddress}</p>
+                          )}
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Product
+                          </label>
+                          <input
+                            type="text"
+                            readOnly
+                            value={
+                              products.find((p) => p.id === item.productId)
+                                ?.productName || ""
+                            }
+                            placeholder="Product Name (Auto-filled)"
+                            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-800"
+                          />
+                          {itemErrors[index]?.productId && (
+                            <p className="mt-1 text-sm text-red-600">{itemErrors[index]?.productId}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t flex justify-end gap-3">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                  disabled={saving}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 rounded bg-blue-600 text-white"
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-md flex items-center gap-2"
+                  disabled={saving}
                 >
-                  {formData.id ? "Update" : "Create"}
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {formData.id ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    formData.id ? "Update Delivery" : "Create Delivery"
+                  )}
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -74,8 +74,8 @@ const initialFormState: Vendor = {
   creditTerms: "",
   creditLimit: "",
   remark: "",
-  contacts: [emptyContact],
-  bankDetails: [emptyBank],
+  contacts: [{ ...emptyContact }],
+  bankDetails: [{ ...emptyBank }],
 };
 
 const VendorTable: React.FC = () => {
@@ -86,23 +86,34 @@ const VendorTable: React.FC = () => {
   const [formData, setFormData] = useState<Vendor>(initialFormState);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const itemsPerPage = 5;
 
   const fetchVendors = async () => {
-    const response = await axios.get("http://localhost:8000/vendors");
-    setVendors(response.data.reverse());
+    try {
+      setLoading(true);
+      const response = await axios.get("http://localhost:8000/vendors");
+      setVendors(response.data.reverse());
+    } catch (error) {
+      console.error("Failed to fetch vendors:", error);
+      alert("Failed to load vendors. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredVendors = vendors.filter((vendor) =>
     [
       vendor.vendorName,
       vendor.vendorCode,
-      vendor.products,
+      vendor.products?.join(", "),
       vendor.gstNo,
       vendor.state,
       vendor.businessType,
     ].some(
       (field) =>
+        field &&
         typeof field === "string" &&
         field.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -124,6 +135,7 @@ const VendorTable: React.FC = () => {
       setCategories(names);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
+      alert("Failed to load categories. Please refresh the page.");
     }
   };
 
@@ -132,44 +144,167 @@ const VendorTable: React.FC = () => {
     fetchCategories();
   }, []);
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // Required fields from Prisma model
+    const requiredFields = [
+      { key: "vendorName", label: "Vendor Name" },
+      { key: "registerAddress", label: "Register Address" },
+      { key: "gstNo", label: "GST Number" },
+      { key: "emailId", label: "Email ID" },
+      { key: "creditTerms", label: "Credit Terms" },
+      { key: "creditLimit", label: "Credit Limit" },
+    ];
+
+    requiredFields.forEach(({ key, label }) => {
+      const value = formData[key as keyof Vendor];
+      if (!value || (typeof value === "string" && !value.trim())) {
+        newErrors[key] = `${label} is required`;
+      }
+    });
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.emailId && !emailRegex.test(formData.emailId)) {
+      newErrors.emailId = "Please enter a valid email address";
+    }
+
+    // GST validation (basic format check)
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (formData.gstNo && !gstRegex.test(formData.gstNo)) {
+      newErrors.gstNo = "Please enter a valid GST number";
+    }
+
+    // Validate at least one contact
+    const validContacts = formData.contacts.filter(
+      (c) => c.firstName.trim() || c.lastName.trim() || c.contactPhoneNumber.trim()
+    );
+    if (validContacts.length === 0) {
+      newErrors.contacts = "At least one contact is required";
+    }
+
+    // Validate each contact
+    formData.contacts.forEach((contact, index) => {
+      if (contact.firstName.trim() || contact.lastName.trim() || contact.contactPhoneNumber.trim()) {
+        if (!contact.firstName.trim()) {
+          newErrors[`contacts[${index}].firstName`] = "First name is required";
+        }
+        if (!contact.lastName.trim()) {
+          newErrors[`contacts[${index}].lastName`] = "Last name is required";
+        }
+        if (!contact.contactPhoneNumber.trim()) {
+          newErrors[`contacts[${index}].contactPhoneNumber`] = "Phone number is required";
+        }
+        if (contact.contactEmailId && !emailRegex.test(contact.contactEmailId)) {
+          newErrors[`contacts[${index}].contactEmailId`] = "Invalid email format";
+        }
+      }
+    });
+
+    // Validate bank details (optional but if provided, validate)
+    formData.bankDetails.forEach((bank, index) => {
+      if (bank.accountNumber.trim() || bank.ifscCode.trim() || bank.bankName.trim()) {
+        if (!bank.accountNumber.trim()) {
+          newErrors[`bankDetails[${index}].accountNumber`] = "Account number is required";
+        }
+        if (!bank.ifscCode.trim()) {
+          newErrors[`bankDetails[${index}].ifscCode`] = "IFSC code is required";
+        }
+        if (!bank.bankName.trim()) {
+          newErrors[`bankDetails[${index}].bankName`] = "Bank name is required";
+        }
+        // IFSC code format validation
+        const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+        if (bank.ifscCode && !ifscRegex.test(bank.ifscCode)) {
+          newErrors[`bankDetails[${index}].ifscCode`] = "Invalid IFSC code format";
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    _field: string,
+    field: string,
     index?: number,
     type?: string
   ) => {
     const { name, value } = e.target;
-
-    if (type === "contact" && index !== undefined) {
-      const updated = [...formData.contacts];
-      updated[index][name as keyof VendorContact] = value;
-      setFormData((prev) => ({ ...prev, contacts: updated }));
-    } else if (type === "bank" && index !== undefined) {
-      const updated = [...formData.bankDetails];
-      updated[index][name as keyof BankDetail] = value;
-      setFormData((prev) => ({ ...prev, bankDetails: updated }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
+
+    // Handle contact fields
+    if (type === "contact" && index !== undefined) {
+      setFormData((prev) => ({
+        ...prev,
+        contacts: prev.contacts.map((contact, i) =>
+          i === index ? { ...contact, [name]: value || "" } : contact
+        ),
+      }));
+      return;
+    }
+
+    // Handle bank fields
+    if (type === "bank" && index !== undefined) {
+      setFormData((prev) => ({
+        ...prev,
+        bankDetails: prev.bankDetails.map((bank, i) =>
+          i === index ? { ...bank, [name]: value || "" } : bank
+        ),
+      }));
+      return;
+    }
+
+    // Handle normal fields - ensure value is never null
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: value || "" 
+    }));
   };
 
-  const addContact = () =>
+  const addContact = () => {
     setFormData((prev) => ({
       ...prev,
-      contacts: [...prev.contacts, emptyContact],
+      contacts: [...prev.contacts, { ...emptyContact }],
     }));
+    
+    // Clear contact errors when adding new contact
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      Object.keys(newErrors).forEach(key => {
+        if (key.startsWith('contacts[')) delete newErrors[key];
+      });
+      return newErrors;
+    });
+  };
 
   const removeContact = (index: number) => {
+    if (formData.contacts.length === 1) {
+      alert("At least one contact is required");
+      return;
+    }
+    
     const updated = [...formData.contacts];
     updated.splice(index, 1);
     setFormData((prev) => ({ ...prev, contacts: updated }));
   };
 
-  const addBank = () =>
+  const addBank = () => {
     setFormData((prev) => ({
       ...prev,
-      bankDetails: [...prev.bankDetails, emptyBank],
+      bankDetails: [...prev.bankDetails, { ...emptyBank }],
     }));
+  };
 
   const removeBank = (index: number) => {
     const updated = [...formData.bankDetails];
@@ -178,14 +313,54 @@ const VendorTable: React.FC = () => {
   };
 
   const handleEdit = (vendor: Vendor) => {
-    setFormData(vendor);
+    // Ensure all fields have string values, not null/undefined
+    const cleanedVendor: Vendor = {
+      ...vendor,
+      vendorName: vendor.vendorName || "",
+      registerAddress: vendor.registerAddress || "",
+      gstNo: vendor.gstNo || "",
+      businessType: vendor.businessType || "",
+      state: vendor.state || "",
+      city: vendor.city || "",
+      emailId: vendor.emailId || "",
+      website: vendor.website || "",
+      creditTerms: vendor.creditTerms || "",
+      creditLimit: vendor.creditLimit || "",
+      remark: vendor.remark || "",
+      products: vendor.products || [],
+      contacts: vendor.contacts?.map(contact => ({
+        ...emptyContact,
+        ...contact,
+        title: contact.title || "",
+        firstName: contact.firstName || "",
+        lastName: contact.lastName || "",
+        contactPhoneNumber: contact.contactPhoneNumber || "",
+        contactEmailId: contact.contactEmailId || "",
+        designation: contact.designation || "",
+        department: contact.department || "",
+        landlineNumber: contact.landlineNumber || "",
+      })) || [{ ...emptyContact }],
+      bankDetails: vendor.bankDetails?.map(bank => ({
+        ...emptyBank,
+        ...bank,
+        accountNumber: bank.accountNumber || "",
+        ifscCode: bank.ifscCode || "",
+        bankName: bank.bankName || "",
+        branchName: bank.branchName || "",
+      })) || [{ ...emptyBank }],
+    };
+    
+    setFormData(cleanedVendor);
+    setErrors({});
+    setGstPdfFile(null);
     setIsCreateModalOpen(true);
   };
 
   const handleDelete = async (id?: number) => {
     if (!id) return;
+    
     const confirm = window.confirm(
-      "Are you sure you want to delete this vendor?"
+      "Are you sure you want to delete this vendor? This action cannot be undone."
     );
     if (!confirm) return;
 
@@ -193,446 +368,563 @@ const VendorTable: React.FC = () => {
       await axios.delete(`http://localhost:8000/vendors/${id}`);
       alert("Vendor deleted successfully!");
       fetchVendors();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting vendor:", err);
-      alert("Failed to delete vendor.");
+      alert(err.response?.data?.message || "Failed to delete vendor.");
     }
   };
 
- const handleCreate = async () => {
-  // ✅ Validate required fields
-  const requiredFields = [
-    "vendorName",
-    "registerAddress",
-    "gstNo",
-    "state",
-    "city",
-    "emailId",
-    "creditTerms",
-    "creditLimit",
-  ];
-
-  const missingFields = requiredFields.filter(
-    (field) => !formData[field as keyof Vendor]?.toString().trim()
-  );
-
-  if (missingFields.length > 0) {
-    alert(`Please fill out the following fields: ${missingFields.join(", ")}`);
-    return;
-  }
-
-  // ✅ Validate contacts
-  const validContacts = formData.contacts.filter(
-    (c) =>
-      c.firstName.trim() || c.lastName.trim() || c.contactPhoneNumber.trim()
-  );
-  if (validContacts.length === 0) {
-    alert("Please add at least one valid contact.");
-    return;
-  }
-
-  // ✅ Validate bank details
-  const validBanks = formData.bankDetails.filter(
-    (b) => b.accountNumber.trim() || b.ifscCode.trim() || b.bankName.trim()
-  );
-
-  try {
-    // ✅ Construct FormData for both create and update
-    const payload = new FormData();
-
-    payload.append("vendorName", formData.vendorName);
-    payload.append("registerAddress", formData.registerAddress);
-    payload.append("gstNo", formData.gstNo);
-    payload.append("businessType", formData.businessType || "");
-    payload.append("state", formData.state);
-    payload.append("city", formData.city);
-    payload.append("emailId", formData.emailId);
-    payload.append("website", formData.website);
-    payload.append("creditTerms", formData.creditTerms);
-    payload.append("creditLimit", formData.creditLimit);
-    payload.append("remark", formData.remark);
-    payload.append("products", JSON.stringify(formData.products));
-    payload.append("contacts", JSON.stringify(validContacts));
-    payload.append("bankDetails", JSON.stringify(validBanks));
-
-    if (gstPdfFile) {
-      payload.append("gstCertificate", gstPdfFile);
+  const handleCreate = async () => {
+    if (!validateForm()) {
+      alert("Please fill all details before submit.");
+      return;
     }
 
-    // ✅ Choose endpoint based on whether it's create or update
-    if (formData.id) {
-      await axios.put(
-        `http://localhost:8000/vendors/${formData.id}`,
-        payload,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+    try {
+      const payload = new FormData();
+
+      // Add all required fields
+      payload.append("vendorName", formData.vendorName);
+      payload.append("registerAddress", formData.registerAddress);
+      payload.append("gstNo", formData.gstNo);
+      payload.append("businessType", formData.businessType || "");
+      payload.append("state", formData.state);
+      payload.append("city", formData.city);
+      payload.append("emailId", formData.emailId);
+      payload.append("website", formData.website);
+      payload.append("creditTerms", formData.creditTerms);
+      payload.append("creditLimit", formData.creditLimit);
+      payload.append("remark", formData.remark);
+      payload.append("products", JSON.stringify(formData.products));
+      
+      // Filter out empty contacts
+      const validContacts = formData.contacts.filter(
+        (c) => c.firstName.trim() || c.lastName.trim() || c.contactPhoneNumber.trim()
       );
-    } else {
-      await axios.post("http://localhost:8000/vendors", payload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    }
+      payload.append("contacts", JSON.stringify(validContacts));
+      
+      // Filter out empty bank details
+      const validBanks = formData.bankDetails.filter(
+        (b) => b.accountNumber.trim() || b.ifscCode.trim() || b.bankName.trim()
+      );
+      payload.append("bankDetails", JSON.stringify(validBanks));
 
-    // ✅ Success feedback
-    alert(
-      formData.id
-        ? "Vendor updated successfully!"
-        : "Vendor created successfully!"
-    );
-    setFormData(initialFormState);
-    setGstPdfFile(null); // Reset file
-    setIsCreateModalOpen(false);
-    fetchVendors();
-  } catch (err) {
-    console.error("Error saving vendor:", err);
-    alert("Failed to save vendor. Please try again.");
-  }
-};
+      if (gstPdfFile) {
+        payload.append("gstCertificate", gstPdfFile);
+      }
+
+      let response;
+      if (formData.id) {
+        response = await axios.put(
+          `http://localhost:8000/vendors/${formData.id}`,
+          payload,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+      } else {
+        response = await axios.post("http://localhost:8000/vendors", payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
+      alert(
+        formData.id
+          ? "Vendor updated successfully!"
+          : "Vendor created successfully!"
+      );
+      setFormData(initialFormState);
+      setGstPdfFile(null);
+      setErrors({});
+      setIsCreateModalOpen(false);
+      fetchVendors();
+    } catch (err: any) {
+      console.error("Error saving vendor:", err);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          "Failed to save vendor. Please try again.";
+      alert(errorMessage);
+    }
+  };
+
+  const getFieldValue = (fieldName: string): string => {
+    const value = formData[fieldName as keyof Vendor];
+    return value !== null && value !== undefined ? String(value) : "";
+  };
 
   return (
-  <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold text-blue-900 mb-2">Vendors</h1>
-    </div>
-
-    <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-
-  <button
-    onClick={() => {
-      setFormData(initialFormState); // clear form
-      setIsCreateModalOpen(true);
-    }}
-    className="bg-gradient-to-r cursor-pointer from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full md:w-auto"
-  >
-    Add Vendor  
-  </button>
-  
-  <div className="relative w-full md:w-64">
-    <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
-      <FaSearch />
-    </span>
-    <input
-      type="text"
-      placeholder="Search..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
-    />
-  </div>
-</div>
-
-
-      <div className="overflow-x-auto" style={{ maxWidth: "100vw" }}>
-        <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
-          <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
-            <tr>
-              <th className="p-2 border">Vendor ID</th>
-              <th className="p-2 border">Vendor Type</th>
-              <th className="p-2 border">Company Name</th>
-              <th className="p-2 border">GST No.</th>
-              <th className="p-2 border">State</th>
-              <th className="p-2 border">City</th>
-              <th className="p-2 border">Products</th>
-              <th className="p-2 border">GST Certificate</th>
-              <th className="p-2 border">Credit Terms</th>
-
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentVendors.map((vendor) => (
-              <tr key={vendor.id} className="border-b">
-                <td className="p-2 border">{vendor.vendorCode}</td>
-                <td className="p-2 border">{vendor.businessType}</td>
-                <td className="p-2 border">{vendor.vendorName || 'N/A'}</td>
-                <td className="p-2 border">{vendor.gstNo}</td>
-                <td className="p-2 border">{vendor.state}</td>
-                <td className="p-2 border">{vendor.city}</td>
-                <td className="p-2 border  text-yellow-800">
-                  {Array.isArray(vendor.products)
-                    ? vendor.products.map((p) => p).join(", ")
-                    : "N/A"}
-                </td>
-                <td className="p-2 border text-blue-900">
-                  {vendor.gstpdf ? (
-                    <a
-                      href={`http://localhost:8000/gst/${vendor.gstpdf}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View PDF
-                    </a>
-                  ) : (
-                    "No PDF"
-                  )}
-                </td>
-                <td className="p-2 border">{vendor.creditTerms}</td>
-
-                <td className="px-4 py-2 text-center space-x-2">
-                  <button
-                    onClick={() => handleEdit(vendor)}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                    title="Edit"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(vendor.id)}
-                    className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                    title="Delete"
-                  >
-                    <FaTrashAlt />
-                  </button>
-                </td>
-
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-blue-900 mb-2">Vendors</h1>
+        <p className="text-gray-600">Manage your vendor information and details</p>
       </div>
 
-      <div className="flex justify-center items-center mt-4 space-x-2">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+          onClick={() => {
+            setFormData(initialFormState);
+            setErrors({});
+            setGstPdfFile(null);
+            setIsCreateModalOpen(true);
+          }}
+          className="bg-gradient-to-r cursor-pointer from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full md:w-auto flex items-center justify-center gap-2"
         >
-          Prev
+          <Plus size={20} />
+          Add Vendor
         </button>
-
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <button
-            key={page}
-            onClick={() => setCurrentPage(page)}
-            className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-500 text-white" : "bg-gray-100"
-              } hover:bg-gray-200`}
-          >
-            {page}
-          </button>
-        ))}
-
-        <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-        >
-          Next
-        </button>
+        
+        <div className="relative w-full md:w-64">
+          <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+            <FaSearch />
+          </span>
+          <input
+            type="text"
+            placeholder="Search by name, GST, products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
+          />
+        </div>
       </div>
 
-      {isCreateModalOpen && (
-         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50">
-<div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-4xl animate-fadeIn">
-            <div className="overflow-auto max-h-[90vh]">
-                <h3 className="text-xl font-semibold mb-4 text-indigo-600">
-                  {formData.id ? "Edit Vendor" : "Create Vendor"}
-                </h3>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto" style={{ maxWidth: "100vw" }}>
+            <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
+              <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                <tr>
+                  <th className="p-4 border">Vendor ID</th>
+                  <th className="p-4 border">Vendor Type</th>
+                  <th className="p-4 border">Company Name</th>
+                  <th className="p-4 border">GST No.</th>
+                  <th className="p-4 border">State</th>
+                  <th className="p-4 border">City</th>
+                  <th className="p-4 border">Products</th>
+                  <th className="p-4 border">GST Certificate</th>
+                  <th className="p-4 border">Credit Terms</th>
+                  <th className="p-4 border">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentVendors.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="p-8 text-center text-gray-500">
+                      No vendors found. {searchQuery && "Try a different search."}
+                    </td>
+                  </tr>
+                ) : (
+                  currentVendors.map((vendor) => (
+                    <tr key={vendor.id} className="border-b hover:bg-gray-50">
+                      <td className="p-4 border font-mono">{vendor.vendorCode || 'N/A'}</td>
+                      <td className="p-4 border">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                          {vendor.businessType || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="p-4 border font-medium">{vendor.vendorName || 'N/A'}</td>
+                      <td className="p-4 border font-mono">{vendor.gstNo || 'N/A'}</td>
+                      <td className="p-4 border">{vendor.state || 'N/A'}</td>
+                      <td className="p-4 border">{vendor.city || 'N/A'}</td>
+                      <td className="p-4 border">
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(vendor.products) && vendor.products.length > 0 ? (
+                            vendor.products.slice(0, 3).map((p, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
+                                {p}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400">No products</span>
+                          )}
+                          {Array.isArray(vendor.products) && vendor.products.length > 3 && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                              +{vendor.products.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 border">
+                        {vendor.gstpdf ? (
+                          <a
+                            href={`http://localhost:8000/gst/${vendor.gstpdf}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                          >
+                            <span className="text-red-500">📄</span> View PDF
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">No PDF</span>
+                        )}
+                      </td>
+                      <td className="p-4 border font-medium">{vendor.creditTerms || 'N/A'}</td>
+                      <td className="p-4 border">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleEdit(vendor)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
+                            title="Edit"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(vendor.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
+                            title="Delete"
+                          >
+                            <FaTrashAlt />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-
-
-                <div className="mt-4">
-                  <label className="font-semibold block mb-2">
-                    Business Type
-                  </label>
-                  <select
-                    name="businessType"
-                    value={formData.businessType}
-                    onChange={(e) => handleInputChange(e, "businessType")}
-                    className="border p-2 rounded w-full"
-                  >
-                    <option value="">Select Business Type</option>
-                    <option value="OEM">OEM</option>
-                    <option value="ND">ND</option>
-                    <option value="RD">RD</option>
-                    <option value="Stockist">Stockist</option>
-                    <option value="Reseller">Reseller</option>
-                    <option value="System Integrator">System Integrator</option>
-                    <option value="Service Provider">Service Provider</option>
-                    <option value="Consultant">Consultant</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-
-                  {[
-                    "vendorName",
-                    "registerAddress",
-                    "state",
-                    "city",
-                    "gstNo",
-                    "emailId",
-                    "creditTerms",
-                    "creditLimit",
-                    "website",
-                    "remark",
-                  ].map((field) => (
-                    <input
-                      key={field}
-                      name={field}
-                      placeholder={field.replace(/([A-Z])/g, " $1")}
-                      value={(formData as any)[field]}
-                      onChange={(e) => handleInputChange(e, field)}
-                      className="border p-2 rounded"
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-4">
-  <label className="font-semibold block mb-2">
-    GST Certificate (PDF)
-  </label>
-
-  {/* File input for uploading new PDF */}
-  <input
-    type="file"
-    accept="application/pdf"
-    onChange={(e) => {
-      const file = e.target.files?.[0];
-      if (file && file.type === "application/pdf") {
-        setGstPdfFile(file);
-      } else {
-        alert("Please upload a valid PDF file.");
-      }
-    }}
-    className="block w-full border p-2 rounded"
-  />
-
-  {/* Show newly selected file name */}
-  {gstPdfFile && (
-    <p className="text-sm text-green-700 mt-1">{gstPdfFile.name}</p>
-  )}
-
-  {/* Show existing GST PDF link if editing and PDF exists */}
-  {!gstPdfFile && formData.gstpdf && (
-    <a
-      href={`http://localhost:8000/gst/${formData.gstpdf}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-blue-600 underline text-sm mt-2 block"
-    >
-      View existing GST certificate
-    </a>
-  )}
-</div>
-
-
-                <div className="mt-6">
-                  <label className="font-semibold block mb-2">
-                    Product Category
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {categories.map((category) => (
-                      <label
-                        key={category}
-                        className="inline-flex items-center"
-                      >
-                        <input
-                          type="checkbox"
-                          value={category}
-                          checked={formData.products.includes(category)}
-                          onChange={(e) => {
-                            const { checked, value } = e.target;
-                            setFormData((prev) => ({
-                              ...prev,
-                              products: checked
-                                ? [...prev.products, value]
-                                : prev.products.filter((p) => p !== value),
-                            }));
-                          }}
-                          className="mr-2"
-                        />
-                        <span>{category}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Contacts</h4>
-                    <button onClick={addContact} className="text-blue-600">
-                      <Plus size={20} />
-                    </button>
-                  </div>
-                  {formData.contacts.map((contact, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 items-center"
-                    >
-                      {Object.keys(emptyContact).map((key) => (
-                        <input
-                          key={key}
-                          name={key}
-                          placeholder={key.replace(/([A-Z])/g, " $1")}
-                          value={(contact as any)[key]}
-                          onChange={(e) =>
-                            handleInputChange(e, key, i, "contact")
-                          }
-                          className="border p-2 rounded"
-                        />
-                      ))}
-                      <button
-                        onClick={() => removeContact(i)}
-                        className="text-red-600"
-                      >
-                        -
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Bank Details</h4>
-                    <button onClick={addBank} className="text-blue-600">
-                      <Plus size={20} />
-                    </button>
-                  </div>
-                  {formData.bankDetails.map((bank, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 items-center"
-                    >
-                      {Object.keys(emptyBank).map((key) => (
-                        <input
-                          key={key}
-                          name={key}
-                          placeholder={key.replace(/([A-Z])/g, " $1")}
-                          value={(bank as any)[key]}
-                          onChange={(e) => handleInputChange(e, key, i, "bank")}
-                          className="border p-2 rounded"
-                        />
-                      ))}
-                      <button
-                        onClick={() => removeBank(i)}
-                        className="text-red-800 "
-                      >
-                        -
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end gap-2 mt-6">
-                  <button
-                    onClick={() => setIsCreateModalOpen(false)}
-                    className="px-4 py-2 rounded bg-gray-500 text-white"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreate}
-                    className="px-4 py-2 rounded bg-blue-600 text-white"
-                  >
-                    {formData.id ? "Update" : "Save"}
-                  </button>
-                </div>
+          {filteredVendors.length > 0 && (
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredVendors.length)} of {filteredVendors.length} vendors
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
               </div>
             </div>
+          )}
+        </>
+      )}
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b">
+              <h3 className="text-2xl font-bold text-indigo-700">
+                {formData.id ? "✏️ Edit Vendor" : "➕ Create New Vendor"}
+              </h3>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-2">
+              {errors.contacts && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600 font-medium">{errors.contacts}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information Section */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-blue-900 border-b pb-2">Basic Information</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Business Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="businessType"
+                      value={getFieldValue("businessType")}
+                      onChange={(e) => handleInputChange(e, "businessType")}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Business Type</option>
+                      <option value="OEM">OEM</option>
+                      <option value="ND">ND</option>
+                      <option value="RD">RD</option>
+                      <option value="Stockist">Stockist</option>
+                      <option value="Reseller">Reseller</option>
+                      <option value="System Integrator">System Integrator</option>
+                      <option value="Service Provider">Service Provider</option>
+                      <option value="Consultant">Consultant</option>
+                    </select>
+                  </div>
+
+                  {[
+                    { field: "vendorName", label: "Vendor Name", required: true },
+                    { field: "registerAddress", label: "Registered Address", required: true },
+                    { field: "state", label: "State", required: true },
+                    { field: "city", label: "City", required: true },
+                    { field: "gstNo", label: "GST Number", required: true },
+                    { field: "emailId", label: "Email ID", required: true, type: "email" },
+                    { field: "creditTerms", label: "Credit Terms", required: true },
+                    { field: "creditLimit", label: "Credit Limit", required: true },
+                    { field: "website", label: "Website", required: false },
+                    { field: "remark", label: "Remarks", required: false },
+                  ].map(({ field, label, required, type = "text" }) => (
+                    <div key={field}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {label} {required && <span className="text-red-500">*</span>}
+                      </label>
+                      <input
+                        type={type}
+                        name={field}
+                        placeholder={`Enter ${label.toLowerCase()}`}
+                        value={getFieldValue(field)}
+                        onChange={(e) => handleInputChange(e, field)}
+                        className={`w-full border ${errors[field] ? 'border-red-500' : 'border-gray-300'} rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                      />
+                      {errors[field] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* GST Certificate & Products Section */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-blue-900 border-b pb-2 mb-4">
+                      GST Certificate
+                    </h4>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors">
+                      <input
+                        type="file"
+                        id="gst-pdf"
+                        accept="application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.type === "application/pdf") {
+                              setGstPdfFile(file);
+                            } else {
+                              alert("Please upload only PDF files.");
+                            }
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <label htmlFor="gst-pdf" className="cursor-pointer">
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl mb-2">📄</span>
+                          <p className="text-sm text-gray-600">
+                            {gstPdfFile ? gstPdfFile.name : "Click to upload GST Certificate (PDF)"}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">Max size: 5MB</p>
+                        </div>
+                      </label>
+                    </div>
+                    {!gstPdfFile && formData.gstpdf && (
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 mb-1">Existing certificate:</p>
+                        <a
+                          href={`http://localhost:8000/gst/${formData.gstpdf}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          <span>📄</span> View GST Certificate
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-blue-900 border-b pb-2 mb-4">
+                      Product Categories
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2">
+                      {categories.map((category) => (
+                        <label
+                          key={category}
+                          className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            value={category}
+                            checked={formData.products.includes(category)}
+                            onChange={(e) => {
+                              const { checked, value } = e.target;
+                              setFormData((prev) => ({
+                                ...prev,
+                                products: checked
+                                  ? [...prev.products, value]
+                                  : prev.products.filter((p) => p !== value),
+                              }));
+                            }}
+                            className="mr-3 h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm">{category}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {formData.products.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 mb-1">Selected ({formData.products.length}):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.products.map((product) => (
+                            <span key={product} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                              {product}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Contacts Section */}
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-semibold text-blue-900">
+                    Contacts
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={addContact}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    <Plus size={16} /> Add Contact
+                  </button>
+                </div>
+                
+                {formData.contacts.map((contact, i) => (
+                  <div key={i} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <h5 className="font-medium text-gray-700">Contact {i + 1}</h5>
+                      {formData.contacts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeContact(i)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Remove Contact
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Object.keys(emptyContact).map((key) => {
+                        const fieldName = key as keyof VendorContact;
+                        const label = key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
+                        const required = ["firstName", "lastName", "contactPhoneNumber"].includes(key);
+                        
+                        return (
+                          <div key={key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              {label} {required && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                              name={key}
+                              placeholder={`Enter ${label.toLowerCase()}`}
+                              value={contact[fieldName] || ""}
+                              onChange={(e) => handleInputChange(e, key, i, "contact")}
+                              className={`w-full border ${errors[`contacts[${i}].${key}`] ? 'border-red-500' : 'border-gray-300'} rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                            />
+                            {errors[`contacts[${i}].${key}`] && (
+                              <p className="mt-1 text-xs text-red-600">{errors[`contacts[${i}].${key}`]}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bank Details Section */}
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-semibold text-blue-900">
+                    Bank Details
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={addBank}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    <Plus size={16} /> Add Bank
+                  </button>
+                </div>
+                
+                {formData.bankDetails.map((bank, i) => (
+                  <div key={i} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <h5 className="font-medium text-gray-700">Bank Account {i + 1}</h5>
+                      {formData.bankDetails.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeBank(i)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Remove Bank
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Object.keys(emptyBank).map((key) => {
+                        const fieldName = key as keyof BankDetail;
+                        const label = key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
+                        const required = ["accountNumber", "ifscCode", "bankName"].includes(key);
+                        
+                        return (
+                          <div key={key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              {label} {required && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                              name={key}
+                              placeholder={`Enter ${label.toLowerCase()}`}
+                              value={bank[fieldName] || ""}
+                              onChange={(e) => handleInputChange(e, key, i, "bank")}
+                              className={`w-full border ${errors[`bankDetails[${i}].${key}`] ? 'border-red-500' : 'border-gray-300'} rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                            />
+                            {errors[`bankDetails[${i}].${key}`] && (
+                              <p className="mt-1 text-xs text-red-600">{errors[`bankDetails[${i}].${key}`]}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setErrors({});
+                }}
+                className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-md"
+              >
+                {formData.id ? "Update Vendor" : "Create Vendor"}
+              </button>
+            </div>
           </div>
+        </div>
       )}
     </div>
   );
