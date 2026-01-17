@@ -199,26 +199,64 @@ const VendorPaymentTable: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      if (formData.id) {
-        await axios.put(
-          `http://localhost:8000/vendor-payment/${formData.id}`,
-          formData
-        );
-        alert("Payment updated sucessfully!");
-      } else {
-        await axios.post("http://localhost:8000/vendor-payment", formData);
-        alert("Payment added successfully!");
-      }
-      setFormData(initialFormState);
-      setIsModalOpen(false);
-      fetchPayments();
-    } catch (err) {
-      console.error(err);
-      alert("fill all mandatory data");
+ const handleSave = async () => {
+  try {
+    // ✅ basic validation
+    if (!formData.vendorId || Number(formData.vendorId) <= 0) {
+      alert("Please select Vendor");
+      return;
     }
-  };
+
+    if (!formData.purchaseInvoiceNo) {
+      alert("Please enter Purchase Invoice No");
+      return;
+    }
+
+    if (!formData.paymentDate) {
+      alert("Please select Payment Date");
+      return;
+    }
+
+    // ✅ send ONLY required dto fields
+    const payload = {
+      vendorId: Number(formData.vendorId),
+      purchaseInvoiceNo: formData.purchaseInvoiceNo,
+      invoiceGrossAmount: formData.invoiceGrossAmount,
+      dueAmount: formData.dueAmount,
+      paidAmount: formData.paidAmount,
+      balanceDue: formData.balanceDue ? formData.balanceDue : undefined,
+      paymentDate: formData.paymentDate,
+      paymentType: formData.paymentType,
+      referenceNo: formData.referenceNo,
+      remark: formData.remark ? formData.remark : undefined,
+    };
+
+    if (formData.id) {
+      await axios.put(
+        `http://localhost:8000/vendor-payment/${formData.id}`,
+        payload
+      );
+      alert("Payment updated successfully!");
+    } else {
+      await axios.post("http://localhost:8000/vendor-payment", payload);
+      alert("Payment added successfully!");
+    }
+
+    setFormData(initialFormState);
+    setIsModalOpen(false);
+    fetchPayments();
+  } catch (err: any) {
+    console.error("SAVE ERROR:", err);
+    console.error("BACKEND ERROR:", err?.response?.data);
+
+    alert(
+      err?.response?.data?.message
+        ? JSON.stringify(err.response.data.message)
+        : "Request failed"
+    );
+  }
+};
+
 
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm(

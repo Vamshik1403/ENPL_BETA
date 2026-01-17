@@ -817,43 +817,63 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Sales Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Customer Name */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Customer Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.customerName || ''}
-                          onChange={(e) =>
-                            onFormDataChange({ ...formData, customerName: e.target.value })
-                          }
-                          placeholder="Enter customer name"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                          required
-                        />
-                      </div>
+                    <div>
+  <label className="block text-sm font-medium text-gray-900 mb-1">
+    Customer Name *
+  </label>
+
+  <input
+    type="text"
+    value={formData.purchase?.customerName || ""}
+    onChange={(e) =>
+      onFormDataChange({
+        ...formData,
+        purchase: {
+          ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+          purchaseType: "INQUIRY",
+          customerName: e.target.value, // ✅ correct field
+          address: formData.purchase?.address || "",
+          products: formData.purchase?.products || [],
+        },
+      })
+    }
+    placeholder="Enter customer name"
+    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+    required
+  />
+</div>
 
                       {/* Address */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Address *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.address || ''}
-                          onChange={(e) =>
-                            onFormDataChange({ ...formData, address: e.target.value })
-                          }
-                          placeholder="Enter address"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                          required
-                        />
-                      </div>
+                 <div>
+  <label className="block text-sm font-medium text-gray-900 mb-1">
+    Address *
+  </label>
 
-                      {/* Contact Name */}
-                      <div>
+  <input
+    type="text"
+    value={formData.purchase?.address || ""}
+    onChange={(e) =>
+      onFormDataChange({
+        ...formData,
+        purchase: {
+          ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+          purchaseType: "INQUIRY",
+          customerName: formData.purchase?.customerName || "",
+          address: e.target.value, // ✅ correct field
+          products: formData.purchase?.products || [],
+        },
+      })
+    }
+    placeholder="Enter address"
+    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+    required
+  />
+</div>
+
+
+                      {/* <div>
                         <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Contact Name *
+                          Contact Name demooooooo *
                         </label>
                         <input
                           type="text"
@@ -867,7 +887,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         />
                       </div>
 
-                      {/* Contact Number */}
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-1">
                           Contact Number *
@@ -882,10 +901,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                           required
                         />
-                      </div>
+                      </div> */}
 
-                      {/* Contact Email */}
-                      <div className="md:col-span-2">
+                      {/* <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-900 mb-1">
                           Contact Email
                         </label>
@@ -898,7 +916,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           placeholder="Enter contact email"
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                         />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 )}
@@ -2517,38 +2535,27 @@ const [successOpen, setSuccessOpen] = useState(false);
       !!formData.purchase?.address ||
       !!formData.purchase?.purchaseType;
 
-    // 🔥 SEND PURCHASE IF ANY PURCHASE DATA EXISTS
-    if (isPurchaseDepartment && formData.purchase && (hasProducts || hasPurchaseMetaChanges)) {
-      taskData.purchase = {
-        purchaseType: formData.purchase.purchaseType || "INQUIRY",
-        customerName:
-          formData.purchase.purchaseType === "INQUIRY"
-            ? formData.purchase.customerName || ""
-            : null,
-        address:
-          formData.purchase.purchaseType === "INQUIRY"
-            ? formData.purchase.address || ""
-            : null,
-        products: hasProducts
-          ? formData.purchase.products.map((p: any) => ({
-            make: p.make || null,
-            model: p.model || null,
-            description: p.description || null,
-            warranty: p.warranty || null,
-            rate: p.rate === "" || p.rate == null ? null : Number(p.rate),
-            vendor: p.vendor || null,
-            validity:
-              formData.purchase && formData.purchase.purchaseType === "INQUIRY" && p.validity
-                ? p.validity
-                : null,
-            availability:
-              formData.purchase && formData.purchase.purchaseType === "INQUIRY"
-                ? p.availability || null
-                : null,
-          }))
-          : undefined,
-      };
-    }
+    // ✅ PURCHASE dept (keep as-is)
+if (isPurchaseDepartment && formData.purchase?.purchaseType) {
+  const purchaseType = formData.purchase.purchaseType as "INQUIRY" | "ORDER";
+
+  taskData.purchase = {
+    purchaseType,
+    customerName: formData.purchase.customerName || "",
+    address: formData.purchase.address || "",
+    products: formData.purchase.products || [],
+  };
+}
+
+// ✅ SALES dept (NO UI for products/task type, but still save into purchase{})
+if (isSalesDepartment) {
+  taskData.taskType = "PRODUCT_INQUIRY";
+  taskData.purchase = {
+    purchaseType: "INQUIRY",
+    customerName: formData.purchase?.customerName || "",
+    address: formData.purchase?.address || "",
+  };
+}
 
     const url = editingId
       ? `http://localhost:8000/task/${editingId}`
@@ -3623,7 +3630,7 @@ const [successOpen, setSuccessOpen] = useState(false);
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedTasks.map((task) => {
+                  {paginatedTasks.map((task: any) => {
 
 
                     const isOverdueOpen =
@@ -3653,10 +3660,10 @@ const [successOpen, setSuccessOpen] = useState(false);
                           {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || task.purchase?.customerName || 'N/A'}
+{addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || task.purchase?.customerName || task.customerName || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {sites.find(s => s.id === task.siteId)?.siteName || 'N/A'}
+{sites.find(s => s.id === task.siteId)?.siteName || task.purchase?.address || task.address || 'N/A'}
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">

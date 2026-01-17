@@ -1,22 +1,21 @@
-import { IsString, IsNumber, IsDate, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsNumber,  IsOptional, IsArray, IsDateString } from 'class-validator';
 
 export class UpdateInventoryDto {
   @IsOptional()
   @IsNumber()
   vendorId?: number;
  
-
   @IsOptional()
-  @IsDate()
-  purchaseDate?: Date;
-
+  @IsDateString()
+  purchaseDate?: string;
+  
   @IsOptional()
   @IsString()
   purchaseInvoice?: string;
 
   @IsOptional()
   @IsString()
-  creditTerms?: string;  // Ensure creditTerms is optional and can be updated
+  creditTerms?: string;  
 
   @IsOptional()
   @IsString()

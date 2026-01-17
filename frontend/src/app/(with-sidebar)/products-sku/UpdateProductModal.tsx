@@ -84,27 +84,7 @@ const UpdateProductModal: React.FC<UpdateProductModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    if (!productName.trim()) {
-      newErrors.productName = "Product name is required";
-    }
-    
-    if (!productDescription.trim()) {
-      newErrors.productDescription = "Product description is required";
-    }
-    
-    if (!HSN.trim()) {
-      newErrors.HSN = "HSN code is required";
-    }
-    
-    if (!unit) {
-      newErrors.unit = "Unit is required";
-    }
-    
-    if (!gstRate.trim()) {
-      newErrors.gstRate = "GST rate is required";
-    } else if (!/^\d+(\.\d+)?$/.test(gstRate)) {
-      newErrors.gstRate = "Please enter a valid GST rate (numbers only)";
-    }
+  
     
     if (!categoryId) {
       newErrors.categoryId = "Category is required";

@@ -63,24 +63,9 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
       newErrors.productName = "Product name is required";
     }
     
-    if (!productDescription.trim()) {
-      newErrors.productDescription = "Product description is required";
-    }
-    
-    if (!HSN.trim()) {
-      newErrors.HSN = "HSN code is required";
-    }
-    
-    if (!unit) {
-      newErrors.unit = "Unit is required";
-    }
-    
-    if (!gstRate.trim()) {
-      newErrors.gstRate = "GST rate is required";
-    } else if (!/^\d+(\.\d+)?$/.test(gstRate)) {
-      newErrors.gstRate = "Please enter a valid GST rate (numbers only)";
-    }
-    
+   
+
+
     if (!categoryId) {
       newErrors.categoryId = "Category is required";
     }
@@ -206,8 +191,10 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>
                   )}
                 </div>
+              </div>
 
-                <div>
+              
+               <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Subcategory <span className="text-red-500">*</span>
                   </label>
@@ -231,7 +218,6 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     <p className="mt-1 text-sm text-gray-500">Please select a category first</p>
                   )}
                 </div>
-              </div>
 
               {/* Product Details Section */}
               <div className="space-y-4">

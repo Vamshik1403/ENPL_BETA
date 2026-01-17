@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Plus } from "lucide-react";
-import { FaEdit, FaSearch, FaTrashAlt } from "react-icons/fa";
+import { FaEdit, FaEye, FaSearch, FaTrashAlt } from "react-icons/fa";
 
 interface VendorContact {
   title: string;
@@ -88,6 +88,9 @@ const VendorTable: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+
   const itemsPerPage = 5;
 
   const fetchVendors = async () => {
@@ -146,7 +149,7 @@ const VendorTable: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     // Required fields from Prisma model
     const requiredFields = [
       { key: "vendorName", label: "Vendor Name" },
@@ -233,7 +236,7 @@ const VendorTable: React.FC = () => {
     type?: string
   ) => {
     const { name, value } = e.target;
-    
+
     // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => {
@@ -266,9 +269,9 @@ const VendorTable: React.FC = () => {
     }
 
     // Handle normal fields - ensure value is never null
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: value || "" 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value || ""
     }));
   };
 
@@ -277,7 +280,7 @@ const VendorTable: React.FC = () => {
       ...prev,
       contacts: [...prev.contacts, { ...emptyContact }],
     }));
-    
+
     // Clear contact errors when adding new contact
     setErrors(prev => {
       const newErrors = { ...prev };
@@ -293,7 +296,7 @@ const VendorTable: React.FC = () => {
       alert("At least one contact is required");
       return;
     }
-    
+
     const updated = [...formData.contacts];
     updated.splice(index, 1);
     setFormData((prev) => ({ ...prev, contacts: updated }));
@@ -310,6 +313,11 @@ const VendorTable: React.FC = () => {
     const updated = [...formData.bankDetails];
     updated.splice(index, 1);
     setFormData((prev) => ({ ...prev, bankDetails: updated }));
+  };
+
+  const handleView = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setIsViewModalOpen(true);
   };
 
   const handleEdit = (vendor: Vendor) => {
@@ -349,7 +357,7 @@ const VendorTable: React.FC = () => {
         branchName: bank.branchName || "",
       })) || [{ ...emptyBank }],
     };
-    
+
     setFormData(cleanedVendor);
     setErrors({});
     setGstPdfFile(null);
@@ -358,7 +366,7 @@ const VendorTable: React.FC = () => {
 
   const handleDelete = async (id?: number) => {
     if (!id) return;
-    
+
     const confirm = window.confirm(
       "Are you sure you want to delete this vendor? This action cannot be undone."
     );
@@ -373,6 +381,36 @@ const VendorTable: React.FC = () => {
       alert(err.response?.data?.message || "Failed to delete vendor.");
     }
   };
+
+  const ReadBox = ({ label, value }: { label: string; value?: any }) => (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      <div className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-800 min-h-[42px] flex items-center">
+        <span className="text-sm break-words">{value ?? "N/A"}</span>
+      </div>
+    </div>
+  );
+
+  const ReadRichBox = ({
+    label,
+    value,
+    rows = 4,
+  }: {
+    label: string;
+    value?: any;
+    rows?: number;
+  }) => (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      <textarea
+        value={value ?? "N/A"}
+        readOnly
+        rows={rows}
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-800 text-sm resize-none"
+      />
+    </div>
+  );
+
 
   const handleCreate = async () => {
     if (!validateForm()) {
@@ -396,13 +434,13 @@ const VendorTable: React.FC = () => {
       payload.append("creditLimit", formData.creditLimit);
       payload.append("remark", formData.remark);
       payload.append("products", JSON.stringify(formData.products));
-      
+
       // Filter out empty contacts
       const validContacts = formData.contacts.filter(
         (c) => c.firstName.trim() || c.lastName.trim() || c.contactPhoneNumber.trim()
       );
       payload.append("contacts", JSON.stringify(validContacts));
-      
+
       // Filter out empty bank details
       const validBanks = formData.bankDetails.filter(
         (b) => b.accountNumber.trim() || b.ifscCode.trim() || b.bankName.trim()
@@ -440,9 +478,9 @@ const VendorTable: React.FC = () => {
       fetchVendors();
     } catch (err: any) {
       console.error("Error saving vendor:", err);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          "Failed to save vendor. Please try again.";
+      const errorMessage = err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Failed to save vendor. Please try again.";
       alert(errorMessage);
     }
   };
@@ -456,7 +494,6 @@ const VendorTable: React.FC = () => {
     <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Vendors</h1>
-        <p className="text-gray-600">Manage your vendor information and details</p>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -472,7 +509,7 @@ const VendorTable: React.FC = () => {
           <Plus size={20} />
           Add Vendor
         </button>
-        
+
         <div className="relative w-full md:w-64">
           <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
             <FaSearch />
@@ -565,6 +602,13 @@ const VendorTable: React.FC = () => {
                       <td className="p-4 border">
                         <div className="flex gap-2 justify-center">
                           <button
+                            onClick={() => handleView(vendor)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
+                            title="View"
+                          >
+                            <FaEye />
+                          </button>
+                          <button
                             onClick={() => handleEdit(vendor)}
                             className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
                             title="Edit"
@@ -616,6 +660,211 @@ const VendorTable: React.FC = () => {
         </>
       )}
 
+
+
+      {isViewModalOpen && selectedVendor && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+
+            {/* Sticky Header */}
+            <div className="sticky top-0 bg-white z-10 flex justify-between items-center px-6 py-4 border-b">
+              <div>
+                <h3 className="text-2xl font-bold text-blue-700">Vendor Details</h3>
+                <p className="text-sm text-gray-500">
+                  {selectedVendor.vendorCode} • {selectedVendor.vendorName}
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsViewModalOpen(false);
+                  setSelectedVendor(null);
+                }}
+                className="text-gray-500 hover:text-gray-800 text-3xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
+
+              {/* TOP GRID: Left basic info / Right summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Left = Details (2 columns inside) */}
+                <div className="lg:col-span-2 border rounded-xl p-5">
+                  <h4 className="text-lg font-semibold text-blue-900 mb-4 border-b pb-2">
+                    Basic Information
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ReadBox label="Vendor Code" value={selectedVendor.vendorCode} />
+                    <ReadBox label="Vendor Name" value={selectedVendor.vendorName} />
+
+                    <ReadBox label="GST No" value={selectedVendor.gstNo} />
+                    <ReadBox label="Email" value={selectedVendor.emailId} />
+
+                    <ReadBox label="Business Type" value={selectedVendor.businessType} />
+                    <ReadBox label="Website" value={selectedVendor.website} />
+
+                    <ReadBox label="State" value={selectedVendor.state} />
+                    <ReadBox label="City" value={selectedVendor.city} />
+                  </div>
+
+                  {/* Rich boxes */}
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ReadRichBox label="Registered Address" value={selectedVendor.registerAddress} rows={4} />
+                    <ReadRichBox label="Remark" value={selectedVendor.remark} rows={4} />
+                  </div>
+                </div>
+
+                {/* Right = Compact summary + attachment */}
+                <div className="border rounded-xl p-5 space-y-5">
+                  <h4 className="text-lg font-semibold text-blue-900 mb-2 border-b pb-2">
+                    Finance & Docs
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <ReadBox label="Credit Terms" value={selectedVendor.creditTerms} />
+                    <ReadBox label="Credit Limit" value={selectedVendor.creditLimit} />
+                  </div>
+
+                  {/* Products compact */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Products</label>
+                    <div className="min-h-[70px] border border-gray-200 rounded-lg p-3 bg-gray-50 flex flex-wrap gap-2">
+                      {Array.isArray(selectedVendor.products) && selectedVendor.products.length > 0 ? (
+                        selectedVendor.products.map((p, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                          >
+                            {p}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-500 text-sm">No products</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Attachment — FIXED compact */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GST Certificate
+                    </label>
+
+                    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {selectedVendor.gstpdf ? selectedVendor.gstpdf : "No file uploaded"}
+                        </p>
+                        <p className="text-xs text-gray-500">Document attachment</p>
+                      </div>
+
+                      {selectedVendor.gstpdf && (
+                        <a
+                          href={`http://localhost:8000/gst/${selectedVendor.gstpdf}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+                        >
+                          View PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contacts */}
+              <div className="border rounded-xl p-5">
+                <h4 className="text-lg font-semibold text-blue-900 mb-4 border-b pb-2">
+                  Contacts
+                </h4>
+
+                {selectedVendor.contacts?.length ? (
+                  <div className="space-y-4">
+                    {selectedVendor.contacts.map((c, idx) => (
+                      <div key={idx} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                        <p className="font-semibold text-gray-800 mb-3">
+                          Contact {idx + 1}: {c.firstName} {c.lastName}
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <ReadBox label="Title" value={c.title} />
+                          <ReadBox label="First Name" value={c.firstName} />
+                          <ReadBox label="Last Name" value={c.lastName} />
+
+                          <ReadBox label="Phone" value={c.contactPhoneNumber} />
+                          <ReadBox label="Email" value={c.contactEmailId} />
+                          <ReadBox label="Designation" value={c.designation} />
+
+                          <ReadBox label="Department" value={c.department} />
+                          <ReadBox label="Landline" value={c.landlineNumber} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No contacts available</p>
+                )}
+              </div>
+
+              {/* Bank Details */}
+              <div className="border rounded-xl p-5">
+                <h4 className="text-lg font-semibold text-blue-900 mb-4 border-b pb-2">
+                  Bank Details
+                </h4>
+
+                {selectedVendor.bankDetails?.length ? (
+                  <div className="space-y-4">
+                    {selectedVendor.bankDetails.map((b, idx) => (
+                      <div key={idx} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                        <p className="font-semibold text-gray-800 mb-3">
+                          Bank {idx + 1}
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {Object.entries(b)
+                            .filter(([key]) => !["id", "vendorId"].includes(key))
+                            .map(([key, value]) => (
+                              <ReadBox
+                                key={key}
+                                label={key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
+                                value={String(value ?? "")}
+                              />
+                            ))}
+
+
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No bank details available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setIsViewModalOpen(false);
+                  setSelectedVendor(null);
+                }}
+                className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {isCreateModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -642,7 +891,7 @@ const VendorTable: React.FC = () => {
                 {/* Basic Information Section */}
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold text-blue-900 border-b pb-2">Basic Information</h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Business Type <span className="text-red-500">*</span>
@@ -803,7 +1052,7 @@ const VendorTable: React.FC = () => {
                     <Plus size={16} /> Add Contact
                   </button>
                 </div>
-                
+
                 {formData.contacts.map((contact, i) => (
                   <div key={i} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
                     <div className="flex justify-between items-center mb-4">
@@ -823,7 +1072,7 @@ const VendorTable: React.FC = () => {
                         const fieldName = key as keyof VendorContact;
                         const label = key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
                         const required = ["firstName", "lastName", "contactPhoneNumber"].includes(key);
-                        
+
                         return (
                           <div key={key}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -861,7 +1110,7 @@ const VendorTable: React.FC = () => {
                     <Plus size={16} /> Add Bank
                   </button>
                 </div>
-                
+
                 {formData.bankDetails.map((bank, i) => (
                   <div key={i} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
                     <div className="flex justify-between items-center mb-4">
@@ -881,7 +1130,7 @@ const VendorTable: React.FC = () => {
                         const fieldName = key as keyof BankDetail;
                         const label = key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
                         const required = ["accountNumber", "ifscCode", "bankName"].includes(key);
-                        
+
                         return (
                           <div key={key}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

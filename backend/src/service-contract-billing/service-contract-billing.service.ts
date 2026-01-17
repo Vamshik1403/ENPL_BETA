@@ -12,6 +12,7 @@ export class ServiceContractBillingService {
     return this.prisma.serviceContractBilling.create({ data });
   }
 
+ 
   // ➕ Bulk insert (used when contract is created)
   createMany(billings: CreateServiceContractBillingDto[]) {
     return this.prisma.serviceContractBilling.createMany({

@@ -10,7 +10,7 @@ export class VendorPaymentService {
   async create(dto: CreateVendorPaymentDto) {
   const createdPayment = await this.prisma.vendorPayment.create({
     data: {
-      customerId: dto.vendorId,
+      vendorId: dto.vendorId,
       purchaseInvoiceNo: dto.purchaseInvoiceNo,
       invoiceGrossAmount: dto.invoiceGrossAmount,
       dueAmount: dto.dueAmount,
@@ -83,7 +83,7 @@ export class VendorPaymentService {
     return this.prisma.vendorPayment.update({
       where: { id },
       data: {
-        customerId: dto.vendorId,
+        vendorId: dto.vendorId,
         purchaseInvoiceNo: dto.purchaseInvoiceNo,
         invoiceGrossAmount: dto.invoiceGrossAmount,
         dueAmount: dto.dueAmount,

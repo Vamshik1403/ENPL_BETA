@@ -25,11 +25,10 @@ export class CreateTaskPurchaseDto {
   address?: string;
 
    @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateTaskPurchaseProductDto)
-  @ArrayMinSize(1)
-  products: CreateTaskPurchaseProductDto[];
+@IsArray()
+@ValidateNested({ each: true })
+@Type(() => CreateTaskPurchaseProductDto)
+products?: CreateTaskPurchaseProductDto[];
 
   @IsOptional()
   @IsArray()

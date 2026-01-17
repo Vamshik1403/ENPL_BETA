@@ -542,22 +542,27 @@ export default function ServiceContractPage() {
   // ⬇️ when Add button clicked → prefill next ID
   const handleAddNew = async () => {
     const res = await apiFetch('/service-contract/next/id');
-    setFormData({
-      serviceContractID: res.nextID || '',
-      customerId: 0,
-      branchId: 0,
-      salesManagerName: '',
-      amcType: '',
-      startDate: '',
-      endDate: '',
-      nextPMVisitDate: '',
-      contractType: 'Free',
-      maxOnSiteVisits: '',
-      maxPreventiveMaintenanceVisit: '',
-      inclusiveInOnSiteVisitCounts: false,
-      preventiveMaintenanceCycle: '',
-      contractDescription: '',
-    });
+   setFormData({
+  serviceContractID: res.nextID || '',
+  customerId: 0,
+  branchId: 0,
+  salesManagerName: '',
+  amcType: '',
+  startDate: '',
+  endDate: '',
+  nextPMVisitDate: '',
+  contractType: 'Free',
+  billingType: '',
+  billingCycle: '',
+  paymentStatus: 'Paid',
+  billingSchedule: [],
+  maxOnSiteVisits: '',
+  maxPreventiveMaintenanceVisit: '',
+  inclusiveInOnSiteVisitCounts: false,
+  preventiveMaintenanceCycle: '',
+  contractDescription: '',
+});
+
 
     setContractServices([]);
     setInventories([]);
@@ -681,15 +686,21 @@ export default function ServiceContractPage() {
         });
 
         // ✅ Update ServiceContractType and BillingSchedule by contractId
-        await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATCH', {
-          serviceContractType: formData.contractType,
-          serviceContractId: editingId,
-          billingType: formData.billingType,
-          billingCycle: formData.billingCycle,
-          billingDueDate: formData.startDate,
-          paymentStatus: formData.paymentStatus,
-          billingSchedule,
-        });
+      const patchPayload: any = {
+  serviceContractType: formData.contractType,
+  serviceContractId: editingId,
+  billingDueDate: formData.startDate,
+  paymentStatus: formData.paymentStatus,
+  billingSchedule,
+};
+
+if (formData.contractType === 'Paid') {
+  patchPayload.billingType = formData.billingType;
+  patchPayload.billingCycle = formData.billingCycle;
+}
+
+await apiFetch(`/service-contract-type/${formData.serviceContractTypeId}`, 'PATCH', patchPayload);
+
 
         // 🔴 Clean existing services and inventories before re-adding
         await apiFetch(`/service-contract-services/contract/${editingId}`, 'DELETE');
@@ -740,15 +751,24 @@ export default function ServiceContractPage() {
         });
 
         // 🟢 Create ServiceContractType and initial BillingSchedule
-        const typeRes = await apiFetch('/service-contract-type', 'POST', {
-          serviceContractType: formData.contractType,
-          serviceContractId,
-          billingType: formData.billingType || '',
-          billingCycle: formData.billingCycle || '',
-          billingDueDate: formData.startDate || '',
-          paymentStatus: formData.paymentStatus || 'Paid',
-          billingSchedule,
-        });
+     const typePayload: any = {
+  serviceContractType: formData.contractType,
+  serviceContractId,
+  billingDueDate: formData.startDate || '',
+  paymentStatus: formData.paymentStatus || 'Paid',
+  billingSchedule,
+};
+
+// ✅ Backend requires billingType and billingCycle always
+// so send defaults if contract is Free
+typePayload.billingType =
+  formData.contractType === 'Paid' ? formData.billingType : 'Prepaid';
+
+typePayload.billingCycle =
+  formData.contractType === 'Paid' ? formData.billingCycle : '0';
+
+const typeRes = await apiFetch('/service-contract-type', 'POST', typePayload);
+
 
         if (billingSchedule?.length && typeRes?.id) {
           await apiFetch('/service-contract-billing/bulk', 'POST', {

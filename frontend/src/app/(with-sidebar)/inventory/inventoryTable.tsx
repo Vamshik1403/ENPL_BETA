@@ -28,6 +28,7 @@ interface Inventory {
     dueDate?: string;
     invoiceGrossAmount?: string;
     purchaseDate: string;
+    dueAmount?: string | number;
     purchaseInvoice: string;
     status?: string;
     duration?: string;
@@ -41,12 +42,31 @@ interface Vendor {
 
 interface Product {
     id: number;
+    productId: string;
     productName: string;
+    productDescription?: string;
+    HSN?: string;
+    unit?: string;
+    gstRate?: string;
+    categoryId: number;
+    subCategoryId: number;
+    category?: {
+        id: number;
+        categoryName: string;
+        categoryId: string;
+    };
+    subCategory?: {
+        id: number;
+        subCategoryName: string;
+        subCategoryId: string;
+        categoryId: number;
+    };
 }
 
 const initialFormState: Inventory = {
     vendorId: 0,
     purchaseDate: "",
+    dueAmount: "0",
     purchaseInvoice: "",
     status: "In Stock",
     dueDate: "",
@@ -70,7 +90,7 @@ const InventoryTable: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [productErrors, setProductErrors] = useState<Record<number, Record<string, string>>>({});
-    
+
     const [sortConfig, setSortConfig] = useState<{
         key: string;
         direction: "asc" | "desc";
@@ -88,7 +108,7 @@ const InventoryTable: React.FC = () => {
     // Filter inventory when search query changes
     useEffect(() => {
         handleSearch(searchQuery);
-    }, [inventoryList, searchQuery]);
+    }, [inventoryList, searchQuery, products, vendors]);
 
     const fetchInventory = async () => {
         try {
@@ -133,70 +153,70 @@ const InventoryTable: React.FC = () => {
         }
     };
 
-    const validateForm = (): boolean => {
+    const validateForm = (dataToValidate: Inventory = formData): boolean => {
         const newErrors: Record<string, string> = {};
         const newProductErrors: Record<number, Record<string, string>> = {};
 
         // Validate inventory fields
-        if (!formData.purchaseInvoice.trim()) {
+        if (!dataToValidate.purchaseInvoice.trim()) {
             newErrors.purchaseInvoice = "Purchase invoice number is required";
         }
-        
-        if (!formData.purchaseDate) {
+
+        if (!dataToValidate.purchaseDate) {
             newErrors.purchaseDate = "Purchase date is required";
         }
-        
-        if (!formData.vendorId) {
+
+        if (!dataToValidate.vendorId) {
             newErrors.vendorId = "Vendor is required";
         }
-        
-        if (!formData.creditTerms?.trim()) {
+
+        if (!dataToValidate.creditTerms?.trim()) {
             newErrors.creditTerms = "Credit terms are required";
         }
-        
-        if (!formData.invoiceNetAmount?.trim()) {
+
+        if (!dataToValidate.invoiceNetAmount?.trim()) {
             newErrors.invoiceNetAmount = "Net amount is required";
-        } else if (isNaN(parseFloat(formData.invoiceNetAmount))) {
+        } else if (isNaN(parseFloat(dataToValidate.invoiceNetAmount))) {
             newErrors.invoiceNetAmount = "Please enter a valid number";
         }
-        
-        if (!formData.gstAmount?.trim()) {
+
+        if (!dataToValidate.gstAmount?.trim()) {
             newErrors.gstAmount = "GST amount is required";
-        } else if (isNaN(parseFloat(formData.gstAmount))) {
+        } else if (isNaN(parseFloat(dataToValidate.gstAmount))) {
             newErrors.gstAmount = "Please enter a valid number";
         }
 
         // Validate products
-        if (formData.products.length === 0) {
+        if (dataToValidate.products.length === 0) {
             newErrors.products = "At least one product is required";
         }
 
-        formData.products.forEach((product, index) => {
+        dataToValidate.products.forEach((product, index) => {
             const productError: Record<string, string> = {};
-            
+
             if (!product.productId) {
                 productError.productId = "Product is required";
             }
-            
+
             if (!product.make?.trim()) {
                 productError.make = "Make is required";
             }
-            
+
             if (!product.model?.trim()) {
                 productError.model = "Model is required";
             }
-            
+
             if (!product.noSerialMac) {
                 if (!product.serialNumber?.trim() && !product.macAddress?.trim()) {
                     productError.serialNumber = "Either Serial Number or MAC Address is required (or check 'No Serial/MAC')";
                     productError.macAddress = "Either Serial Number or MAC Address is required (or check 'No Serial/MAC')";
                 }
             }
-            
+
             if (!product.warrantyPeriod?.trim()) {
                 productError.warrantyPeriod = "Warranty period is required";
             }
-            
+
             if (!product.purchaseRate?.trim()) {
                 productError.purchaseRate = "Purchase rate is required";
             } else if (isNaN(parseFloat(product.purchaseRate))) {
@@ -210,7 +230,7 @@ const InventoryTable: React.FC = () => {
 
         setErrors(newErrors);
         setProductErrors(newProductErrors);
-        
+
         return Object.keys(newErrors).length === 0 && Object.keys(newProductErrors).length === 0;
     };
 
@@ -224,26 +244,35 @@ const InventoryTable: React.FC = () => {
             const csvData = inventoryList.flatMap((inventory) => {
                 const vendorName =
                     vendors.find((v) => v.id === inventory.vendorId)?.vendorName || "";
-                return inventory.products.map((product) => ({
-                    PurchaseDate: inventory.purchaseDate,
-                    PurchaseInvoice: inventory.purchaseInvoice,
-                    Vendor: vendorName,
-                    Status: inventory.status || "",
-                    CreditTerms: inventory.creditTerms || "",
-                    DueDate: inventory.dueDate || "",
-                    InvoiceNetAmount: inventory.invoiceNetAmount || "",
-                    GSTAmount: inventory.gstAmount || "",
-                    InvoiceGrossAmount: inventory.invoiceGrossAmount || "",
-                    Duration: inventory.duration || "",
-                    ProductID: product.productId,
-                    ProductName: products.find(p => p.id === product.productId)?.productName || "",
-                    Make: product.make,
-                    Model: product.model,
-                    SerialNumber: product.serialNumber,
-                    MacAddress: product.macAddress,
-                    WarrantyPeriod: product.warrantyPeriod,
-                    PurchaseRate: product.purchaseRate,
-                }));
+                return inventory.products.map((product) => {
+                    const productData = products.find(p => p.id === product.productId);
+                    return {
+                        PurchaseDate: inventory.purchaseDate,
+                        PurchaseInvoice: inventory.purchaseInvoice,
+                        Vendor: vendorName,
+                        Status: inventory.status || "",
+                        CreditTerms: inventory.creditTerms || "",
+                        DueDate: inventory.dueDate || "",
+                        InvoiceNetAmount: inventory.invoiceNetAmount || "",
+                        GSTAmount: inventory.gstAmount || "",
+                        InvoiceGrossAmount: inventory.invoiceGrossAmount || "",
+                        Duration: inventory.duration || "",
+                        ProductID: product.productId,
+                        ProductCode: productData?.productId || "",
+                        ProductName: productData?.productName || "",
+                        Category: productData?.category?.categoryName || "",
+                        SubCategory: productData?.subCategory?.subCategoryName || "",
+                        HSN: productData?.HSN || "",
+                        Unit: productData?.unit || "",
+                        GSTRate: productData?.gstRate || "",
+                        Make: product.make,
+                        Model: product.model,
+                        SerialNumber: product.serialNumber,
+                        MacAddress: product.macAddress,
+                        WarrantyPeriod: product.warrantyPeriod,
+                        PurchaseRate: product.purchaseRate,
+                    };
+                });
             });
 
             const csv = Papa.unparse(csvData);
@@ -272,9 +301,6 @@ const InventoryTable: React.FC = () => {
 
             const inventoryMatch =
                 inv.purchaseInvoice?.toLowerCase().includes(lowerQuery) ||
-                inv.products.some((product) =>
-                    product.serialNumber?.toLowerCase().includes(lowerQuery)
-                ) ||
                 inv.purchaseDate?.toLowerCase().includes(lowerQuery) ||
                 inv.creditTerms?.toLowerCase().includes(lowerQuery) ||
                 inv.invoiceNetAmount?.toLowerCase().includes(lowerQuery) ||
@@ -284,13 +310,17 @@ const InventoryTable: React.FC = () => {
                 vendorName.includes(lowerQuery);
 
             const productMatch = inv.products.some((product) => {
+                const productData = products.find((p) => p.id === product.productId);
                 return (
-                    products
-                        .find((p) => p.id === product.productId)
-                        ?.productName?.toLowerCase()
-                        .includes(lowerQuery) ||
-                    product.model?.toLowerCase().includes(lowerQuery) ||
+                    productData?.productId?.toLowerCase().includes(lowerQuery) ||
+                    productData?.productName?.toLowerCase().includes(lowerQuery) ||
+                    productData?.category?.categoryName?.toLowerCase().includes(lowerQuery) ||
+                    productData?.subCategory?.subCategoryName?.toLowerCase().includes(lowerQuery) ||
+                    productData?.HSN?.toLowerCase().includes(lowerQuery) ||
+                    productData?.unit?.toLowerCase().includes(lowerQuery) ||
+                    productData?.gstRate?.toLowerCase().includes(lowerQuery) ||
                     product.make?.toLowerCase().includes(lowerQuery) ||
+                    product.model?.toLowerCase().includes(lowerQuery) ||
                     product.serialNumber?.toLowerCase().includes(lowerQuery) ||
                     product.macAddress?.toLowerCase().includes(lowerQuery) ||
                     product.warrantyPeriod?.toLowerCase().includes(lowerQuery) ||
@@ -335,63 +365,117 @@ const InventoryTable: React.FC = () => {
         });
     };
 
-    const handleSave = async () => {
-        if (!validateForm()) {
-            alert("Please fix the errors in the form before submitting.");
-            return;
-        }
+  const handleSave = async () => {
+  // ✅ 1) normalize data before validation
+  const normalizedFormData = {
+    ...formData,
+    products: formData.products.map((product) => {
+      const serialEmpty = !product.serialNumber?.trim();
+      const macEmpty = !product.macAddress?.trim();
 
-        try {
-            setSaving(true);
-            const payload = {
-                ...formData,
-                products: formData.products.map((product) => ({
-                    productId: product.productId,
-                    make: product.make,
-                    model: product.model,
-                    serialNumber: product.serialNumber,
-                    macAddress: product.macAddress,
-                    warrantyPeriod: product.warrantyPeriod,
-                    purchaseRate: product.purchaseRate,
-                    autoGenerateSerial: product.noSerialMac,
-                })),
-            };
+      // ✅ If both empty => treat as "No Serial/MAC"
+      if (serialEmpty && macEmpty) {
+        return {
+          ...product,
+          noSerialMac: true,
+          serialNumber: "",
+          macAddress: "",
+        };
+      }
 
-            if (formData.id) {
-                await axios.put(`http://localhost:8000/inventory/${formData.id}`, payload);
-                alert("Inventory updated successfully!");
-            } else {
-                await axios.post("http://localhost:8000/inventory", payload);
-                alert("Inventory created successfully!");
-            }
+      return product;
+    }),
+  };
 
-            setFormData(initialFormState);
-            setErrors({});
-            setProductErrors({});
-            setIsModalOpen(false);
-            fetchInventory();
-        } catch (error: any) {
-            console.error("Save error:", error);
-            const errorMessage = error.response?.data?.message || 
-                              error.response?.data?.error || 
-                              "Something went wrong! Please try again.";
-            alert(errorMessage);
-        } finally {
-            setSaving(false);
-        }
+  // ✅ ensure UI also gets normalized (optional but best)
+  setFormData(normalizedFormData);
+
+  // ✅ 2) validate after normalization
+  if (!validateForm(normalizedFormData)) {
+    alert("Please fix the errors in the form before submitting.");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    // ✅ 3) Build payload from normalized data
+    const payload = {
+      ...normalizedFormData,
+      purchaseDate: normalizedFormData.purchaseDate, // already YYYY-MM-DD
+      dueAmount: normalizedFormData.dueAmount
+        ? String(normalizedFormData.dueAmount)
+        : "0",
+
+products: normalizedFormData.products.map((product) => ({
+  productId: product.productId,
+  make: product.make,
+  model: product.model,
+
+  // ✅ send NULL not ""
+  serialNumber: product.noSerialMac ? null : product.serialNumber?.trim() || null,
+  macAddress: product.noSerialMac ? null : product.macAddress?.trim() || null,
+
+  warrantyPeriod: product.warrantyPeriod,
+  purchaseRate: product.purchaseRate,
+
+  autoGenerateSerial: !!product.noSerialMac,
+})),
+
     };
+
+    if (normalizedFormData.id) {
+      await axios.put(
+        `http://localhost:8000/inventory/${normalizedFormData.id}`,
+        payload
+      );
+      alert("Inventory updated successfully!");
+    } else {
+      await axios.post("http://localhost:8000/inventory", payload);
+      alert("Inventory created successfully!");
+    }
+
+    setFormData(initialFormState);
+    setErrors({});
+    setProductErrors({});
+    setIsModalOpen(false);
+    fetchInventory();
+  } catch (error: any) {
+    console.error("Save error:", error);
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      "Something went wrong! Please try again.";
+    alert(errorMessage);
+  } finally {
+    setSaving(false);
+  }
+};
+
 
     const openModal = (data?: Inventory) => {
         if (data) {
-            const clonedProducts = (data.products || []).map((p) => ({ ...p }));
-            setFormData({ ...data, products: clonedProducts });
+            const clonedProducts = (data.products || []).map((p: any) => ({
+                ...p,
+                noSerialMac: !!p.autoGenerateSerial,   // ✅ map backend to frontend checkbox
+            }));
+
+            setFormData({
+                ...data,
+                purchaseDate: data.purchaseDate ? data.purchaseDate.slice(0, 10) : "",
+                dueDate: data.dueDate ? data.dueDate.slice(0, 10) : "",
+                products: clonedProducts,
+            });
         } else {
             setFormData(initialFormState);
         }
+
         setErrors({});
         setProductErrors({});
         setIsModalOpen(true);
     };
+
+
 
     // Sorting logic
     const sortedInventory = [...filteredInventory].sort((a, b) => {
@@ -416,6 +500,14 @@ const InventoryTable: React.FC = () => {
                     ).localeCompare(
                         products.find((p) => p.id === productB?.productId)?.productName || ""
                     );
+                case "category":
+                    const catA = products.find(p => p.id === obj.products[0]?.productId)?.category?.categoryName || "";
+                    const catB = products.find(p => p.id === b.products[0]?.productId)?.category?.categoryName || "";
+                    return catA.localeCompare(catB);
+                case "subCategory":
+                    const subA = products.find(p => p.id === obj.products[0]?.productId)?.subCategory?.subCategoryName || "";
+                    const subB = products.find(p => p.id === b.products[0]?.productId)?.subCategory?.subCategoryName || "";
+                    return subA.localeCompare(subB);
                 default:
                     return "";
             }
@@ -447,8 +539,8 @@ const InventoryTable: React.FC = () => {
 
     const getSortIcon = (key: string) => {
         if (sortConfig?.key !== key) return <FaSort className="ml-1 text-gray-400" />;
-        return sortConfig.direction === "asc" ? 
-            <FaSortUp className="ml-1 text-blue-600" /> : 
+        return sortConfig.direction === "asc" ?
+            <FaSortUp className="ml-1 text-blue-600" /> :
             <FaSortDown className="ml-1 text-blue-600" />;
     };
 
@@ -475,7 +567,7 @@ const InventoryTable: React.FC = () => {
         const updated = [...formData.products];
         updated.splice(index, 1);
         setFormData({ ...formData, products: updated });
-        
+
         // Clear errors for this product
         setProductErrors(prev => {
             const newErrors = { ...prev };
@@ -488,7 +580,7 @@ const InventoryTable: React.FC = () => {
         const updated = [...formData.products];
         (updated[index] as any)[field] = value;
         setFormData({ ...formData, products: updated });
-        
+
         // Clear error for this field
         if (productErrors[index]?.[field]) {
             setProductErrors(prev => {
@@ -506,7 +598,7 @@ const InventoryTable: React.FC = () => {
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+        <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black overflow-x-hidden">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-blue-900 mb-2">Inventory</h1>
             </div>
@@ -521,13 +613,13 @@ const InventoryTable: React.FC = () => {
                 </button>
 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="relative w-full md:w-64">
+                    <div className="relative w-screen md:w-64">
                         <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
                             <FaSearch />
                         </span>
                         <input
                             type="text"
-                            placeholder="Search by invoice, serial, vendor..."
+                            placeholder="Search by invoice, serial, vendor, category, HSN..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
@@ -550,123 +642,159 @@ const InventoryTable: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    <div className="overflow-x-auto bg-white rounded-xl shadow-md">
-                        <table className="w-full text-sm text-gray-700">
-                            <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
-                                <tr>
-                                    {[
-                                        { label: "Product Name", key: "productName" },
-                                        { label: "Make", key: "make" },
-                                        { label: "Model", key: "model" },
-                                        { label: "Serial No", key: "serialNumber" },
-                                        { label: "MAC Address", key: "macAddress" },
-                                        { label: "Warranty", key: "warrantyPeriod" },
-                                        { label: "Purchase Rate", key: "purchaseRate" },
-                                        { label: "Vendor", key: "vendor" },
-                                        { label: "Purchase Date", key: "purchaseDate" },
-                                        { label: "Invoice No", key: "purchaseInvoice" },
-                                        { label: "Status", key: "status" },
-                                        { label: "Age", key: "duration" },
-                                        { label: "Actions", key: "" },
-                                    ].map((col) => (
-                                        <th
-                                            key={col.key || "actions"}
-                                            className="p-4 border border-gray-300 text-left cursor-pointer select-none"
-                                            onClick={() => col.key && handleSort(col.key)}
-                                        >
-                                            <div className="flex items-center">
-                                                {col.label}
-                                                {col.key && getSortIcon(col.key)}
-                                            </div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {paginatedInventory.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={13} className="p-8 text-center text-gray-500">
-                                            {searchQuery ? "No inventory found matching your search." : "No inventory items found. Add your first inventory item!"}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    paginatedInventory.map((inv) =>
-                                        inv.products.map((product, index) => (
-                                            <tr key={`${inv.id}-${product.serialNumber}-${index}`} className="border-b hover:bg-gray-50">
-                                                <td className="p-4 border border-gray-300">
-                                                    {products.find((p) => p.id === product.productId)
-                                                        ?.productName || "N/A"}
-                                                </td>
-                                                <td className="p-4 border border-gray-300">{product.make}</td>
-                                                <td className="p-4 border border-gray-300">{product.model}</td>
-                                                <td className="p-4 border border-gray-300 font-mono">
-                                                    {product.serialNumber || (
-                                                        <span className="text-gray-400">N/A</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-4 border border-gray-300 font-mono">
-                                                    {product.macAddress || (
-                                                        <span className="text-gray-400">N/A</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                                                        {product.warrantyPeriod} days
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                                        ₹{product.purchaseRate}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    {vendors.find((v) => v.id === inv.vendorId)?.vendorName}
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    {inv.purchaseDate?.slice(0, 10)}
-                                                </td>
-                                                <td className="p-4 border border-gray-300 font-medium">
-                                                    {inv.purchaseInvoice}
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    <span className={`px-3 py-1 rounded-full text-xs ${
-                                                        inv.status === "In Stock" 
-                                                            ? "bg-green-100 text-green-800"
-                                                            : inv.status === "Sold"
-                                                            ? "bg-blue-100 text-blue-800"
-                                                            : "bg-gray-100 text-gray-800"
-                                                    }`}>
-                                                        {inv.status}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                                                        {inv.duration}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 border border-gray-300">
-                                                    <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() => openModal(inv)}
-                                                            className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow transition-all hover:shadow-lg hover:scale-105"
-                                                            title="Edit"
-                                                        >
-                                                            <PencilLine size={18} />
-                                                        </button>
+                    <div className="bg-white rounded-xl shadow-md w-screen">
+                        <div className="bg-white rounded-xl shadow-md w-screen">
+                            <div className="w-full overflow-x-auto w-screen">
+                                <table className="min-w-450 text-sm text-gray-700">
+                                    <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                                        <tr>
+                                            {[
+                                                { label: "Product Code", key: "productCode" },
+                                                { label: "Product Name", key: "productName" },
+                                                { label: "Category", key: "category" },
+                                                { label: "Sub-Category", key: "subCategory" },
+                                                { label: "HSN", key: "hsn" },
+                                                { label: "Make", key: "make" },
+                                                { label: "Model", key: "model" },
+                                                { label: "Serial No", key: "serialNumber" },
+                                                { label: "MAC Address", key: "macAddress" },
+                                                { label: "Warranty", key: "warrantyPeriod" },
+                                                { label: "Purchase Rate", key: "purchaseRate" },
+                                                { label: "Vendor", key: "vendor" },
+                                                { label: "Purchase Date", key: "purchaseDate" },
+                                                { label: "Invoice No", key: "purchaseInvoice" },
+                                                { label: "Status", key: "status" },
+                                                { label: "Age", key: "duration" },
+                                                { label: "Actions", key: "" },
+                                            ].map((col) => (
+                                                <th
+                                                    key={col.key || "actions"}
+                                                    className="p-4 border border-gray-300 text-left cursor-pointer select-none whitespace-nowrap"
+                                                    onClick={() => col.key && handleSort(col.key)}
+                                                >
+                                                    <div className="flex items-center">
+                                                        {col.label}
+                                                        {col.key && getSortIcon(col.key)}
                                                     </div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {paginatedInventory.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={17} className="p-8 text-center text-gray-500">
+                                                    {searchQuery
+                                                        ? "No inventory found matching your search."
+                                                        : "No inventory items found. Add your first inventory item!"}
                                                 </td>
                                             </tr>
-                                        ))
-                                    )
-                                )}
-                            </tbody>
-                        </table>
+                                        ) : (
+                                            paginatedInventory.flatMap((inv) => {
+                                                // ✅ If no products exist, still show 1 row for inventory
+                                                if (!inv.products || inv.products.length === 0) {
+                                                    return (
+                                                        <tr key={`inv-${inv.id}`} className="border-b hover:bg-gray-50">
+                                                            <td className="p-4 border border-gray-300 text-gray-400" colSpan={11}>
+                                                                No products found
+                                                            </td>
+
+                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                                {vendors.find((v) => v.id === inv.vendorId)?.vendorName || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                                {inv.purchaseDate?.slice(0, 10)}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 font-medium whitespace-nowrap">
+                                                                {inv.purchaseInvoice}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                {inv.status}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                {inv.duration}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                <button
+                                                                    onClick={() => openModal(inv)}
+                                                                    className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow"
+                                                                    title="Edit"
+                                                                >
+                                                                    <PencilLine size={18} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+
+                                                // ✅ If products exist, show them normally
+                                                return inv.products.map((product, index) => {
+                                                    const productData = products.find((p) => p.id === product.productId);
+
+                                                    return (
+                                                        <tr key={`${inv.id}-${product.productId}-${index}`} className="border-b hover:bg-gray-50">
+                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
+                                                                {productData?.productId || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                                {productData?.productName || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                {productData?.category?.categoryName || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                {productData?.subCategory?.subCategoryName || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
+                                                                {productData?.HSN || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">{product.make}</td>
+                                                            <td className="p-4 border border-gray-300">{product.model}</td>
+                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
+                                                                {product.serialNumber || <span className="text-gray-400">N/A</span>}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
+                                                                {product.macAddress || <span className="text-gray-400">N/A</span>}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">{product.warrantyPeriod}</td>
+                                                            <td className="p-4 border border-gray-300">{product.purchaseRate}</td>
+
+                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                                {vendors.find((v) => v.id === inv.vendorId)?.vendorName || "N/A"}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                                {inv.purchaseDate?.slice(0, 10)}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300 font-medium whitespace-nowrap">
+                                                                {inv.purchaseInvoice}
+                                                            </td>
+                                                            <td className="p-4 border border-gray-300">{inv.status}</td>
+                                                            <td className="p-4 border border-gray-300">{inv.duration}</td>
+                                                            <td className="p-4 border border-gray-300">
+                                                                <button
+                                                                    onClick={() => openModal(inv)}
+                                                                    className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow"
+                                                                    title="Edit"
+                                                                >
+                                                                    <PencilLine size={18} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                });
+                                            })
+                                        )}
+                                    </tbody>
+
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     {filteredInventory.length > 0 && (
                         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-gray-600 whitespace-nowrap">
                                 Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredInventory.length)} of {filteredInventory.length} items
                             </div>
                             <div className="flex items-center space-x-2">
@@ -872,150 +1000,174 @@ const InventoryTable: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    {formData.products.map((product, index) => (
-                                        <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h5 className="font-medium text-gray-700">Product {index + 1}</h5>
-                                                {formData.products.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeProductRow(index)}
-                                                        className="text-red-600 hover:text-red-800"
-                                                        title="Remove product"
-                                                    >
-                                                        <X size={18} />
-                                                    </button>
-                                                )}
+                                    {formData.products.map((product, index) => {
+                                        const selectedProduct = products.find(p => p.id === product.productId);
+                                        return (
+                                            <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <h5 className="font-medium text-gray-700">Product {index + 1}</h5>
+                                                        {selectedProduct && (
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                <span className="mr-3">
+                                                                    Category: {selectedProduct.category?.categoryName || "N/A"}
+                                                                </span>
+                                                                <span>
+                                                                    Sub-Category: {selectedProduct.subCategory?.subCategoryName || "N/A"}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {formData.products.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeProductRow(index)}
+                                                            className="text-red-600 hover:text-red-800"
+                                                            title="Remove product"
+                                                        >
+                                                            <X size={18} />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={product.noSerialMac || false}
+onChange={(e) => {
+  const checked = e.target.checked;
+  updateProductField(index, "noSerialMac", checked);
+
+  if (checked) {
+    updateProductField(index, "serialNumber", "");
+    updateProductField(index, "macAddress", "");
+  }
+}}                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        id={`noSerialMac-${index}`}
+                                                    />
+                                                    <label htmlFor={`noSerialMac-${index}`} className="ml-2 text-sm font-medium text-gray-700">
+                                                        Product does not have Serial Number or MAC Address
+                                                    </label>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Product <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <ProductCombobox
+                                                            selectedValue={product.productId}
+                                                            onSelect={(value) => updateProductField(index, 'productId', value)}
+                                                            placeholder="Select Product"
+                                                        />
+                                                        {productErrors[index]?.productId && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.productId}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Make <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter make"
+                                                            value={product.make}
+                                                            onChange={(e) => updateProductField(index, 'make', e.target.value)}
+                                                            className={`w-full p-2 border ${productErrors[index]?.make ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                        />
+                                                        {productErrors[index]?.make && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.make}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Model <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter model"
+                                                            value={product.model}
+                                                            onChange={(e) => updateProductField(index, 'model', e.target.value)}
+                                                            className={`w-full p-2 border ${productErrors[index]?.model ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                        />
+                                                        {productErrors[index]?.model && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.model}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Serial Number
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter serial number"
+                                                            value={product.serialNumber}
+                                                            onChange={(e) => updateProductField(index, 'serialNumber', e.target.value)}
+                                                            disabled={product.noSerialMac}
+                                                            className={`w-full p-2 border ${productErrors[index]?.serialNumber ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
+                                                        />
+                                                        {productErrors[index]?.serialNumber && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.serialNumber}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            MAC Address
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter MAC address"
+                                                            value={product.macAddress}
+                                                            onChange={(e) => updateProductField(index, 'macAddress', e.target.value)}
+                                                            disabled={product.noSerialMac}
+                                                            className={`w-full p-2 border ${productErrors[index]?.macAddress ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
+                                                        />
+                                                        {productErrors[index]?.macAddress && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.macAddress}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Warranty Period (Days) <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter warranty in days"
+                                                            value={product.warrantyPeriod}
+                                                            onChange={(e) => updateProductField(index, 'warrantyPeriod', e.target.value)}
+                                                            className={`w-full p-2 border ${productErrors[index]?.warrantyPeriod ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                        />
+                                                        {productErrors[index]?.warrantyPeriod && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.warrantyPeriod}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            Purchase Rate <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter purchase rate"
+                                                            value={product.purchaseRate}
+                                                            onChange={(e) => updateProductField(index, "purchaseRate", e.target.value)}
+                                                            className={`w-full p-2 border ${productErrors[index]?.purchaseRate ? "border-red-500" : "border-gray-300"
+                                                                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                        />
+
+                                                        {productErrors[index]?.purchaseRate && (
+                                                            <p className="mt-1 text-sm text-red-600">{productErrors[index]?.purchaseRate}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-
-                                            <div className="flex items-center mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={product.noSerialMac || false}
-                                                    onChange={(e) => updateProductField(index, 'noSerialMac', e.target.checked)}
-                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                    id={`noSerialMac-${index}`}
-                                                />
-                                                <label htmlFor={`noSerialMac-${index}`} className="ml-2 text-sm font-medium text-gray-700">
-                                                    Product does not have Serial Number or MAC Address
-                                                </label>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Product <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <ProductCombobox
-                                                        selectedValue={product.productId}
-                                                        onSelect={(value) => updateProductField(index, 'productId', value)}
-                                                        placeholder="Select Product"
-                                                    />
-                                                    {productErrors[index]?.productId && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.productId}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Make <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter make"
-                                                        value={product.make}
-                                                        onChange={(e) => updateProductField(index, 'make', e.target.value)}
-                                                        className={`w-full p-2 border ${productErrors[index]?.make ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                                                    />
-                                                    {productErrors[index]?.make && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.make}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Model <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter model"
-                                                        value={product.model}
-                                                        onChange={(e) => updateProductField(index, 'model', e.target.value)}
-                                                        className={`w-full p-2 border ${productErrors[index]?.model ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                                                    />
-                                                    {productErrors[index]?.model && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.model}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Serial Number
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter serial number"
-                                                        value={product.serialNumber}
-                                                        onChange={(e) => updateProductField(index, 'serialNumber', e.target.value)}
-                                                        disabled={product.noSerialMac}
-                                                        className={`w-full p-2 border ${productErrors[index]?.serialNumber ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
-                                                    />
-                                                    {productErrors[index]?.serialNumber && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.serialNumber}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        MAC Address
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter MAC address"
-                                                        value={product.macAddress}
-                                                        onChange={(e) => updateProductField(index, 'macAddress', e.target.value)}
-                                                        disabled={product.noSerialMac}
-                                                        className={`w-full p-2 border ${productErrors[index]?.macAddress ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
-                                                    />
-                                                    {productErrors[index]?.macAddress && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.macAddress}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Warranty Period (Days) <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter warranty in days"
-                                                        value={product.warrantyPeriod}
-                                                        onChange={(e) => updateProductField(index, 'warrantyPeriod', e.target.value)}
-                                                        className={`w-full p-2 border ${productErrors[index]?.warrantyPeriod ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                                                    />
-                                                    {productErrors[index]?.warrantyPeriod && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.warrantyPeriod}</p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Purchase Rate <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter purchase rate"
-                                                        value={product.purchaseRate}
-                                                        onChange={(e) => updateProductField(index, 'purchaseRate', e.target.value)}
-                                                        className={`w-full p-2 border ${productErrors[index]?.purchaseRate ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                                                    />
-                                                    {productErrors[index]?.purchaseRate && (
-                                                        <p className="mt-1 text-sm text-red-600">{productErrors[index]?.purchaseRate}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 

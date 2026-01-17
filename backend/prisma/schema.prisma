@@ -26,7 +26,6 @@ model AddressBook {
   customerContactSites CustomerContactSite[]
   complaintRegistrations ComplaintRegistration[]
     materialDelivery MaterialDelivery[]
-      vendorPayment    VendorPayment[]
 
 
 }
@@ -123,10 +122,10 @@ model ServiceContractType {
   id                   Int              @id @default(autoincrement())
   serviceContractType  String
   serviceContractId    Int
-  billingType          String
-  billingCycle         String
-  billingDueDate       String
-  paymentStatus        String
+  billingType          String?
+  billingCycle         String?
+  billingDueDate       String?
+  paymentStatus        String?
   serviceContractBillings ServiceContractBilling[]
   serviceContract      ServiceContract  @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
 }
@@ -464,7 +463,6 @@ model CustomerContactSite {
   @@unique([customerContactId, customerId, siteId])
 }
 
-
 model ComplaintRegistration {
   id              Int      @id @default(autoincrement())
   complaintID     String   @unique
@@ -489,15 +487,6 @@ model UserPermission {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-
-
-
-
-
-
-
-
 
 model Category {
   id            Int           @id @default(autoincrement())
@@ -529,8 +518,8 @@ model Product {
 
   category             Category               @relation(fields: [categoryId], references: [id])
   subCategory          SubCategory            @relation(fields: [subCategoryId], references: [id])
-  productInventories   ProductInventory[] // ✅ Join table entries
-  materialDeliveryItem MaterialDeliveryItem[] // ✅ Link to material delivery items
+  productInventories   ProductInventory[] 
+  materialDeliveryItem MaterialDeliveryItem[] 
 
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
@@ -562,9 +551,9 @@ model ProductInventory {
   inventoryId    Int
   productId      Int
   make           String
-  model          String
-  serialNumber   String
-  macAddress     String
+  model          String?
+  serialNumber   String?
+  macAddress     String?
   warrantyPeriod String
   purchaseRate   String
 
@@ -574,6 +563,7 @@ model ProductInventory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 model MaterialDelivery {
   id                Int     @id @default(autoincrement())
   deliveryType      String
@@ -615,9 +605,11 @@ model MaterialDeliveryItem {
 }
 
 model VendorPayment {
-  id                 Int        @id @default(autoincrement())
-  customerId           Int
+  id                 Int      @id @default(autoincrement())
+
+  vendorId           Int
   inventoryId        Int?
+
   purchaseInvoiceNo  String
   invoiceGrossAmount String
   dueAmount          String
@@ -626,14 +618,17 @@ model VendorPayment {
   paymentDate        DateTime
   paymentType        String
   referenceNo        String
-  remark             String
-  addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  remark             String?
+
+  vendor             Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   inventory          Inventory? @relation(fields: [inventoryId], references: [id])
-  vendor         Vendor[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+
 
 // Define the Vendor model
 model Vendor {
