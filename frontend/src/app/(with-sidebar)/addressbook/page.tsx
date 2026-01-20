@@ -498,12 +498,13 @@ export default function AddressBookPage() {
   }, [searchTerm]);
 
   return (
-    <div className="p-8 -mt-10">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6">
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Address Book</h1>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+<div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <button
           onClick={async () => {
             // Check create permission - USING CUSTOMERS PERMISSION
@@ -826,8 +827,8 @@ export default function AddressBookPage() {
       )}
 
       {/* Main Content - Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+<div className="bg-white rounded-none sm:rounded-xl shadow-md overflow-hidden -mx-8 sm:mx-0">
+<div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-xl font-semibold text-white">Address Book Entries</h2>
             <div className="text-white text-sm">
@@ -838,8 +839,8 @@ export default function AddressBookPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+<div className="w-full overflow-x-auto">
+<table className="min-w-[720px] w-full text-sm">
             <thead className="bg-blue-50">
               <tr>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Customer ID</th>

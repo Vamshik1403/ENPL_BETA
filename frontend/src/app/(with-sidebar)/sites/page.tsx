@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AddressBook {
   id: number;
@@ -14,20 +14,7 @@ interface AddressBook {
   gstNo?: string;
 }
 
-interface UserPermissions {
-  id: number;
-  userId: number;
-  permissions: {
-    permissions: {
-      [key: string]: {
-        edit: boolean;
-        read: boolean;
-        create: boolean;
-        delete: boolean;
-      };
-    };
-  };
-}
+
 
 interface Site {
   id?: number;
@@ -72,6 +59,8 @@ export default function SitesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  
 
   // Get userId from localStorage on component mount
   useEffect(() => {
@@ -334,12 +323,33 @@ export default function SitesPage() {
     delete: permissions?.SITES?.delete ?? false,
   };
 
-  console.log('Current sitesPerm:', sitesPerm);
+// add these at top of your component
+const [activeIndex, setActiveIndex] = useState(-1);
+const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Debug logging
-  console.log('Search term:', addressBookSearch);
-  console.log('Total address books:', addressBooks.length);
-  console.log('Filtered results:', filteredAddressBooks.length);
+useEffect(() => {
+  // When dropdown opens, highlight first option
+  if (showAddressBookDropdown) {
+    setActiveIndex(filteredAddressBooks.length > 0 ? 0 : -1);
+  } else {
+    setActiveIndex(-1);
+  }
+}, [showAddressBookDropdown, filteredAddressBooks.length]);
+
+useEffect(() => {
+  // reset active index when search changes
+  setActiveIndex(filteredAddressBooks.length > 0 ? 0 : -1);
+}, [addressBookSearch]);
+
+useEffect(() => {
+  // auto scroll active item into view
+  if (activeIndex >= 0 && itemRefs.current[activeIndex]) {
+    itemRefs.current[activeIndex].scrollIntoView({
+      block: "nearest",
+    });
+  }
+}, [activeIndex]);
+
 
   const handleAddressBookSelect = (addressBook: AddressBook) => {
     setFormData(prev => ({
@@ -605,7 +615,7 @@ export default function SitesPage() {
   }, [searchTerm]);
 
   return (
-    <div className="p-8 -mt-10">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Branches</h1>
       
@@ -742,7 +752,47 @@ export default function SitesPage() {
                           if (addressBookSearch.trim().length > 0) {
                             setShowAddressBookDropdown(true);
                           }
+                          
                         }}
+                         onKeyDown={(e) => {
+      // Open dropdown when user starts typing
+      if (!showAddressBookDropdown && addressBookSearch.trim().length > 0) {
+        setShowAddressBookDropdown(true);
+      }
+
+      if (!showAddressBookDropdown) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((prev) => {
+          if (filteredAddressBooks.length === 0) return -1;
+          const next = prev < filteredAddressBooks.length - 1 ? prev + 1 : 0;
+          return next;
+        });
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex((prev) => {
+          if (filteredAddressBooks.length === 0) return -1;
+          const next = prev > 0 ? prev - 1 : filteredAddressBooks.length - 1;
+          return next;
+        });
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        if (activeIndex >= 0 && filteredAddressBooks[activeIndex]) {
+          handleAddressBookSelect(filteredAddressBooks[activeIndex]);
+          setShowAddressBookDropdown(false);
+        }
+      }
+
+      if (e.key === "Escape") {
+        setShowAddressBookDropdown(false);
+      }
+    }}
                         placeholder="Search customer..."
                         className="w-full border text-black border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       />
@@ -760,20 +810,32 @@ export default function SitesPage() {
                               </button>
                             </div>
                           ) : filteredAddressBooks.length > 0 ? (
-                            filteredAddressBooks.map((addressBook) => (
-                              <div
-                                key={addressBook.id}
-                                onClick={() => handleAddressBookSelect(addressBook)}
-                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                              >
-                                <div className="font-medium text-gray-900">
-                                  {addressBook.addressBookID} - {addressBook.customerName}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {addressBook.regdAddress}
-                                </div>
-                              </div>
-                            ))
+                            filteredAddressBooks.map((addressBook, index) => (
+  <div
+    key={addressBook.id}
+    ref={(el) => {
+      if (el) {
+        itemRefs.current[index] = el;
+      }
+    }}
+    onMouseEnter={() => setActiveIndex(index)}
+    onClick={() => {
+      handleAddressBookSelect(addressBook);
+      setShowAddressBookDropdown(false);
+    }}
+    className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0
+      ${activeIndex === index ? "bg-blue-100" : "hover:bg-gray-100"}
+    `}
+  >
+    <div className="font-medium text-gray-900">
+      {addressBook.addressBookID} - {addressBook.customerName}
+    </div>
+    <div className="text-sm text-gray-500">
+      {addressBook.regdAddress}
+    </div>
+  </div>
+))
+
                           ) : addressBooks.length === 0 ? (
                             <div className="px-3 py-2 text-gray-500">
                               No customers/vendors found in database.
@@ -1022,8 +1084,8 @@ export default function SitesPage() {
       )}
 
       {/* Main Content - Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+<div className="bg-white rounded-none sm:rounded-xl shadow-md overflow-hidden -mx-4 sm:mx-0">
+       <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-xl font-semibold text-white">Branches</h2>
             <div className="text-white text-sm">
@@ -1034,11 +1096,10 @@ export default function SitesPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+<div className="w-full overflow-x-auto">
+<table className="min-w-[720px] w-full text-sm">
             <thead className="bg-blue-50">
               <tr>
-                <th className="px-6 py-4 text-left text-blue-800 font-semibold">ID</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch ID</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch Name</th>
                 <th className="px-6 py-4 text-left text-blue-800 font-semibold">Branch Address</th>
@@ -1048,7 +1109,6 @@ export default function SitesPage() {
             <tbody className="divide-y divide-gray-200">
               {currentItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-gray-700 font-medium">{item.id}</td>
                   <td className="px-6 py-4 text-gray-700">{item.siteID}</td>
                   <td className="px-6 py-4 text-gray-700 font-medium">{item.siteName}</td>
                   <td className="px-6 py-4 text-gray-700">{item.siteAddress}</td>

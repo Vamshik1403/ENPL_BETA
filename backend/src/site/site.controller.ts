@@ -9,6 +9,16 @@ import { CreateSiteDto } from './dto/create-site.dto';
 export class SiteController {
   constructor(private readonly siteService: SitesService) {}
 
+  @Get('based-on-cust')
+findAllBasedOnCust(
+  @Query('addressBookId', new ParseIntPipe({ optional: true }))
+  addressBookId?: number,
+) {
+  return this.siteService.findAllBasedOnCust(
+    addressBookId?.toString(),
+  );
+}
+
    @Get(':id')
 findOne(@Param('id', ParseIntPipe) id: number) {
   return this.siteService.findOne(id);
@@ -31,10 +41,8 @@ findOne(@Param('id', ParseIntPipe) id: number) {
     return this.siteService.findAll();
   }
 
-  @Get('based-on-cust')
-  findAllBasedOnCust(@Query('addressBookId') addressBookId?: string) {
-    return this.siteService.findAllBasedOnCust(addressBookId);
-  }
+
+
   
 
 

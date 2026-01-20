@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Filter, TrendingUp, Clock, ChevronDown, Users, Store, Box, Layers, Package, ShoppingCart, DollarSign, Receipt, CreditCard, Truck, Eye, EyeOff, Lock } from "lucide-react";
+import { Calendar, Filter, TrendingUp, Clock, ChevronDown, Users, Store, Box, Layers, Package, ShoppingCart, DollarSign, Receipt, CreditCard, Truck } from "lucide-react";
 import { 
   FaUsers, FaStore, FaBoxes, FaSitemap, FaProductHunt, FaSwatchbook,
   FaInvision, FaAmazonPay, FaMoneyBill, FaOutdent 
@@ -105,25 +105,23 @@ export default function Dashboard() {
   const [loggedUserInfo, setLoggedUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
-  // Debug: Show logged user info when it changes
-  if (loggedUserInfo) {
-  console.log("👤 Logged User Info Updated:", loggedUserInfo);
-  }
-}, [loggedUserInfo]);
+    if (loggedUserInfo) {
+      console.log("👤 Logged User Info Updated:", loggedUserInfo);
+    }
+  }, [loggedUserInfo]);
 
-useEffect(() => {
-  // Debug: Show task filtering results
-  console.log("🔍 DEBUG - Task Filtering Stats:", {
-    allTasksCount: allTasks.length,
-    filteredTasksCount: filteredTasks.length,
-    departmentTasks: allTasks.filter(t => t.departmentId === loggedUserInfo?.departmentId).length,
-    userCreatedTasks: allTasks.filter(t => 
-      t.userId === loggedUserInfo?.id || 
-      t.createdBy === loggedUserInfo?.id ||
-      t.createdById === loggedUserInfo?.id
-    ).length
-  });
-}, [allTasks, filteredTasks, loggedUserInfo]);
+  useEffect(() => {
+    console.log("🔍 DEBUG - Task Filtering Stats:", {
+      allTasksCount: allTasks.length,
+      filteredTasksCount: filteredTasks.length,
+      departmentTasks: allTasks.filter(t => t.departmentId === loggedUserInfo?.departmentId).length,
+      userCreatedTasks: allTasks.filter(t => 
+        t.userId === loggedUserInfo?.id || 
+        t.createdBy === loggedUserInfo?.id ||
+        t.createdById === loggedUserInfo?.id
+      ).length
+    });
+  }, [allTasks, filteredTasks, loggedUserInfo]);
 
   // Helper to get date range boundaries
   const getDateRange = (range: DateRange, customStart?: string, customEnd?: string) => {
@@ -288,7 +286,6 @@ useEffect(() => {
 
     console.log("🔄 Loading user info for userId:", storedUserId);
 
-    // Fetch users list
     const usersRes = await fetch("http://localhost:8000/auth/users", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -310,7 +307,6 @@ useEffect(() => {
 
     console.log("✅ Found logged user:", loggedUser);
 
-    // Now fetch departments list to match department name with department ID
     const departmentsRes = await fetch("http://localhost:8000/department", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -322,7 +318,6 @@ useEffect(() => {
       const departments = await departmentsRes.json();
       console.log("📋 All departments:", departments);
       
-      // Find department by name from user data
       if (loggedUser.department && typeof loggedUser.department === 'string') {
         const foundDept = departments.find((d: any) => 
           d.departmentName === loggedUser.department
@@ -332,13 +327,10 @@ useEffect(() => {
           departmentId = foundDept.id;
           departmentObj = foundDept;
           console.log(`✅ Matched department "${loggedUser.department}" to ID: ${departmentId}`);
-        } else {
-          console.warn(`❌ Department "${loggedUser.department}" not found in departments list`);
         }
       }
     }
 
-    // Extract user info
     const userInfo: UserInfo = {
       id: loggedUser.id,
       username: loggedUser.username,
@@ -351,9 +343,6 @@ useEffect(() => {
 
     console.log("✅ FINAL User Info with Department Mapping:", userInfo);
     
- 
-    
-    // Cache in localStorage
     localStorage.setItem("userData", JSON.stringify(userInfo));
     if (userInfo.departmentId) {
       localStorage.setItem("departmentId", String(userInfo.departmentId));
@@ -369,28 +358,17 @@ useEffect(() => {
 };
 
   // Filter tasks based on user permissions and department
- // Filter tasks based on user permissions and department
 const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
   if (!loggedUserInfo) return tasks;
   
   const isSuperAdmin = loggedUserInfo.userType?.toUpperCase() === "SUPERADMIN";
   const isAdmin = loggedUserInfo.userType?.toUpperCase() === "ADMIN";
   
-  // SUPERADMIN sees all tasks
-  if (isSuperAdmin) {
-    console.log("👑 SUPERADMIN: Showing all tasks");
+  if (isSuperAdmin || isAdmin) {
     return tasks;
   }
   
-  // ADMIN might see all or department-specific based on your rules
-  if (isAdmin) {
-    console.log("👔 ADMIN: Showing all tasks");
-    return tasks;
-  }
-  
-  // Regular users: filter by userId OR departmentId
   const filteredTasks = tasks.filter((task: any) => {
-    // Extract task's userId from various possible field names
     const taskUserId = 
       task.userId ?? 
       task.createdBy ?? 
@@ -399,7 +377,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
       task.created_by_id ?? 
       null;
     
-    // Extract task's departmentId
     const taskDepartmentId =
       task.departmentId ??
       task.department_id ??
@@ -408,12 +385,10 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
       task.department?.department_id ??
       null;
     
-    // User created the task
     const createdByMe = loggedUserInfo.id != null && 
                        taskUserId != null && 
                        Number(taskUserId) === Number(loggedUserInfo.id);
     
-    // Task belongs to user's department
     const sameDepartment = loggedUserInfo.departmentId != null && 
                           taskDepartmentId != null && 
                           Number(taskDepartmentId) === Number(loggedUserInfo.departmentId);
@@ -422,7 +397,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
   });
 
   console.log(`🔍 User Filter Results: ${filteredTasks.length} of ${tasks.length} tasks visible`);
-  console.log(`   User Dept ID: ${loggedUserInfo.departmentId}, User ID: ${loggedUserInfo.id}`);
   
   return filteredTasks;
 };
@@ -433,7 +407,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
       setLoading(true);
       setApiErrors([]);
       
-      // Fetch original data
       const originalEndpoints = [
         "http://localhost:8000/sites",
         "http://localhost:8000/address-book",
@@ -450,7 +423,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
         originalEndpoints.map(url => safeFetch(url))
       );
 
-      // Process original data results
       const [
         sitesData,
         custData,
@@ -468,7 +440,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
         }
       });
 
-      // Set basic counts
       setSiteCount(Number(sitesData) || 0);
       setCustomerCount(Number(custData) || 0);
       setServiceContractCount(Number(serviceContractData) || 0);
@@ -477,20 +448,17 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
       setProductTypeCount(Number(productTypeData) || 0);
       setWorkscopeCategoryCount(Number(workscopeData) || 0);
 
-      // Fetch task data
       try {
         const taskResponse = await fetch("http://localhost:8000/task");
         if (taskResponse.ok) {
           const tasksArray = await taskResponse.json();
           const allTasksRaw = Array.isArray(tasksArray) ? tasksArray : [];
 
-          // Apply user-based filtering
           const visibleTasks = filterTasksByUserAccess(allTasksRaw);
           
           setAllTasks(visibleTasks);
           setTotalTasks(visibleTasks.length);
           
-          // Apply date filter
           updateTaskFilter(dateFilter, visibleTasks);
           
           console.log(`Tasks filtered: ${visibleTasks.length} of ${allTasksRaw.length} visible to user`);
@@ -504,7 +472,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
         setTotalTasks(0);
       }
 
-      // Fetch task remarks
       try {
         const remarksResponse = await fetch("http://localhost:8000/tasks-remarks");
         if (remarksResponse.ok) {
@@ -518,7 +485,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
         setAllRemarks([]);
       }
 
-      // Fetch inventory data if permission exists
       if (permissions.inventory) {
         await fetchInventoryData();
       }
@@ -564,11 +530,9 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
           if (!isNaN(numValue)) {
             newCounts[endpoint.key as keyof typeof newCounts] = numValue;
           } else {
-            console.warn(`Invalid number for ${endpoint.url}:`, value);
             newCounts[endpoint.key as keyof typeof newCounts] = 0;
           }
         } else {
-          console.error(`Failed to fetch ${endpoint.url}:`, result.reason);
           newCounts[endpoint.key as keyof typeof newCounts] = 0;
           errors.push(`Failed to load ${endpoint.key.replace(/([A-Z])/g, ' $1')}`);
         }
@@ -579,7 +543,6 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
       }
 
       setCounts(newCounts);
-      console.log("Fetched inventory counts:", newCounts);
     } catch (error) {
       console.error('Failed to fetch inventory counts', error);
       setApiErrors(prev => [...prev, "Failed to load inventory data"]);
@@ -732,11 +695,8 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
   const renderUserInfo = () => {
     if (!loggedUserInfo) return null;
 
-
-    
-    
     return (
-      <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 rounded-lg">
+      <div className="hidden sm:flex items-center gap-3 px-3 sm:px-4 py-2 bg-blue-50 rounded-lg">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
             <span className="text-blue-600 font-medium">
@@ -748,14 +708,7 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
               {loggedUserInfo.fullName}
             </div>
             <div className="text-xs text-gray-600">
-              {loggedUserInfo.department?.departmentName || 'No Department'} • 
-              <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-                loggedUserInfo.userType === 'SUPERADMIN' ? 'bg-purple-100 text-purple-800' :
-                loggedUserInfo.userType === 'ADMIN' ? 'bg-blue-100 text-blue-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {loggedUserInfo.userType}
-              </span>
+              {loggedUserInfo.department?.departmentName || 'No Department'}
             </div>
           </div>
         </div>
@@ -764,94 +717,98 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
   };
 
   useEffect(() => {
-    // Load user info once
     loadLoggedUserInfo();
   }, []);
 
   useEffect(() => {
-    // Fetch data when permissions are loaded and user info is available
     if (!permissionsLoading && loggedUserInfo) {
       fetchDashboardData();
     }
   }, [permissionsLoading, permissions, loggedUserInfo]);
 
-  // StatCard Component (keep as is)
-  const StatCard = ({ 
-    title, 
-    value, 
-    color, 
-    onClick, 
-    icon: Icon,
-    subtitle,
-    trend,
-    customIcon,
-    isCurrency = false
-  }: any) => {
-    const displayValue = loading 
-      ? "..." 
-      : isCurrency && typeof value === 'string' && value.startsWith('₹')
-        ? value
-        : isCurrency
-        ? formatCurrency(Number(value) || 0)
-        : typeof value === 'number'
-        ? value.toLocaleString()
-        : value || 0;
+ // StatCard Component - Made Responsive (FIXED VERSION)
+const StatCard = ({ 
+  title, 
+  value, 
+  color, 
+  onClick, 
+  icon: Icon,
+  subtitle,
+  trend,
+  customIcon,
+  isCurrency = false
+}: any) => {
+  const displayValue = loading 
+    ? "..." 
+    : isCurrency && typeof value === 'string' && value.startsWith('₹')
+      ? value
+      : isCurrency
+      ? formatCurrency(Number(value) || 0)
+      : typeof value === 'number'
+      ? value.toLocaleString()
+      : value || 0;
 
-    return (
-      <div
-        className={`bg-white shadow-md rounded-xl p-6 border-l-4 hover:shadow-lg transition-all duration-200 ${
-          onClick ? "cursor-pointer hover:scale-[1.02]" : ""
-        } relative overflow-hidden group`}
-        style={{ borderColor: color }}
-        onClick={onClick}
-        role={onClick ? "button" : undefined}
-      >
-        <div 
-          className="absolute top-0 left-0 w-1 h-full opacity-10 group-hover:opacity-20 transition-opacity"
-          style={{ backgroundColor: color }}
-        />
-        
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              {customIcon ? (
-                <div className="text-lg" style={{ color }}>{customIcon}</div>
-              ) : Icon ? (
-                <Icon size={18} className="opacity-70" style={{ color }} />
-              ) : null}
-              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                {title}
-              </h3>
-            </div>
+  // Determine icon size based on screen size (you can make this more sophisticated)
+  const iconSize = 16; // Default size for desktop
+
+  return (
+    <div
+      className={`bg-white shadow-sm sm:shadow-md rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 border-l-4 hover:shadow-md sm:hover:shadow-lg transition-all duration-200 ${
+        onClick ? "cursor-pointer hover:scale-[1.01] sm:hover:scale-[1.02]" : ""
+      } relative overflow-hidden group`}
+      style={{ borderColor: color }}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+    >
+      <div 
+        className="absolute top-0 left-0 w-1 h-full opacity-10 group-hover:opacity-20 transition-opacity"
+        style={{ backgroundColor: color }}
+      />
+      
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1 sm:mb-2">
+            {customIcon ? (
+              <div className="text-base sm:text-lg" style={{ color }}>{customIcon}</div>
+            ) : Icon ? (
+              <Icon size={14} className="opacity-70 sm:hidden" style={{ color }} />
+            ) : null}
+            {Icon && (
+              <Icon size={16} className="opacity-70 hidden sm:block" style={{ color }} />
+            )}
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">
+              {title}
+            </h3>
+          </div>
+          
+          <div className="flex items-baseline gap-1 sm:gap-2">
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
+              {displayValue}
+            </p>
             
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-gray-800">
-                {displayValue}
-              </p>
-              
-              {trend !== undefined && trend !== 0 && (
-                <span className={`text-sm font-medium ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}%
-                </span>
-              )}
-            </div>
-            
-            {subtitle && (
-              <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
+            {trend !== undefined && trend !== 0 && (
+              <span className={`text-xs sm:text-sm font-medium ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}%
+              </span>
             )}
           </div>
           
-          {onClick && (
-            <div className="text-gray-300 group-hover:text-gray-400 transition-colors">
-              <ChevronDown size={20} className="rotate-270" />
-            </div>
+          {subtitle && (
+            <p className="text-xs text-gray-400 mt-0.5 sm:mt-1">{subtitle}</p>
           )}
         </div>
+        
+        {onClick && (
+          <div className="text-gray-300 group-hover:text-gray-400 transition-colors hidden sm:block">
+            <ChevronDown size={16} className="rotate-270" />
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
-  // Inventory Cards Array (keep as is)
+  // Inventory Cards Array
   const inventoryCards = [
     { 
       title: "Vendors", 
@@ -919,17 +876,17 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
     },
   ];
 
-  // Status Indicator Component (keep as is)
+  // Status Indicator Component - Made Responsive
   const StatusIndicator = ({ status, count, color }: any) => (
-    <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between p-3 sm:p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-2 sm:gap-3">
         <div 
-          className="w-3 h-3 rounded-full" 
+          className="w-2 h-2 sm:w-3 sm:h-3 rounded-full" 
           style={{ backgroundColor: color }}
         />
-        <span className="font-medium text-gray-700">{status}</span>
+        <span className="text-sm sm:font-medium text-gray-700">{status}</span>
       </div>
-      <span className="text-xl font-bold text-gray-900">{count}</span>
+      <span className="text-lg sm:text-xl font-bold text-gray-900">{count}</span>
     </div>
   );
 
@@ -946,526 +903,602 @@ const filterTasksByUserAccess = (tasks: Task[]): Task[] => {
   }
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Dashboard Overview
-            </h1>
-            <p className="text-gray-600">
-              Real-time insights and analytics for your service management
-            </p>
-          </div>
+    <>
+      {/* Responsive CSS */}
+      <style jsx global>{`
+        /* Mobile optimization for dashboard */
+        @media (max-width: 640px) {
+          .dashboard-container {
+            width: 100% !important;
+            margin-left: 0 !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+          }
           
-          <div className="flex items-center gap-3">
-            {renderUserInfo()}
-            
-            <div className="text-sm text-gray-500">
-              Data updated just now
-            </div>
-            <button 
-              onClick={() => {
-                fetchDashboardData();
-                refreshPermissions();
-                loadLoggedUserInfo(); // Refresh user info too
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <Clock size={16} />
-              Refresh
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Error Banner */}
-      {apiErrors.length > 0 && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center gap-2 text-yellow-700">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <span className="font-medium">Note:</span>
-            <span>Some data may not be available</span>
-          </div>
-          <div className="mt-2 text-sm text-yellow-600">
-            <button 
-              onClick={() => setApiErrors([])}
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* No Permissions Message */}
-      {!permissionsLoading && !loading && !permissions.hasAnyPermission && (
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center mb-8">
-          <div className="text-5xl mb-4">🔒</div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">No Dashboard Access</h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            You don't have permission to view any dashboard sections. 
-            Please contact your administrator to request access.
-          </p>
-          <div className="flex justify-center gap-4">
-            <button 
-              onClick={() => router.push("/tasks")}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Go to Tasks
-            </button>
-            <button 
-              onClick={refreshPermissions}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Refresh Permissions
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Statistics Grid */}
-      <DashboardSection
-        requiredPermission="metrics"
-        permissions={permissions}
-      >
-        <div className="mb-10">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">Key Metrics</h2>
-            <div className="text-sm text-gray-500">
-              Total records across all modules
-            </div>
-          </div>
+          .stat-grid {
+            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard 
-              title="Customers" 
-              value={customerCount} 
-              color="#059669"
-              onClick={() => router.push("/addressbook")}
-              icon={Calendar}
-              subtitle="Total registered customers"
-            />
-            <StatCard 
-              title="Sites" 
-              value={siteCount} 
-              color="#2563EB"
-              onClick={() => router.push("/sites")}
-              icon={Calendar}
-              subtitle="Customer locations"
-            />
-            <StatCard 
-              title="Service Contracts" 
-              value={serviceContractCount} 
-              color="#7C3AED"
-              onClick={() => router.push("/service-contract")}
-              icon={Calendar}
-              subtitle="Active agreements"
-            />
-            <StatCard 
-              title="Total Tasks" 
-              value={totalTasks} 
-              color="#374151"
-              onClick={() => router.push("/tasks")}
-              icon={TrendingUp}
-              subtitle={`${loggedUserInfo?.department?.departmentName || 'Your'} tasks`}
-              trend={taskTrend}
-            />
-          </div>
-        </div>
-      </DashboardSection>
+          .inventory-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+          
+          .task-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+          
+          .section-padding {
+            padding: 1rem !important;
+          }
+          
+          .section-margin {
+            margin-bottom: 1rem !important;
+          }
+          
+          .header-flex {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.75rem !important;
+          }
+          
+          .title-text {
+            font-size: 1.5rem !important;
+            margin-bottom: 0.25rem !important;
+          }
+          
+          .subtitle-text {
+            font-size: 0.875rem !important;
+          }
+        }
+        
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          
+          .inventory-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+          
+          .task-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+        }
+        
+        /* Hide sidebar on mobile and expand content */
+        @media (max-width: 768px) {
+          main {
+            margin-left: 0 !important;
+            width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+          
+          .sidebar-collapsed ~ main {
+            margin-left: 0 !important;
+            width: 100% !important;
+          }
+          
+          .sidebar-expanded ~ main {
+            margin-left: 0 !important;
+            width: 100% !important;
+          }
+        }
+        
+       
+      `}</style>
 
-      {/* Rest of the code remains the same... */}
-      {/* Inventory & Business Metrics */}
-      <DashboardSection 
-        requiredPermission="inventory" 
-        permissions={permissions}
-      >
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Business & Inventory Metrics
-              </h2>
-              <p className="text-gray-600">
-                Financial and inventory overview
+      {/* Main Dashboard Container */}
+      <div className="dashboard-container w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+        {/* Header */}
+        <div className="section-margin mb-6 sm:mb-8">
+          <div className="header-flex flex justify-between items-center mb-4">
+            <div className="flex-1">
+              <h1 className="title-text text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                Dashboard Overview
+              </h1>
+              <p className="subtitle-text text-gray-600">
+                Real-time insights and analytics for your service management
               </p>
             </div>
-            <button
-              onClick={fetchInventoryData}
-              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-            >
-              <Clock size={14} />
-              Refresh Inventory
-            </button>
+            
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-normal">
+              {renderUserInfo()}
+              
+              <div className="hidden sm:block text-sm text-gray-500">
+                Data updated just now
+              </div>
+             <button 
+  onClick={() => {
+    fetchDashboardData();
+    refreshPermissions();
+    loadLoggedUserInfo();
+  }}
+  className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
+>
+  <Clock size={14} className="sm:hidden" />
+  <Clock size={16} className="hidden sm:block" />
+  <span className="hidden xs:inline">Refresh</span>
+  <span className="xs:hidden">↻</span>
+</button>
+            </div>
           </div>
-          
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading inventory data...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {inventoryCards.map((card, index) => (
-                <StatCard
-                  key={index}
-                  title={card.title}
-                  value={card.value}
-                  color={card.color}
-                  subtitle={card.subtitle}
-                  customIcon={card.customIcon}
-                />
-              ))}
-            </div>
-          )}
         </div>
-      </DashboardSection>
 
-      {/* Task Analysis Section */}
-      <DashboardSection 
-        requiredPermission="tasks" 
-        permissions={permissions}
-      >
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          {/* Task Header with Filter Controls */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 pb-6 border-b">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Task Analysis
-              </h2>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Filter size={16} />
-                <span className="font-medium">Period:</span>
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                  {formatDateRange(dateFilter)}
-                </span>
-                <span className="text-sm">
-                  ({filteredTasks.length} of {totalTasks} tasks)
-                </span>
-                {loggedUserInfo?.department && (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                    Dept: {loggedUserInfo.department.departmentName}
-                  </span>
-                )}
+        {/* Error Banner */}
+        {apiErrors.length > 0 && (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-700">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium text-sm">Note:</span>
+              <span className="text-sm">Some data may not be available</span>
+            </div>
+            <div className="mt-2 text-xs sm:text-sm text-yellow-600">
+              <button 
+                onClick={() => setApiErrors([])}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* No Permissions Message */}
+        {!permissionsLoading && !loading && !permissions.hasAnyPermission && (
+          <div className="bg-white rounded-lg sm:rounded-2xl shadow-lg p-6 sm:p-12 text-center mb-6 sm:mb-8">
+            <div className="text-4xl sm:text-5xl mb-4">🔒</div>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">No Dashboard Access</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">
+              You don't have permission to view any dashboard sections. 
+              Please contact your administrator to request access.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+              <button 
+                onClick={() => router.push("/tasks")}
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              >
+                Go to Tasks
+              </button>
+              <button 
+                onClick={refreshPermissions}
+                className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+              >
+                Refresh Permissions
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main Statistics Grid */}
+        <DashboardSection requiredPermission="metrics" permissions={permissions}>
+          <div className="mb-8 sm:mb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Key Metrics</h2>
+              <div className="text-xs sm:text-sm text-gray-500">
+                Total records across all modules
               </div>
             </div>
             
-            {/* Date Filter Controls */}
-            <div className="flex flex-wrap gap-3">
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                {(['today', 'week', 'month', 'year', 'all'] as DateRange[]).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => updateTaskFilter({ range })}
-                    className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors ${
-                      dateFilter.range === range
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                    }`}
-                  >
-                    {range === 'all' ? 'All Time' : 
-                     range === 'week' ? 'This Week' :
-                     range === 'month' ? 'This Month' :
-                     range === 'year' ? 'This Year' : range}
-                  </button>
+            <div className="stat-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <StatCard 
+                title="Customers" 
+                value={customerCount} 
+                color="#059669"
+                onClick={() => router.push("/addressbook")}
+                icon={Calendar}
+                subtitle="Total registered customers"
+              />
+              <StatCard 
+                title="Sites" 
+                value={siteCount} 
+                color="#2563EB"
+                onClick={() => router.push("/sites")}
+                icon={Calendar}
+                subtitle="Customer locations"
+              />
+              <StatCard 
+                title="Service Contracts" 
+                value={serviceContractCount} 
+                color="#7C3AED"
+                onClick={() => router.push("/service-contract")}
+                icon={Calendar}
+                subtitle="Active agreements"
+              />
+              <StatCard 
+                title="Total Tasks" 
+                value={totalTasks} 
+                color="#374151"
+                onClick={() => router.push("/tasks")}
+                icon={TrendingUp}
+                subtitle={`${loggedUserInfo?.department?.departmentName || 'Your'} tasks`}
+                trend={taskTrend}
+              />
+            </div>
+          </div>
+        </DashboardSection>
+
+        {/* Inventory & Business Metrics */}
+        <DashboardSection requiredPermission="inventory" permissions={permissions}>
+          <div className="section-padding bg-white rounded-lg sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 md:mb-8 gap-3 sm:gap-0">
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">
+                  Business & Inventory Metrics
+                </h2>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Financial and inventory overview
+                </p>
+              </div>
+            <button
+  onClick={fetchInventoryData}
+  className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+>
+  <Clock size={12} className="sm:hidden" />
+  <Clock size={14} className="hidden sm:block" />
+  <span className="hidden xs:inline">Refresh Inventory</span>
+  <span className="xs:hidden">Refresh</span>
+</button>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center items-center py-8 sm:py-12">
+                <div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600 text-sm sm:text-base">Loading inventory data...</span>
+              </div>
+            ) : (
+              <div className="inventory-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+                {inventoryCards.map((card, index) => (
+                  <StatCard
+                    key={index}
+                    title={card.title}
+                    value={card.value}
+                    color={card.color}
+                    subtitle={card.subtitle}
+                    customIcon={card.customIcon}
+                  />
                 ))}
               </div>
-              
-              <button
-                onClick={() => setShowCustomDatePicker(!showCustomDatePicker)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  dateFilter.range === 'custom'
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <Calendar size={16} />
-                Custom Range
-              </button>
-            </div>
+            )}
           </div>
+        </DashboardSection>
 
-          {/* Custom Date Picker */}
-          {showCustomDatePicker && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <div className="flex flex-col sm:flex-row items-end gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-                
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    max={new Date().toISOString().split('T')[0]}
-                    min={customStartDate}
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  <button
-                    onClick={applyCustomDateFilter}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    onClick={() => setShowCustomDatePicker(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Task Status Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatusIndicator 
-              status="Open" 
-              count={openTasks} 
-              color="#3B82F6"
-            />
-            <StatusIndicator 
-              status="Scheduled" 
-              count={scheduledTasks} 
-              color="#10B981"
-            />
-            <StatusIndicator 
-              status="In Progress" 
-              count={wipTasks} 
-              color="#F59E0B"
-            />
-            <StatusIndicator 
-              status="On Hold" 
-              count={onHoldTasks} 
-              color="#EF4444"
-            />
-            <StatusIndicator 
-              status="Rescheduled" 
-              count={rescheduledTasks} 
-              color="#8B5CF6"
-            />
-            <StatusIndicator 
-              status="Completed" 
-              count={completedTasks} 
-              color="#22C55E"
-            />
-            <StatusIndicator 
-              status="Reopened" 
-              count={reopenTasks} 
-              color="#6366F1"
-            />
-            
-            {/* Summary Card */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white md:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Task Summary</h3>
-                <div className="text-sm opacity-90">
-                  {dateFilter.range === 'custom' ? 'Custom Range' : 'Current Period'}
-                  {loggedUserInfo?.department && (
-                    <div className="mt-1">Department: {loggedUserInfo.department.departmentName}</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-100">Total Tasks</span>
-                  <span className="text-2xl font-bold">{filteredTasks.length}</span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-100">Completion Rate</span>
-                  <span className="text-xl font-bold">
-                    {filteredTasks.length > 0 
-                      ? `${((completedTasks / filteredTasks.length) * 100).toFixed(1)}%`
-                      : '0%'}
+        {/* Task Analysis Section */}
+        <DashboardSection requiredPermission="tasks" permissions={permissions}>
+          <div className="section-padding bg-white rounded-lg sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            {/* Task Header with Filter Controls */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8 pb-4 sm:pb-6 border-b">
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">
+                  Task Analysis
+                </h2>
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+  <Filter size={12} className="sm:hidden" />
+  <Filter size={14} className="hidden sm:block md:hidden" />
+  <Filter size={16} className="hidden md:block" />
+  <span className="font-medium">Period:</span>
+                  <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">
+                    {formatDateRange(dateFilter)}
                   </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-100">Avg. Daily Tasks</span>
-                  <span className="text-xl font-bold">
-                    {(() => {
-                      if (dateFilter.range === 'custom' && customStartDate && customEndDate) {
-                        const days = Math.ceil((new Date(customEndDate).getTime() - new Date(customStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        return days > 0 ? (filteredTasks.length / days).toFixed(1) : '0';
-                      }
-                      return '-';
-                    })()}
+                  <span className="text-xs">
+                    ({filteredTasks.length} of {totalTasks} tasks)
                   </span>
                 </div>
               </div>
               
-              <button
-                onClick={() => router.push("/tasks")}
-                className="mt-6 w-full py-3 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
-              >
-                View All Tasks →
-              </button>
+              {/* Date Filter Controls */}
+              <div className="flex flex-wrap gap-2 sm:gap-3 w-full lg:w-auto">
+                <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1 overflow-x-auto">
+                  {(['today', 'week', 'month', 'year', 'all'] as DateRange[]).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => updateTaskFilter({ range })}
+                      className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium capitalize whitespace-nowrap transition-colors ${
+                        dateFilter.range === range
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                      }`}
+                    >
+                      {range === 'all' ? 'All Time' : 
+                       range === 'week' ? 'Week' :
+                       range === 'month' ? 'Month' :
+                       range === 'year' ? 'Year' : range}
+                    </button>
+                  ))}
+                </div>
+                
+               <button
+  onClick={() => setShowCustomDatePicker(!showCustomDatePicker)}
+  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 whitespace-nowrap ${
+    dateFilter.range === 'custom'
+      ? 'bg-blue-100 text-blue-700 border border-blue-200'
+      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+  }`}
+>
+  <Calendar size={12} className="sm:hidden" />
+  <Calendar size={14} className="hidden sm:block md:hidden" />
+  <Calendar size={16} className="hidden md:block" />
+  <span className="hidden sm:inline">Custom Range</span>
+  <span className="sm:hidden">Custom</span>
+</button>
+              </div>
             </div>
-          </div>
 
-          {/* Progress Visualization */}
-          <div className="mt-8 pt-6 border-t">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Task Distribution</h3>
-            <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-              {[
-                { status: 'Completed', count: completedTasks, color: '#22C55E' },
-                { status: 'In Progress', count: wipTasks, color: '#F59E0B' },
-                { status: 'Scheduled', count: scheduledTasks, color: '#10B981' },
-                { status: 'Open', count: openTasks, color: '#3B82F6' },
-                { status: 'On Hold', count: onHoldTasks, color: '#EF4444' },
-              ]
-                .filter(item => item.count > 0)
-                .map((item, index, array) => {
-                  const percentage = (item.count / filteredTasks.length) * 100;
-                  return (
-                    <div
-                      key={item.status}
-                      style={{
-                        width: `${percentage}%`,
-                        backgroundColor: item.color,
-                        height: '100%',
-                        display: 'inline-block'
-                      }}
-                      title={`${item.status}: ${item.count} (${percentage.toFixed(1)}%)`}
-                      className="hover:opacity-90 transition-opacity cursor-help"
+            {/* Custom Date Picker */}
+            {showCustomDatePicker && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg sm:rounded-xl border border-blue-200">
+                <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      max={new Date().toISOString().split('T')[0]}
                     />
-                  );
-                })}
-            </div>
-            
-            <div className="flex flex-wrap gap-4 mt-4">
-              {[
-                { status: 'Completed', count: completedTasks, color: '#22C55E' },
-                { status: 'In Progress', count: wipTasks, color: '#F59E0B' },
-                { status: 'Scheduled', count: scheduledTasks, color: '#10B981' },
-                { status: 'Open', count: openTasks, color: '#3B82F6' },
-                { status: 'On Hold', count: onHoldTasks, color: '#EF4444' },
-                { status: 'Rescheduled', count: rescheduledTasks, color: '#8B5CF6' },
-                { status: 'Reopened', count: reopenTasks, color: '#6366F1' },
-              ]
-                .filter(item => item.count > 0)
-                .map(item => (
-                  <div key={item.status} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      max={new Date().toISOString().split('T')[0]}
+                      min={customStartDate}
                     />
-                    <span className="text-sm text-gray-600">
-                      {item.status}: <span className="font-semibold">{item.count}</span>
+                  </div>
+                  
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={applyCustomDateFilter}
+                      className="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      onClick={() => setShowCustomDatePicker(false)}
+                      className="flex-1 sm:flex-none px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Task Status Grid */}
+            <div className="task-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+              <StatusIndicator 
+                status="Open" 
+                count={openTasks} 
+                color="#3B82F6"
+              />
+              <StatusIndicator 
+                status="Scheduled" 
+                count={scheduledTasks} 
+                color="#10B981"
+              />
+              <StatusIndicator 
+                status="In Progress" 
+                count={wipTasks} 
+                color="#F59E0B"
+              />
+              <StatusIndicator 
+                status="On Hold" 
+                count={onHoldTasks} 
+                color="#EF4444"
+              />
+              <StatusIndicator 
+                status="Rescheduled" 
+                count={rescheduledTasks} 
+                color="#8B5CF6"
+              />
+              <StatusIndicator 
+                status="Completed" 
+                count={completedTasks} 
+                color="#22C55E"
+              />
+              <StatusIndicator 
+                status="Reopened" 
+                count={reopenTasks} 
+                color="#6366F1"
+              />
+              
+              {/* Summary Card */}
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl p-4 sm:p-6 text-white col-span-2">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold">Task Summary</h3>
+                  <div className="text-xs sm:text-sm opacity-90">
+                    {dateFilter.range === 'custom' ? 'Custom Range' : 'Current Period'}
+                  </div>
+                </div>
+                
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-100 text-sm sm:text-base">Total Tasks</span>
+                    <span className="text-xl sm:text-2xl font-bold">{filteredTasks.length}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-100 text-sm sm:text-base">Completion Rate</span>
+                    <span className="text-lg sm:text-xl font-bold">
+                      {filteredTasks.length > 0 
+                        ? `${((completedTasks / filteredTasks.length) * 100).toFixed(1)}%`
+                        : '0%'}
                     </span>
                   </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      </DashboardSection>
-
-      {/* Additional Metrics */}
-      <DashboardSection 
-        requiredPermission="resources" 
-        permissions={permissions}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Resources</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard 
-                  title="Service Categories" 
-                  value={contractworkCount} 
-                  color="#D97706"
-                  onClick={() => router.push("/contract-work")}
-                />
-                <StatCard 
-                  title="Departments" 
-                  value={departmentCount} 
-                  color="#DC2626"
-                  onClick={() => router.push("/departments")}
-                />
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-100 text-sm sm:text-base">Avg. Daily Tasks</span>
+                    <span className="text-lg sm:text-xl font-bold">
+                      {(() => {
+                        if (dateFilter.range === 'custom' && customStartDate && customEndDate) {
+                          const days = Math.ceil((new Date(customEndDate).getTime() - new Date(customStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                          return days > 0 ? (filteredTasks.length / days).toFixed(1) : '0';
+                        }
+                        return '-';
+                      })()}
+                    </span>
+                  </div>
+                </div>
                 
-                <StatCard 
-                  title="Workscope Categories" 
-                  value={workscopeCategoryCount} 
-                  color="#EA580C"
-                  onClick={() => router.push("/workscope")}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <DashboardSection 
-            requiredPermission="quickActions" 
-            permissions={permissions}
-          >
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg p-6 text-white">
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button 
-                  onClick={() => router.push("/tasks?new=true")}
-                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors"
+                <button
+                  onClick={() => router.push("/tasks")}
+                  className="mt-4 sm:mt-6 w-full py-2 sm:py-3 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm sm:text-base"
                 >
-                  <span>Create New Task</span>
-                  <span className="text-xl">+</span>
-                </button>
-                <button 
-                  onClick={() => router.push("/service-contract?new=true")}
-                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors"
-                >
-                  <span>Add Service Contract</span>
-                  <span className="text-xl">+</span>
-                </button>
-                <button 
-                  onClick={() => router.push("/addressbook?new=true")}
-                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors"
-                >
-                  <span>Add New Customer</span>
-                  <span className="text-xl">+</span>
-                </button>
-                <button 
-                  onClick={fetchDashboardData}
-                  className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-left flex items-center justify-between transition-colors mt-4"
-                >
-                  <span>Refresh Dashboard</span>
-                  <Clock size={18} />
+                  View All Tasks →
                 </button>
               </div>
             </div>
-          </DashboardSection>
-        </div>
-      </DashboardSection>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading dashboard data...</p>
+            {/* Progress Visualization */}
+            <div className="mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Task Distribution</h3>
+              <div className="h-3 sm:h-4 bg-gray-200 rounded-full overflow-hidden">
+                {[
+                  { status: 'Completed', count: completedTasks, color: '#22C55E' },
+                  { status: 'In Progress', count: wipTasks, color: '#F59E0B' },
+                  { status: 'Scheduled', count: scheduledTasks, color: '#10B981' },
+                  { status: 'Open', count: openTasks, color: '#3B82F6' },
+                  { status: 'On Hold', count: onHoldTasks, color: '#EF4444' },
+                ]
+                  .filter(item => item.count > 0)
+                  .map((item, index, array) => {
+                    const percentage = (item.count / filteredTasks.length) * 100;
+                    return (
+                      <div
+                        key={item.status}
+                        style={{
+                          width: `${percentage}%`,
+                          backgroundColor: item.color,
+                          height: '100%',
+                          display: 'inline-block'
+                        }}
+                        title={`${item.status}: ${item.count} (${percentage.toFixed(1)}%)`}
+                        className="hover:opacity-90 transition-opacity cursor-help"
+                      />
+                    );
+                  })}
+              </div>
+              
+              <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mt-3 sm:mt-4">
+                {[
+                  { status: 'Completed', count: completedTasks, color: '#22C55E' },
+                  { status: 'In Progress', count: wipTasks, color: '#F59E0B' },
+                  { status: 'Scheduled', count: scheduledTasks, color: '#10B981' },
+                  { status: 'Open', count: openTasks, color: '#3B82F6' },
+                  { status: 'On Hold', count: onHoldTasks, color: '#EF4444' },
+                  { status: 'Rescheduled', count: rescheduledTasks, color: '#8B5CF6' },
+                  { status: 'Reopened', count: reopenTasks, color: '#6366F1' },
+                ]
+                  .filter(item => item.count > 0)
+                  .map(item => (
+                    <div key={item.status} className="flex items-center gap-1 sm:gap-2">
+                      <div 
+                        className="w-2 h-2 sm:w-3 sm:h-3 rounded-full" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-xs sm:text-sm text-gray-600">
+                        {item.status}: <span className="font-semibold">{item.count}</span>
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        </DashboardSection>
+
+        {/* Additional Metrics */}
+        <DashboardSection requiredPermission="resources" permissions={permissions}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2">
+              <div className="section-padding bg-white rounded-lg sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Additional Resources</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <StatCard 
+                    title="Service Categories" 
+                    value={contractworkCount} 
+                    color="#D97706"
+                    onClick={() => router.push("/contract-work")}
+                  />
+                  <StatCard 
+                    title="Departments" 
+                    value={departmentCount} 
+                    color="#DC2626"
+                    onClick={() => router.push("/departments")}
+                  />
+                  
+                  <StatCard 
+                    title="Workscope Categories" 
+                    value={workscopeCategoryCount} 
+                    color="#EA580C"
+                    onClick={() => router.push("/workscope")}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DashboardSection requiredPermission="quickActions" permissions={permissions}>
+              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-2xl shadow-md sm:shadow-lg p-4 sm:p-6 text-white">
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Quick Actions</h3>
+                <div className="space-y-2 sm:space-y-3">
+                  <button 
+                    onClick={() => router.push("/tasks?new=true")}
+                    className="w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors text-sm sm:text-base"
+                  >
+                    <span>Create New Task</span>
+                    <span className="text-lg sm:text-xl">+</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push("/service-contract?new=true")}
+                    className="w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors text-sm sm:text-base"
+                  >
+                    <span>Add Service Contract</span>
+                    <span className="text-lg sm:text-xl">+</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push("/addressbook?new=true")}
+                    className="w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/10 hover:bg-white/20 rounded-lg text-left flex items-center justify-between transition-colors text-sm sm:text-base"
+                  >
+                    <span>Add New Customer</span>
+                    <span className="text-lg sm:text-xl">+</span>
+                  </button>
+                <button 
+  onClick={fetchDashboardData}
+  className="w-full py-2 sm:py-3 px-3 sm:px-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-left flex items-center justify-between transition-colors text-sm sm:text-base mt-2 sm:mt-4"
+>
+  <span>Refresh Dashboard</span>
+  <Clock size={14} className="sm:hidden" />
+  <Clock size={18} className="hidden sm:block" />
+</button>
+                </div>
+              </div>
+            </DashboardSection>
+          </div>
+        </DashboardSection>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 sm:h-12 w-10 sm:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+              <p className="text-gray-600 text-sm sm:text-base">Loading dashboard data...</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

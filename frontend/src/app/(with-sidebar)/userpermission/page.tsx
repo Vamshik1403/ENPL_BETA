@@ -932,7 +932,7 @@ export default function UsersPage() {
   }, [loadingUsers, fetchUsers]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-white p-4 md:p-8">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4  sm:px-6 text-black">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">

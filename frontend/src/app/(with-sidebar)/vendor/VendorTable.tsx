@@ -491,12 +491,12 @@ const VendorTable: React.FC = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+<div className="w-full -ml-13 sm:ml-0 px-4 text-black py-4 sm:px-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Vendors</h1>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+<div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center -mx-4 sm:mx-0">
         <button
           onClick={() => {
             setFormData(initialFormState);
@@ -519,7 +519,7 @@ const VendorTable: React.FC = () => {
             placeholder="Search by name, GST, products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
+            className="w-full pl-10 pr-4 py-2 border text-black border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
           />
         </div>
       </div>
@@ -530,8 +530,8 @@ const VendorTable: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto" style={{ maxWidth: "100vw" }}>
-            <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
+<div className="w-full overflow-x-auto -mx-4 sm:mx-0">
+<table className="min-w-[1024px] w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
               <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
                 <tr>
                   <th className="p-4 border">Vendor ID</th>

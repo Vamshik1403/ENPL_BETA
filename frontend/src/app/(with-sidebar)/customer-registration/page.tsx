@@ -159,9 +159,13 @@ export default function CustomerContactPage() {
       return;
     }
     const res = await fetch(
-      `http://localhost:8000/sites/based-on-cust?addressBookId=${customerId}`,
-    );
-    setSites(await res.json());
+  `http://localhost:8000/sites/based-on-cust?addressBookId=${customerId}`,
+);
+const data = await res.json();
+
+// ✅ FORCE array safety
+setSites(Array.isArray(data) ? data : []);
+
   };
 
 const fetchPermissions = async (uid: number) => {
@@ -458,13 +462,11 @@ useEffect(() => {
   });
 
   return (
-    <div className="min-h-screen -mt-10 text-black bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 text-black sm:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Customer Contact Management
-          </h1>
+         
          
         </div>
 
@@ -716,12 +718,16 @@ useEffect(() => {
         )}
 
         {/* ================= LIST TABLE ================= */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+<div className="
+  w-full
+  px-0 sm:px-6
+  py-4
+">
           {/* Table Header with Stats */}
           <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-gray-50">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">All Contacts</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Customer Registartion Contacts</h3>
                 <p className="text-sm text-gray-600">
                   Showing {paginatedRecords.length} of {filteredRecords.length} contacts
                 </p>
@@ -735,8 +741,12 @@ useEffect(() => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
+<div className="
+  w-full
+  overflow-x-auto
+  -mx-4 sm:mx-0
+">
+<table className="min-w-[720px] w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">

@@ -605,7 +605,7 @@ const MaterialDeliveryForm: React.FC = () => {
   const totalPages = Math.ceil(sortedDeliveries.length / itemsPerPage);
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6 text-black">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Material Outward</h1>
       </div>

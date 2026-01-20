@@ -138,10 +138,11 @@ const CategoryTable: React.FC = () => {
 
 
 
-return (
-  <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
-  
-        <div className="flex justify-between items-center mb-5 mt-16">
+  return (
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 text-black sm:px-6">
+      {/* Mobile: Remove side margins, Desktop: Keep padding */}
+      <div className="mx-0 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-24">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 mt-16 px-4 sm:px-0">
           <button
             onClick={() => {
               setIsCreateModalOpen(true);
@@ -151,11 +152,11 @@ return (
                 subCategories: [{ subCategoryName: "" }],
               });
             }}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full sm:w-auto mb-4 sm:mb-0"
           >
             Add Product Category
           </button>
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full sm:w-64">
             <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
               <FaSearch />
             </span>
@@ -164,81 +165,93 @@ return (
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
+              className="w-full pl-10 text-black pr-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-300"
             />
           </div>
         </div>
 
-<div className="bg-white rounded-xl shadow-md overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-    <h2 className="text-xl font-semibold text-white">Categories</h2>
-  </div>
-            <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
-            <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
-              <tr className="bg-gray-200">
-                <th className="border border-gray-300 p-2 cursor-pointer" onClick={() => requestSort("categoryId")}>
-                  Category ID {sortConfig?.key === "categoryId" ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}
-                </th>
-                <th className="border border-gray-300 p-2 cursor-pointer" onClick={() => requestSort("categoryName")}>
-                  Category Name {sortConfig?.key === "categoryName" ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}
-                </th>
-
-                <th className="border border-gray-300 p-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentCategories.length > 0 ? (
-                currentCategories.map((category) => (
-                  <tr key={category.id} className="hover:bg-gray-100">
-                    <td className="border border-gray-300 p-2">
-                      {category.categoryId}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      {category.categoryName}
-                    </td>
-                    <td className="border border-gray-300 p-2 text-center">
-                      <div className="flex justify-center items-center gap-3">
-                        <button
-                          onClick={() => {
-                            setSelectedCategory(category);
-                            setFormData({
-                              categoryName: category.categoryName,
-                              categoryId: category.categoryId,
-                              subCategories: category.subCategories.map(
-                                (sub) => ({
-                                  subCategoryName: sub.subCategoryName,
-                                })
-                              ),
-                            });
-                            setIsUpdateModalOpen(true);
-                          }}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Edit"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
-                          title="Delete"
-                        >
-                          <FaTrashAlt />
-                        </button>
-                      </div>
+        {/* Table Container - Mobile: full width, Desktop: responsive width */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mx-0 sm:mx-0">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+            <h2 className="text-xl font-semibold text-white">Categories</h2>
+          </div>
+          
+          {/* Table wrapper for horizontal scrolling on mobile */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-gray-700 bg-white">
+              <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                <tr className="bg-gray-200">
+                  <th 
+                    className="border border-gray-300 p-2 cursor-pointer whitespace-nowrap"
+                    onClick={() => requestSort("categoryId")}
+                  >
+                    Category ID {sortConfig?.key === "categoryId" ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}
+                  </th>
+                  <th 
+                    className="border border-gray-300 p-2 cursor-pointer whitespace-nowrap"
+                    onClick={() => requestSort("categoryName")}
+                  >
+                    Category Name {sortConfig?.key === "categoryName" ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}
+                  </th>
+                  <th className="border border-gray-300 p-2 whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentCategories.length > 0 ? (
+                  currentCategories.map((category) => (
+                    <tr key={category.id} className="hover:bg-gray-100">
+                      <td className="border border-gray-300 p-2 whitespace-nowrap">
+                        {category.categoryId}
+                      </td>
+                      <td className="border border-gray-300 p-2 whitespace-nowrap">
+                        {category.categoryName}
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <div className="flex justify-center items-center gap-3">
+                          <button
+                            onClick={() => {
+                              setSelectedCategory(category);
+                              setFormData({
+                                categoryName: category.categoryName,
+                                categoryId: category.categoryId,
+                                subCategories: category.subCategories.map(
+                                  (sub) => ({
+                                    subCategoryName: sub.subCategoryName,
+                                  })
+                                ),
+                              });
+                              setIsUpdateModalOpen(true);
+                            }}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
+                            title="Edit"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(category.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition-transform transform hover:scale-110"
+                            title="Delete"
+                          >
+                            <FaTrashAlt />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="p-3 text-gray-500 text-center">
+                      No categories available.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="p-3 text-gray-500">
-                    No categories available.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="flex justify-center mt-4">
+        
+        {/* Pagination */}
+        <div className="flex justify-center mt-4 px-4 sm:px-0">
           <button
             onClick={() => paginate(currentPage - 1)}
             className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
@@ -253,8 +266,8 @@ return (
                 key={index}
                 onClick={() => paginate(index + 1)}
                 className={`mx-1 px-4 py-2 rounded ${currentPage === index + 1
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-300 text-gray-700"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-300 text-gray-700"
                   } hover:bg-blue-400`}
               >
                 {index + 1}
@@ -271,12 +284,13 @@ return (
             Next
           </button>
         </div>
-  
+      </div>
+
 
       {/* Create Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg">
+          <div className="bg-white p-6 rounded shadow-lg mx-4 sm:mx-0">
             <h2 className="text-lg font-semibold mb-4">Add Product Category</h2>
 
             <input
@@ -320,7 +334,7 @@ return (
       {/* Update Modal */}
       {isUpdateModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg">
+          <div className="bg-white p-6 rounded shadow-lg mx-4 sm:mx-0">
             <h2 className="text-lg font-semibold mb-4">Edit Category</h2>
 
             <input

@@ -1062,7 +1062,7 @@ const typeRes = await apiFetch('/service-contract-type', 'POST', typePayload);
 
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen -mt-10">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Service Contract Management</h1>
       </div>
@@ -2015,11 +2015,10 @@ const typeRes = await apiFetch('/service-contract-type', 'POST', typePayload);
       )}
 
       {/* Contracts List Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden text-black">
 
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 flex justify-between items-center">
 
-          <h2 className="text-xl font-semibold text-white">Service Contracts</h2>
           {/* 🔍 Search bar */}
           <input
             type="text"

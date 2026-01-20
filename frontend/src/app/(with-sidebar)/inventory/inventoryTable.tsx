@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { PencilLine, Plus, X } from "lucide-react";
+import { Eye, PencilLine, Plus, X } from "lucide-react";
 import { VendorCombobox } from "@/components/ui/VendorCombobox";
 import { ProductCombobox } from "@/components/ui/ProductCombobox";
 import Papa from "papaparse";
@@ -17,6 +17,7 @@ interface ProductInventory {
     warrantyPeriod: string;
     purchaseRate: string;
     noSerialMac?: boolean;
+    autoGenerateSerial?: boolean;   
 }
 
 interface Inventory {
@@ -84,6 +85,8 @@ const InventoryTable: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [formData, setFormData] = useState<Inventory>(initialFormState);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -150,6 +153,20 @@ const InventoryTable: React.FC = () => {
             setVendors(res.data);
         } catch (error) {
             console.error("Error fetching vendors:", error);
+        }
+    };
+
+    const openViewModal = async (inventoryId: number) => {
+        try {
+            setLoading(true);
+            const res = await axios.get(`http://localhost:8000/inventory/${inventoryId}`);
+            setSelectedInventory(res.data);
+            setIsViewModalOpen(true);
+        } catch (error) {
+            console.error("Error fetching inventory details:", error);
+            alert("Failed to load inventory details.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -365,92 +382,92 @@ const InventoryTable: React.FC = () => {
         });
     };
 
-  const handleSave = async () => {
-  // ✅ 1) normalize data before validation
-  const normalizedFormData = {
-    ...formData,
-    products: formData.products.map((product) => {
-      const serialEmpty = !product.serialNumber?.trim();
-      const macEmpty = !product.macAddress?.trim();
+    const handleSave = async () => {
+        // ✅ 1) normalize data before validation
+        const normalizedFormData = {
+            ...formData,
+            products: formData.products.map((product) => {
+                const serialEmpty = !product.serialNumber?.trim();
+                const macEmpty = !product.macAddress?.trim();
 
-      // ✅ If both empty => treat as "No Serial/MAC"
-      if (serialEmpty && macEmpty) {
-        return {
-          ...product,
-          noSerialMac: true,
-          serialNumber: "",
-          macAddress: "",
+                // ✅ If both empty => treat as "No Serial/MAC"
+                if (serialEmpty && macEmpty) {
+                    return {
+                        ...product,
+                        noSerialMac: true,
+                        serialNumber: "",
+                        macAddress: "",
+                    };
+                }
+
+                return product;
+            }),
         };
-      }
 
-      return product;
-    }),
-  };
+        // ✅ ensure UI also gets normalized (optional but best)
+        setFormData(normalizedFormData);
 
-  // ✅ ensure UI also gets normalized (optional but best)
-  setFormData(normalizedFormData);
+        // ✅ 2) validate after normalization
+        if (!validateForm(normalizedFormData)) {
+            alert("Please fix the errors in the form before submitting.");
+            return;
+        }
 
-  // ✅ 2) validate after normalization
-  if (!validateForm(normalizedFormData)) {
-    alert("Please fix the errors in the form before submitting.");
-    return;
-  }
+        try {
+            setSaving(true);
 
-  try {
-    setSaving(true);
+            // ✅ 3) Build payload from normalized data
+            const payload = {
+                ...normalizedFormData,
+                purchaseDate: normalizedFormData.purchaseDate, // already YYYY-MM-DD
+                dueAmount: normalizedFormData.dueAmount
+                    ? String(normalizedFormData.dueAmount)
+                    : "0",
 
-    // ✅ 3) Build payload from normalized data
-    const payload = {
-      ...normalizedFormData,
-      purchaseDate: normalizedFormData.purchaseDate, // already YYYY-MM-DD
-      dueAmount: normalizedFormData.dueAmount
-        ? String(normalizedFormData.dueAmount)
-        : "0",
+                products: normalizedFormData.products.map((product) => ({
+                    productId: product.productId,
+                    make: product.make,
+                    model: product.model,
 
-products: normalizedFormData.products.map((product) => ({
-  productId: product.productId,
-  make: product.make,
-  model: product.model,
+                    // ✅ send NULL not ""
+                    serialNumber: product.noSerialMac ? null : product.serialNumber?.trim() || null,
+                    macAddress: product.noSerialMac ? null : product.macAddress?.trim() || null,
 
-  // ✅ send NULL not ""
-  serialNumber: product.noSerialMac ? null : product.serialNumber?.trim() || null,
-  macAddress: product.noSerialMac ? null : product.macAddress?.trim() || null,
+                    warrantyPeriod: product.warrantyPeriod,
+                    purchaseRate: product.purchaseRate,
 
-  warrantyPeriod: product.warrantyPeriod,
-  purchaseRate: product.purchaseRate,
+                    autoGenerateSerial: !!product.noSerialMac,
+                })),
 
-  autoGenerateSerial: !!product.noSerialMac,
-})),
+            };
 
+            if (normalizedFormData.id) {
+                await axios.put(
+                    `http://localhost:8000/inventory/${normalizedFormData.id}`,
+                    payload
+                );
+                alert("Inventory updated successfully!");
+            } else {
+                await axios.post("http://localhost:8000/inventory", payload);
+                alert("Inventory created successfully!");
+            }
+
+            setFormData(initialFormState);
+            setErrors({});
+            setProductErrors({});
+            setIsModalOpen(false);
+            fetchInventory();
+        } catch (error: any) {
+            console.error("Save error:", error);
+            const errorMessage =
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                "Something went wrong! Please try again.";
+            alert(errorMessage);
+        } finally {
+            setSaving(false);
+        }
     };
-
-    if (normalizedFormData.id) {
-      await axios.put(
-        `http://localhost:8000/inventory/${normalizedFormData.id}`,
-        payload
-      );
-      alert("Inventory updated successfully!");
-    } else {
-      await axios.post("http://localhost:8000/inventory", payload);
-      alert("Inventory created successfully!");
-    }
-
-    setFormData(initialFormState);
-    setErrors({});
-    setProductErrors({});
-    setIsModalOpen(false);
-    fetchInventory();
-  } catch (error: any) {
-    console.error("Save error:", error);
-    const errorMessage =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      "Something went wrong! Please try again.";
-    alert(errorMessage);
-  } finally {
-    setSaving(false);
-  }
-};
 
 
     const openModal = (data?: Inventory) => {
@@ -598,12 +615,12 @@ products: normalizedFormData.products.map((product) => ({
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black overflow-x-hidden">
+        <div className="w-full min-w-0 px-4 py-4 sm:px-6 text-black">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-blue-900 mb-2">Inventory</h1>
             </div>
 
-            <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center px-4 sm:px-0">
                 <button
                     onClick={() => openModal()}
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full md:w-auto flex items-center justify-center gap-2"
@@ -613,7 +630,7 @@ products: normalizedFormData.products.map((product) => ({
                 </button>
 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="relative w-screen md:w-64">
+                    <div className="relative w-full md:w-64">
                         <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
                             <FaSearch />
                         </span>
@@ -642,80 +659,65 @@ products: normalizedFormData.products.map((product) => ({
                 </div>
             ) : (
                 <>
-                    <div className="bg-white rounded-xl shadow-md w-screen">
-                        <div className="bg-white rounded-xl shadow-md w-screen">
-                            <div className="w-full overflow-x-auto w-screen">
-                                <table className="min-w-450 text-sm text-gray-700">
-                                    <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                    <div className="bg-white rounded-xl shadow-md w-full min-w-0">
+                        <div className="w-full overflow-x-auto">
+                            <table className="min-w-[1100px] w-max text-sm text-gray-700">
+                                <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
+                                    <tr>
+                                        {[
+                                            { label: "Product Name", key: "productName" },
+                                            { label: "Vendor", key: "vendor" },
+                                            { label: "Status", key: "status" },
+                                            { label: "Age", key: "duration" },
+                                            { label: "Actions", key: "" },
+                                        ].map((col) => (
+                                            <th
+                                                key={col.key || "actions"}
+                                                className="p-4 border border-gray-300 text-left cursor-pointer select-none whitespace-nowrap"
+                                                onClick={() => col.key && handleSort(col.key)}
+                                            >
+                                                <div className="flex items-center">
+                                                    {col.label}
+                                                    {col.key && getSortIcon(col.key)}
+                                                </div>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {paginatedInventory.length === 0 ? (
                                         <tr>
-                                            {[
-                                                { label: "Product Code", key: "productCode" },
-                                                { label: "Product Name", key: "productName" },
-                                                { label: "Category", key: "category" },
-                                                { label: "Sub-Category", key: "subCategory" },
-                                                { label: "HSN", key: "hsn" },
-                                                { label: "Make", key: "make" },
-                                                { label: "Model", key: "model" },
-                                                { label: "Serial No", key: "serialNumber" },
-                                                { label: "MAC Address", key: "macAddress" },
-                                                { label: "Warranty", key: "warrantyPeriod" },
-                                                { label: "Purchase Rate", key: "purchaseRate" },
-                                                { label: "Vendor", key: "vendor" },
-                                                { label: "Purchase Date", key: "purchaseDate" },
-                                                { label: "Invoice No", key: "purchaseInvoice" },
-                                                { label: "Status", key: "status" },
-                                                { label: "Age", key: "duration" },
-                                                { label: "Actions", key: "" },
-                                            ].map((col) => (
-                                                <th
-                                                    key={col.key || "actions"}
-                                                    className="p-4 border border-gray-300 text-left cursor-pointer select-none whitespace-nowrap"
-                                                    onClick={() => col.key && handleSort(col.key)}
-                                                >
-                                                    <div className="flex items-center">
-                                                        {col.label}
-                                                        {col.key && getSortIcon(col.key)}
-                                                    </div>
-                                                </th>
-                                            ))}
+                                            <td colSpan={5} className="p-8 text-center text-gray-500">
+                                                {searchQuery
+                                                    ? "No inventory found matching your search."
+                                                    : "No inventory items found. Add your first inventory item!"}
+                                            </td>
                                         </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {paginatedInventory.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={17} className="p-8 text-center text-gray-500">
-                                                    {searchQuery
-                                                        ? "No inventory found matching your search."
-                                                        : "No inventory items found. Add your first inventory item!"}
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginatedInventory.flatMap((inv) => {
-                                                // ✅ If no products exist, still show 1 row for inventory
-                                                if (!inv.products || inv.products.length === 0) {
-                                                    return (
-                                                        <tr key={`inv-${inv.id}`} className="border-b hover:bg-gray-50">
-                                                            <td className="p-4 border border-gray-300 text-gray-400" colSpan={11}>
-                                                                No products found
-                                                            </td>
-
-                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
-                                                                {vendors.find((v) => v.id === inv.vendorId)?.vendorName || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
-                                                                {inv.purchaseDate?.slice(0, 10)}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 font-medium whitespace-nowrap">
-                                                                {inv.purchaseInvoice}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">
-                                                                {inv.status}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">
-                                                                {inv.duration}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">
+                                    ) : (
+                                        paginatedInventory.flatMap((inv) => {
+                                            // ✅ If no products exist, still show 1 row for inventory
+                                            if (!inv.products || inv.products.length === 0) {
+                                                return (
+                                                    <tr key={`inv-${inv.id}`} className="border-b hover:bg-gray-50">
+                                                        <td className="p-4 border border-gray-300 text-gray-400" colSpan={2}>
+                                                            No products found
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            {inv.status || "N/A"}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            {inv.duration || "N/A"}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => openViewModal(inv.id!)}
+                                                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow"
+                                                                    title="View Details"
+                                                                >
+                                                                    <Eye size={18} />
+                                                                </button>
                                                                 <button
                                                                     onClick={() => openModal(inv)}
                                                                     className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow"
@@ -723,55 +725,40 @@ products: normalizedFormData.products.map((product) => ({
                                                                 >
                                                                     <PencilLine size={18} />
                                                                 </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                }
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }
 
-                                                // ✅ If products exist, show them normally
-                                                return inv.products.map((product, index) => {
-                                                    const productData = products.find((p) => p.id === product.productId);
+                                            // ✅ If products exist, show them normally
+                                            return inv.products.map((product, index) => {
+                                                const productData = products.find((p) => p.id === product.productId);
+                                                const vendorName = vendors.find((v) => v.id === inv.vendorId)?.vendorName || "N/A";
 
-                                                    return (
-                                                        <tr key={`${inv.id}-${product.productId}-${index}`} className="border-b hover:bg-gray-50">
-                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
-                                                                {productData?.productId || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
-                                                                {productData?.productName || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">
-                                                                {productData?.category?.categoryName || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">
-                                                                {productData?.subCategory?.subCategoryName || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
-                                                                {productData?.HSN || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">{product.make}</td>
-                                                            <td className="p-4 border border-gray-300">{product.model}</td>
-                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
-                                                                {product.serialNumber || <span className="text-gray-400">N/A</span>}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 font-mono text-xs">
-                                                                {product.macAddress || <span className="text-gray-400">N/A</span>}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">{product.warrantyPeriod}</td>
-                                                            <td className="p-4 border border-gray-300">{product.purchaseRate}</td>
-
-                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
-                                                                {vendors.find((v) => v.id === inv.vendorId)?.vendorName || "N/A"}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 whitespace-nowrap">
-                                                                {inv.purchaseDate?.slice(0, 10)}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300 font-medium whitespace-nowrap">
-                                                                {inv.purchaseInvoice}
-                                                            </td>
-                                                            <td className="p-4 border border-gray-300">{inv.status}</td>
-                                                            <td className="p-4 border border-gray-300">{inv.duration}</td>
-                                                            <td className="p-4 border border-gray-300">
+                                                return (
+                                                    <tr key={`${inv.id}-${product.productId}-${index}`} className="border-b hover:bg-gray-50">
+                                                        <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                            {productData?.productName || "N/A"}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300 whitespace-nowrap">
+                                                            {vendorName}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            {inv.status || "N/A"}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            {inv.duration || "N/A"}
+                                                        </td>
+                                                        <td className="p-4 border border-gray-300">
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => openViewModal(inv.id!)}
+                                                                    className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg shadow"
+                                                                    title="View Details"
+                                                                >
+                                                                    <Eye size={18} />
+                                                                </button>
                                                                 <button
                                                                     onClick={() => openModal(inv)}
                                                                     className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg shadow"
@@ -779,21 +766,20 @@ products: normalizedFormData.products.map((product) => ({
                                                                 >
                                                                     <PencilLine size={18} />
                                                                 </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                });
-                                            })
-                                        )}
-                                    </tbody>
-
-                                </table>
-                            </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
                     {filteredInventory.length > 0 && (
-                        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 px-4 sm:px-0">
                             <div className="text-sm text-gray-600 whitespace-nowrap">
                                 Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredInventory.length)} of {filteredInventory.length} items
                             </div>
@@ -821,12 +807,187 @@ products: normalizedFormData.products.map((product) => ({
                 </>
             )}
 
+            {/* View Modal (Read Only) */}
+            {isViewModalOpen && selectedInventory && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-2 sm:p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-2 sm:mx-0">
+                        <div className="p-4 sm:p-6 md:p-8">
+                            <div className="flex justify-between items-center mb-4 sm:mb-6 pb-3 sm:pb-4 border-b">
+                                <h3 className="text-xl sm:text-2xl font-bold text-blue-700">
+                                    📋 Inventory Details
+                                </h3>
+                                <button
+                                    onClick={() => setIsViewModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto max-h-[60vh] pr-2">
+                                {/* Inventory Details Section */}
+                                <div className="mb-6 sm:mb-8">
+                                    <h4 className="text-base sm:text-lg font-semibold text-blue-900 mb-3 sm:mb-4 pb-2 border-b">
+                                        Inventory Information
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Purchase Invoice No</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {selectedInventory.purchaseInvoice || "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Purchase Date</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {selectedInventory.purchaseDate ? new Date(selectedInventory.purchaseDate).toLocaleDateString() : "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Vendor</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {vendors.find(v => v.id === selectedInventory.vendorId)?.vendorName || "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Credit Terms (Days)</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {selectedInventory.creditTerms || "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Due Date</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {selectedInventory.dueDate ? new Date(selectedInventory.dueDate).toLocaleDateString() : "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Status</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                {selectedInventory.status || "N/A"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Net Amount</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                ₹{selectedInventory.invoiceNetAmount || "0.00"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">GST Amount</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                ₹{selectedInventory.gstAmount || "0.00"}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-500">Gross Amount</span>
+                                            <p className="text-sm sm:text-base font-semibold text-gray-800">
+                                                ₹{selectedInventory.invoiceGrossAmount || "0.00"}
+                                            </p>
+                                        </div>
+                                       
+                                    </div>
+                                </div>
+
+                                {/* Products Section */}
+                                <div className="mb-6 sm:mb-8">
+                                    <h4 className="text-base sm:text-lg font-semibold text-blue-900 mb-3 sm:mb-4">
+                                        Products ({selectedInventory.products?.length || 0})
+                                    </h4>
+
+                                    {(!selectedInventory.products || selectedInventory.products.length === 0) ? (
+                                        <div className="p-4 text-center text-gray-500 border border-gray-200 rounded-lg">
+                                            No products found
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {selectedInventory.products.map((product, index) => {
+                                                const productData = products.find(p => p.id === product.productId);
+                                                const vendorName = vendors.find(v => v.id === selectedInventory.vendorId)?.vendorName || "N/A";
+
+                                                return (
+                                                    <div key={index} className="border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
+                                                        <div className="mb-3">
+                                                            <h5 className="font-semibold text-gray-700 text-sm sm:text-base">
+                                                                Product {index + 1}: {productData?.productName || "N/A"}
+                                                            </h5>
+                                                            <div className="flex flex-wrap gap-2 mt-1 text-xs sm:text-sm text-gray-500">
+                                                                <span>Category: {productData?.category?.categoryName || "N/A"}</span>
+                                                                <span>•</span>
+                                                                <span>Sub-Category: {productData?.subCategory?.subCategoryName || "N/A"}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Product Code</span>
+                                                                <p className="font-medium text-gray-800">{productData?.productId || "N/A"}</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Make</span>
+                                                                <p className="font-medium text-gray-800">{product.make || "N/A"}</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Model</span>
+                                                                <p className="font-medium text-gray-800">{product.model || "N/A"}</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Serial Number</span>
+                                                                <p className="font-medium text-gray-800">
+                                                                    {product.noSerialMac || product.autoGenerateSerial ? "Auto-generated" : (product.serialNumber || "N/A")}
+                                                                </p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">MAC Address</span>
+                                                                <p className="font-medium text-gray-800">
+                                                                    {product.noSerialMac || product.autoGenerateSerial ? "Auto-generated" : (product.macAddress || "N/A")}
+                                                                </p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Warranty Period</span>
+                                                                <p className="font-medium text-gray-800">{product.warrantyPeriod || "N/A"} days</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">Purchase Rate</span>
+                                                                <p className="font-medium text-gray-800">₹{product.purchaseRate || "0.00"}</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">HSN Code</span>
+                                                                <p className="font-medium text-gray-800">{productData?.HSN || "N/A"}</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <span className="text-xs font-medium text-gray-500">GST Rate</span>
+                                                                <p className="font-medium text-gray-800">{productData?.gstRate || "N/A"}%</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t flex justify-end">
+                                <button
+                                    onClick={() => setIsViewModalOpen(false)}
+                                    className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-md text-sm sm:text-base"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit/Create Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="p-6 md:p-8">
-                            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-                                <h3 className="text-2xl font-bold text-indigo-700">
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-2 sm:p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-2 sm:mx-0">
+                        <div className="p-4 sm:p-6 md:p-8">
+                            <div className="flex justify-between items-center mb-4 sm:mb-6 pb-3 sm:pb-4 border-b">
+                                <h3 className="text-xl sm:text-2xl font-bold text-indigo-700">
                                     {formData.id ? "✏️ Edit Inventory" : "➕ Add New Inventory"}
                                 </h3>
                                 <button
@@ -846,11 +1007,11 @@ products: normalizedFormData.products.map((product) => ({
                                 )}
 
                                 {/* Inventory Details Section */}
-                                <div className="mb-8">
-                                    <h4 className="text-lg font-semibold text-blue-900 mb-4 pb-2 border-b">
+                                <div className="mb-6 sm:mb-8">
+                                    <h4 className="text-base sm:text-lg font-semibold text-blue-900 mb-3 sm:mb-4 pb-2 border-b">
                                         Inventory Details
                                     </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Purchase Invoice No <span className="text-red-500">*</span>
@@ -861,7 +1022,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 placeholder="Enter invoice number"
                                                 value={formData.purchaseInvoice}
                                                 onChange={handleChange}
-                                                className={`w-full p-3 border ${errors.purchaseInvoice ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                className={`w-full p-2 sm:p-3 border ${errors.purchaseInvoice ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                             />
                                             {errors.purchaseInvoice && (
                                                 <p className="mt-1 text-sm text-red-600">{errors.purchaseInvoice}</p>
@@ -877,7 +1038,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 name="purchaseDate"
                                                 value={formData.purchaseDate}
                                                 onChange={handleChange}
-                                                className={`w-full p-3 border ${errors.purchaseDate ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                className={`w-full p-2 sm:p-3 border ${errors.purchaseDate ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                             />
                                             {errors.purchaseDate && (
                                                 <p className="mt-1 text-sm text-red-600">{errors.purchaseDate}</p>
@@ -913,7 +1074,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 placeholder="Enter credit terms in days"
                                                 value={formData.creditTerms}
                                                 onChange={handleChange}
-                                                className={`w-full p-3 border ${errors.creditTerms ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                className={`w-full p-2 sm:p-3 border ${errors.creditTerms ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                             />
                                             {errors.creditTerms && (
                                                 <p className="mt-1 text-sm text-red-600">{errors.creditTerms}</p>
@@ -929,7 +1090,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 name="dueDate"
                                                 value={formData.dueDate}
                                                 onChange={handleChange}
-                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 readOnly
                                             />
                                         </div>
@@ -944,7 +1105,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 placeholder="Enter net amount"
                                                 value={formData.invoiceNetAmount}
                                                 onChange={handleChange}
-                                                className={`w-full p-3 border ${errors.invoiceNetAmount ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                className={`w-full p-2 sm:p-3 border ${errors.invoiceNetAmount ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                             />
                                             {errors.invoiceNetAmount && (
                                                 <p className="mt-1 text-sm text-red-600">{errors.invoiceNetAmount}</p>
@@ -961,7 +1122,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 placeholder="Enter GST amount"
                                                 value={formData.gstAmount}
                                                 onChange={handleChange}
-                                                className={`w-full p-3 border ${errors.gstAmount ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                                                className={`w-full p-2 sm:p-3 border ${errors.gstAmount ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                             />
                                             {errors.gstAmount && (
                                                 <p className="mt-1 text-sm text-red-600">{errors.gstAmount}</p>
@@ -977,7 +1138,7 @@ products: normalizedFormData.products.map((product) => ({
                                                 name="invoiceGrossAmount"
                                                 placeholder="Auto-calculated"
                                                 value={formData.invoiceGrossAmount}
-                                                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
+                                                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg bg-gray-50"
                                                 readOnly
                                             />
                                         </div>
@@ -985,17 +1146,17 @@ products: normalizedFormData.products.map((product) => ({
                                 </div>
 
                                 {/* Products Section */}
-                                <div className="mb-8">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="text-lg font-semibold text-blue-900">
+                                <div className="mb-6 sm:mb-8">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                                        <h4 className="text-base sm:text-lg font-semibold text-blue-900">
                                             Products
                                         </h4>
                                         <button
                                             type="button"
                                             onClick={addProductRow}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm sm:text-base"
                                         >
-                                            <Plus size={16} />
+                                            <Plus size={14} />
                                             Add Product
                                         </button>
                                     </div>
@@ -1003,13 +1164,13 @@ products: normalizedFormData.products.map((product) => ({
                                     {formData.products.map((product, index) => {
                                         const selectedProduct = products.find(p => p.id === product.productId);
                                         return (
-                                            <div key={index} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                                <div className="flex justify-between items-center mb-4">
+                                            <div key={index} className="mb-4 p-3 sm:p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
                                                     <div>
-                                                        <h5 className="font-medium text-gray-700">Product {index + 1}</h5>
+                                                        <h5 className="font-medium text-gray-700 text-sm sm:text-base">Product {index + 1}</h5>
                                                         {selectedProduct && (
                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                <span className="mr-3">
+                                                                <span className="mr-2">
                                                                     Category: {selectedProduct.category?.categoryName || "N/A"}
                                                                 </span>
                                                                 <span>
@@ -1025,32 +1186,33 @@ products: normalizedFormData.products.map((product) => ({
                                                             className="text-red-600 hover:text-red-800"
                                                             title="Remove product"
                                                         >
-                                                            <X size={18} />
+                                                            <X size={16} />
                                                         </button>
                                                     )}
                                                 </div>
 
-                                                <div className="flex items-center mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                                <div className="flex items-start mb-3 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded">
                                                     <input
                                                         type="checkbox"
                                                         checked={product.noSerialMac || false}
-onChange={(e) => {
-  const checked = e.target.checked;
-  updateProductField(index, "noSerialMac", checked);
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            updateProductField(index, "noSerialMac", checked);
 
-  if (checked) {
-    updateProductField(index, "serialNumber", "");
-    updateProductField(index, "macAddress", "");
-  }
-}}                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            if (checked) {
+                                                                updateProductField(index, "serialNumber", "");
+                                                                updateProductField(index, "macAddress", "");
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
                                                         id={`noSerialMac-${index}`}
                                                     />
-                                                    <label htmlFor={`noSerialMac-${index}`} className="ml-2 text-sm font-medium text-gray-700">
+                                                    <label htmlFor={`noSerialMac-${index}`} className="ml-2 text-xs sm:text-sm font-medium text-gray-700">
                                                         Product does not have Serial Number or MAC Address
                                                     </label>
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                                             Product <span className="text-red-500">*</span>
@@ -1104,7 +1266,7 @@ onChange={(e) => {
                                                         <input
                                                             type="text"
                                                             placeholder="Enter serial number"
-                                                            value={product.serialNumber}
+                                                            value={product.serialNumber || ""}
                                                             onChange={(e) => updateProductField(index, 'serialNumber', e.target.value)}
                                                             disabled={product.noSerialMac}
                                                             className={`w-full p-2 border ${productErrors[index]?.serialNumber ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
@@ -1121,7 +1283,7 @@ onChange={(e) => {
                                                         <input
                                                             type="text"
                                                             placeholder="Enter MAC address"
-                                                            value={product.macAddress}
+                                                            value={product.macAddress || ""}
                                                             onChange={(e) => updateProductField(index, 'macAddress', e.target.value)}
                                                             disabled={product.noSerialMac}
                                                             className={`w-full p-2 border ${productErrors[index]?.macAddress ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${product.noSerialMac ? 'bg-gray-100' : ''}`}
@@ -1171,17 +1333,17 @@ onChange={(e) => {
                                 </div>
                             </div>
 
-                            <div className="mt-6 pt-6 border-t flex justify-end gap-3">
+                            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t flex flex-col sm:flex-row justify-end gap-3">
                                 <button
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                                    className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
                                     disabled={saving}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-md flex items-center gap-2"
+                                    className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2 text-sm sm:text-base"
                                     disabled={saving}
                                 >
                                     {saving ? (

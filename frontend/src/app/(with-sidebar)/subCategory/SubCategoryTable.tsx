@@ -211,13 +211,13 @@ const SubCategoryTable: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6 text-black">
 
-      <div className="flex justify-between items-center mb-5 mt-16">
-        <button
-          onClick={openCreateModal}
-          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300"
-        >
+<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 mt-16 px-4 sm:px-0">     
+    <button
+  onClick={openCreateModal}
+  className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-xl shadow-md hover:scale-105 transition-transform duration-300 w-full sm:w-auto mb-4 sm:mb-0"
+>
           Add Product Subcategory
         </button>
         <div className="relative w-full md:w-64">
@@ -234,11 +234,12 @@ const SubCategoryTable: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-          <h2 className="text-xl font-semibold text-white">Sub Categories</h2>
+<div className="bg-white rounded-xl shadow-md overflow-hidden">
+<div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">          <h2 className="text-xl font-semibold text-white">Sub Categories</h2>
         </div>
-        <table className="w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+
+  <table className="w-full text-sm text-gray-700 bg-white">
           <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
             <tr className="bg-gray-200">
               <th
@@ -335,9 +336,10 @@ const SubCategoryTable: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
-      <div className="flex justify-center mt-4">
+<div className="flex justify-center mt-4 px-4 sm:px-0">
         <button
           onClick={() => paginate(currentPage - 1)}
           className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
@@ -375,7 +377,7 @@ const SubCategoryTable: React.FC = () => {
       {/* Create/Update Subcategory Modal */}
       {(isCreateModalOpen || isUpdateModalOpen) && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg">
+<div className="bg-white p-6 rounded shadow-lg mx-4 sm:mx-0">
             <h2 className="text-lg font-semibold mb-4">
               {isUpdateModalOpen ? "Edit Subcategory" : "Add Subcategory"}
             </h2>

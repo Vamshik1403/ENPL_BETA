@@ -1,7 +1,7 @@
 'use client';
 
 import { PlusIcon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useRef } from 'react';
 
 
 interface Department {
@@ -309,7 +309,38 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onEditLatestRemark,
   onOpenInventoryModal,
   onRemoveInventory,
+  
 }) => {
+  // ✅ Hooks MUST be before any return
+  const [customerActiveIndex, setCustomerActiveIndex] = useState(-1);
+  const customerItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    if (!showModal) return; // ✅ safe inside effect
+
+    if (showCustomerDropdown) {
+      setCustomerActiveIndex(filteredCustomers.length > 0 ? 0 : -1);
+    } else {
+      setCustomerActiveIndex(-1);
+    }
+  }, [showModal, showCustomerDropdown, filteredCustomers.length]);
+
+  useEffect(() => {
+    if (!showModal) return; // ✅ safe inside effect
+    setCustomerActiveIndex(filteredCustomers.length > 0 ? 0 : -1);
+  }, [showModal, customerSearch, filteredCustomers.length]);
+
+  useEffect(() => {
+    if (!showModal) return; // ✅ safe inside effect
+
+    if (customerActiveIndex >= 0 && customerItemRefs.current[customerActiveIndex]) {
+      customerItemRefs.current[customerActiveIndex]?.scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [showModal, customerActiveIndex]);
+
+  // ✅ Now you can return
   if (!showModal) return null;
 
   return (
@@ -413,90 +444,84 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Customer *
                       </label>
-                      <input
-                        type="text"
-                        value={customerSearch}
-                        onChange={(e) => {
-                          onCustomerSearchChange(e.target.value);
-                          onShowCustomerDropdownChange(true);
-                        }}
-                        onFocus={() => onShowCustomerDropdownChange(true)}
-                        placeholder="Search customer..."
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                        required
-                      />
-                      {showCustomerDropdown && customerSearch && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          {filteredCustomers.map((customer) => (
-                            <div
-                              key={customer.id}
-                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
-                              onClick={() => {
-                                onFormDataChange({ ...formData, addressBookId: customer.id, siteId: 0 });
-                                onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-                                onShowCustomerDropdownChange(false);
-                              }}
-                            >
-                              {customer.addressBookID} - {customer.customerName}
-                            </div>
-                          ))}
-                          {filteredCustomers.length === 0 && (
-                            <div className="px-3 py-2 text-gray-500">No customers found</div>
-                          )}
-                        </div>
-                      )}
-                      {formData.addressBookId && formData.addressBookId > 0 && (
-                        <div className="mt-1 text-sm text-green-600">
-                          Selected: {addressBooks.find(ab => ab.id === formData.addressBookId)?.customerName}
-                        </div>
-                      )}
-                    </div>
+                    <input
+  type="text"
+  value={customerSearch}
+  onChange={(e) => {
+    onCustomerSearchChange(e.target.value);
+    onShowCustomerDropdownChange(true);
+  }}
+  onFocus={() => onShowCustomerDropdownChange(true)}
+  onKeyDown={(e) => {
+    if (!showCustomerDropdown && customerSearch.trim().length > 0) {
+      onShowCustomerDropdownChange(true);
+    }
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-1">
-                        Branch/Site *
-                      </label>
-                      <select
-                        value={formData.siteId ?? 0}
-                        onChange={(e) => onFormDataChange({ ...formData, siteId: parseInt(e.target.value) })}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                        required
-                        disabled={formData.addressBookId === 0}
-                      >
-                        <option value={0}>Select Branch/Site</option>
-                        {filteredSites.map((site) => (
-                          <option key={site.id} value={site.id}>
-                            {site.siteID} - {site.siteName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
+    if (!showCustomerDropdown) return;
 
-                {/* INQUIRY SPECIFIC FIELDS */}
-                {(formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-1">
-                        Customer Name (Inquiry) *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.purchase?.customerName || ""}
-                        onChange={(e) =>
-                          onFormDataChange({
-                            ...formData,
-                            purchase: {
-                              ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
-                              customerName: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                        placeholder="Enter customer name for inquiry"
-                        required
-                      />
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setCustomerActiveIndex((prev) => {
+        if (filteredCustomers.length === 0) return -1;
+        return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
+      });
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setCustomerActiveIndex((prev) => {
+        if (filteredCustomers.length === 0) return -1;
+        return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
+      });
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
+        const customer = filteredCustomers[customerActiveIndex];
+
+        onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+        onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+        onShowCustomerDropdownChange(false);
+      }
+    }
+
+    if (e.key === "Escape") {
+      onShowCustomerDropdownChange(false);
+    }
+  }}
+  placeholder="Search customer..."
+  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+  required
+/>
+
+{showCustomerDropdown && customerSearch && (
+  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                               {filteredCustomers.map((customer, index) => (
+      <div
+        key={customer.id}
+        ref={(el) => { customerItemRefs.current[index] = el; }}
+        onMouseEnter={() => setCustomerActiveIndex(index)}
+        className={`px-3 py-2 cursor-pointer text-gray-900
+          ${customerActiveIndex === index ? "bg-blue-100" : "hover:bg-gray-100"}
+        `}
+        onClick={() => {
+          onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+          onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+          onShowCustomerDropdownChange(false);
+        }}
+      >
+        {customer.addressBookID} - {customer.customerName}
+      </div>
+    ))}
+
+    {filteredCustomers.length === 0 && (
+      <div className="px-3 py-2 text-gray-500">No customers found</div>
+    )}
+  </div>
+)}
+
+
                     </div>
 
                     <div>
@@ -749,33 +774,78 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <label className="block text-sm font-medium text-gray-900 mb-1">
                           Customer *
                         </label>
-                        <input
-                          type="text"
-                          value={customerSearch}
-                          onChange={(e) => {
-                            onCustomerSearchChange(e.target.value);
-                            onShowCustomerDropdownChange(true);
-                          }}
-                          onFocus={() => onShowCustomerDropdownChange(true)}
-                          placeholder="Search customer..."
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                          required={isTechnicalDepartment || isBillingDepartment}
-                        />
+                       <input
+  type="text"
+  value={customerSearch}
+  onChange={(e) => {
+    onCustomerSearchChange(e.target.value);
+    onShowCustomerDropdownChange(true);
+  }}
+  onFocus={() => onShowCustomerDropdownChange(true)}
+  onKeyDown={(e) => {
+    if (!showCustomerDropdown && customerSearch.trim().length > 0) {
+      onShowCustomerDropdownChange(true);
+    }
+
+    if (!showCustomerDropdown) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setCustomerActiveIndex((prev) => {
+        if (filteredCustomers.length === 0) return -1;
+        return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
+      });
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setCustomerActiveIndex((prev) => {
+        if (filteredCustomers.length === 0) return -1;
+        return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
+      });
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
+        const customer = filteredCustomers[customerActiveIndex];
+
+        onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+        onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+        onShowCustomerDropdownChange(false);
+      }
+    }
+
+    if (e.key === "Escape") {
+      onShowCustomerDropdownChange(false);
+    }
+  }}
+  placeholder="Search customer..."
+  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+  required={isTechnicalDepartment || isBillingDepartment}
+/>
+
                         {showCustomerDropdown && customerSearch && (
                           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                            {filteredCustomers.map((customer) => (
-                              <div
-                                key={customer.id}
-                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
-                                onClick={() => {
-                                  onFormDataChange({ ...formData, addressBookId: customer.id, siteId: 0 });
-                                  onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-                                  onShowCustomerDropdownChange(false);
-                                }}
-                              >
-                                {customer.addressBookID} - {customer.customerName}
-                              </div>
-                            ))}
+                           {filteredCustomers.map((customer, index) => (
+  <div
+    key={customer.id}
+    ref={(el) => { customerItemRefs.current[index] = el; }}
+    onMouseEnter={() => setCustomerActiveIndex(index)}
+    className={`px-3 py-2 cursor-pointer text-gray-900
+      ${customerActiveIndex === index ? "bg-blue-100" : "hover:bg-gray-100"}
+    `}
+    onClick={() => {
+      onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+      onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+      onShowCustomerDropdownChange(false);
+    }}
+  >
+    {customer.addressBookID} - {customer.customerName}
+  </div>
+))}
+
                             {filteredCustomers.length === 0 && (
                               <div className="px-3 py-2 text-gray-500">No customers found</div>
                             )}
@@ -2002,7 +2072,7 @@ const [successOpen, setSuccessOpen] = useState(false);
     userId: userId || 0,
     departmentId: departments.length > 0 ? departments[0].id : 0,
     addressBookId: 0,
-    siteId: 0,
+    siteId: null,
     status: 'Open',
     createdBy: currentUserName,
     createdAt: new Date().toISOString(),
@@ -2084,35 +2154,45 @@ const [successOpen, setSuccessOpen] = useState(false);
     site.addressBookId === formData.addressBookId
   );
 
-  // ✅ Auto-fill Task Contacts when a site is selected
-  useEffect(() => {
-    if (!formData.siteId || formData.siteId === 0) return;
+ // ✅ Auto-fill Task Contacts when a site is selected
+useEffect(() => {
+  if (!showModal) return;
+  if (!formData.siteId || formData.siteId === 0) return;
 
-    const fetchSiteContacts = async () => {
-      try {
-        const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
-        const data = await res.json();
+  const fetchSiteContacts = async () => {
+    try {
+      const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
+      const data = await res.json();
 
-        if (data?.contacts?.length > 0) {
-          const converted = data.contacts.map((c: any) => ({
-            id: c.id || Date.now() + Math.random(),
-            taskId: 0,
-            contactName: c.contactPerson,
-            contactNumber: c.contactNumber,
-            contactEmail: c.emailAddress
-          }));
+      const converted =
+        (data?.contacts || []).map((c: any) => ({
+          taskId: 0,
+          contactName: c.contactPerson || "",
+          contactNumber: c.contactNumber || "",
+          contactEmail: c.emailAddress || "",
+        })) || [];
 
-          setSavedContacts(converted);
-        }
-      } catch (err) {
-        console.error("Auto-fill site contacts failed:", err);
-      }
-    };
+      // ✅ Put into editable Task Contacts form inputs
+      setFormData((prev) => ({
+        ...prev,
+        contacts:
+          converted.length > 0
+            ? converted
+            : [{ taskId: 0, contactName: "", contactNumber: "", contactEmail: "" }],
+      }));
+    } catch (err) {
+      console.error("Auto-fill site contacts failed:", err);
 
+      // ✅ keep at least one empty row
+      setFormData((prev) => ({
+        ...prev,
+        contacts: [{ taskId: 0, contactName: "", contactNumber: "", contactEmail: "" }],
+      }));
+    }
+  };
 
-
-    fetchSiteContacts();
-  }, [formData.siteId]);
+  fetchSiteContacts();
+}, [showModal, formData.siteId]);
 
   const fetchUserPermissions = async (uid: number) => {
     try {
@@ -2315,7 +2395,7 @@ const [successOpen, setSuccessOpen] = useState(false);
       userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
-      siteId: 0,
+      siteId: null,
       status: 'Open',
       createdBy: actualUserName, // Use actual user name
       createdAt: new Date().toISOString(),
@@ -2368,7 +2448,7 @@ const [successOpen, setSuccessOpen] = useState(false);
       userId: userId || 0,
       departmentId: departments.length > 0 ? departments[0].id : 0,
       addressBookId: 0,
-      siteId: 0,
+      siteId: null,
       status: 'Open',
       createdBy: currentUserName,
       createdAt: new Date().toISOString(),
@@ -3525,7 +3605,7 @@ if (isSalesDepartment) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 -mt-10">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4  sm:px-6 text-black">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

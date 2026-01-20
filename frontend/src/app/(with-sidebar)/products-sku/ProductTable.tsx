@@ -214,10 +214,9 @@ const ProductTable: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen -mt-10 text-black">
+<div className="w-full -ml-13 sm:ml-0 px-4 py-4 sm:px-6 text-black">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Products</h1>
-        <p className="text-gray-600">Manage your product catalog and inventory</p>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
