@@ -1,7 +1,8 @@
 'use client';
 
-import { PlusIcon } from 'lucide-react';
-import { useState, useEffect,useRef } from 'react';
+import { PlusIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { Dispatch, FormEvent, SetStateAction } from "react";
 
 
 interface Department {
@@ -174,7 +175,7 @@ interface TaskFormData {
 
 // TaskModal Component
 interface TaskModalProps {
-    loading: boolean;
+  loading: boolean;
   isPurchaseDepartment: boolean;
   isTechnicalDepartment: boolean;
   isBillingDepartment: boolean;
@@ -205,11 +206,11 @@ interface TaskModalProps {
   editingSavedWorkscope: number | null;
   editingSavedSchedule: number | null;
   purchaseFile: File | null;
-  setPurchaseFile: React.Dispatch<React.SetStateAction<File | null>>;
+  setPurchaseFile: Dispatch<SetStateAction<File | null>>;
   inventories: any[];
   productTypes: any[];
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: FormEvent) => void;
   onDepartmentSearchChange: (value: string) => void;
   onCustomerSearchChange: (value: string) => void;
   onWorkscopeCategorySearchChange: (value: string) => void;
@@ -309,7 +310,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onEditLatestRemark,
   onOpenInventoryModal,
   onRemoveInventory,
-  
+
 }) => {
   // ✅ Hooks MUST be before any return
   const [customerActiveIndex, setCustomerActiveIndex] = useState(-1);
@@ -369,16 +370,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     Department
                   </label>
                   <select
-                    value={formData.departmentId || (departments.length > 0 ? departments[0].id : '')}
+                    value={formData.departmentId ?? ""}
                     onChange={(e) =>
                       onFormDataChange({
                         ...formData,
-                        departmentId: parseInt(e.target.value),
+                        departmentId: e.target.value ? Number(e.target.value) : null,
                       })
                     }
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     required
                   >
+                    <option value="" disabled>
+                      Select Department
+                    </option>
                     {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>
                         {dept.departmentName}
@@ -444,82 +448,82 @@ const TaskModal: React.FC<TaskModalProps> = ({
                       <label className="block text-sm font-medium text-gray-900 mb-1">
                         Customer *
                       </label>
-                    <input
-  type="text"
-  value={customerSearch}
-  onChange={(e) => {
-    onCustomerSearchChange(e.target.value);
-    onShowCustomerDropdownChange(true);
-  }}
-  onFocus={() => onShowCustomerDropdownChange(true)}
-  onKeyDown={(e) => {
-    if (!showCustomerDropdown && customerSearch.trim().length > 0) {
-      onShowCustomerDropdownChange(true);
-    }
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => {
+                          onCustomerSearchChange(e.target.value);
+                          onShowCustomerDropdownChange(true);
+                        }}
+                        onFocus={() => onShowCustomerDropdownChange(true)}
+                        onKeyDown={(e) => {
+                          if (!showCustomerDropdown && customerSearch.trim().length > 0) {
+                            onShowCustomerDropdownChange(true);
+                          }
 
-    if (!showCustomerDropdown) return;
+                          if (!showCustomerDropdown) return;
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setCustomerActiveIndex((prev) => {
-        if (filteredCustomers.length === 0) return -1;
-        return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
-      });
-    }
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setCustomerActiveIndex((prev) => {
+                              if (filteredCustomers.length === 0) return -1;
+                              return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
+                            });
+                          }
 
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setCustomerActiveIndex((prev) => {
-        if (filteredCustomers.length === 0) return -1;
-        return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
-      });
-    }
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setCustomerActiveIndex((prev) => {
+                              if (filteredCustomers.length === 0) return -1;
+                              return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
+                            });
+                          }
 
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
-        const customer = filteredCustomers[customerActiveIndex];
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
+                              const customer = filteredCustomers[customerActiveIndex];
 
-        onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
-        onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-        onShowCustomerDropdownChange(false);
-      }
-    }
+                              onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+                              onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                              onShowCustomerDropdownChange(false);
+                            }
+                          }
 
-    if (e.key === "Escape") {
-      onShowCustomerDropdownChange(false);
-    }
-  }}
-  placeholder="Search customer..."
-  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-  required
-/>
+                          if (e.key === "Escape") {
+                            onShowCustomerDropdownChange(false);
+                          }
+                        }}
+                        placeholder="Search customer..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                        required
+                      />
 
-{showCustomerDropdown && customerSearch && (
-  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                               {filteredCustomers.map((customer, index) => (
-      <div
-        key={customer.id}
-        ref={(el) => { customerItemRefs.current[index] = el; }}
-        onMouseEnter={() => setCustomerActiveIndex(index)}
-        className={`px-3 py-2 cursor-pointer text-gray-900
+                      {showCustomerDropdown && customerSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredCustomers.map((customer, index) => (
+                            <div
+                              key={customer.id}
+                              ref={(el) => { customerItemRefs.current[index] = el; }}
+                              onMouseEnter={() => setCustomerActiveIndex(index)}
+                              className={`px-3 py-2 cursor-pointer text-gray-900
           ${customerActiveIndex === index ? "bg-blue-100" : "hover:bg-gray-100"}
         `}
-        onClick={() => {
-          onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
-          onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-          onShowCustomerDropdownChange(false);
-        }}
-      >
-        {customer.addressBookID} - {customer.customerName}
-      </div>
-    ))}
+                              onClick={() => {
+                                onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+                                onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                                onShowCustomerDropdownChange(false);
+                              }}
+                            >
+                              {customer.addressBookID} - {customer.customerName}
+                            </div>
+                          ))}
 
-    {filteredCustomers.length === 0 && (
-      <div className="px-3 py-2 text-gray-500">No customers found</div>
-    )}
-  </div>
-)}
+                          {filteredCustomers.length === 0 && (
+                            <div className="px-3 py-2 text-gray-500">No customers found</div>
+                          )}
+                        </div>
+                      )}
 
 
                     </div>
@@ -774,77 +778,77 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         <label className="block text-sm font-medium text-gray-900 mb-1">
                           Customer *
                         </label>
-                       <input
-  type="text"
-  value={customerSearch}
-  onChange={(e) => {
-    onCustomerSearchChange(e.target.value);
-    onShowCustomerDropdownChange(true);
-  }}
-  onFocus={() => onShowCustomerDropdownChange(true)}
-  onKeyDown={(e) => {
-    if (!showCustomerDropdown && customerSearch.trim().length > 0) {
-      onShowCustomerDropdownChange(true);
-    }
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => {
+                            onCustomerSearchChange(e.target.value);
+                            onShowCustomerDropdownChange(true);
+                          }}
+                          onFocus={() => onShowCustomerDropdownChange(true)}
+                          onKeyDown={(e) => {
+                            if (!showCustomerDropdown && customerSearch.trim().length > 0) {
+                              onShowCustomerDropdownChange(true);
+                            }
 
-    if (!showCustomerDropdown) return;
+                            if (!showCustomerDropdown) return;
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setCustomerActiveIndex((prev) => {
-        if (filteredCustomers.length === 0) return -1;
-        return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
-      });
-    }
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              setCustomerActiveIndex((prev) => {
+                                if (filteredCustomers.length === 0) return -1;
+                                return prev < filteredCustomers.length - 1 ? prev + 1 : 0;
+                              });
+                            }
 
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setCustomerActiveIndex((prev) => {
-        if (filteredCustomers.length === 0) return -1;
-        return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
-      });
-    }
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              setCustomerActiveIndex((prev) => {
+                                if (filteredCustomers.length === 0) return -1;
+                                return prev > 0 ? prev - 1 : filteredCustomers.length - 1;
+                              });
+                            }
 
-    if (e.key === "Enter") {
-      e.preventDefault();
+                            if (e.key === "Enter") {
+                              e.preventDefault();
 
-      if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
-        const customer = filteredCustomers[customerActiveIndex];
+                              if (customerActiveIndex >= 0 && filteredCustomers[customerActiveIndex]) {
+                                const customer = filteredCustomers[customerActiveIndex];
 
-        onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
-        onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-        onShowCustomerDropdownChange(false);
-      }
-    }
+                                onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+                                onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                                onShowCustomerDropdownChange(false);
+                              }
+                            }
 
-    if (e.key === "Escape") {
-      onShowCustomerDropdownChange(false);
-    }
-  }}
-  placeholder="Search customer..."
-  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-  required={isTechnicalDepartment || isBillingDepartment}
-/>
+                            if (e.key === "Escape") {
+                              onShowCustomerDropdownChange(false);
+                            }
+                          }}
+                          placeholder="Search customer..."
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required={isTechnicalDepartment || isBillingDepartment}
+                        />
 
                         {showCustomerDropdown && customerSearch && (
                           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                           {filteredCustomers.map((customer, index) => (
-  <div
-    key={customer.id}
-    ref={(el) => { customerItemRefs.current[index] = el; }}
-    onMouseEnter={() => setCustomerActiveIndex(index)}
-    className={`px-3 py-2 cursor-pointer text-gray-900
+                            {filteredCustomers.map((customer, index) => (
+                              <div
+                                key={customer.id}
+                                ref={(el) => { customerItemRefs.current[index] = el; }}
+                                onMouseEnter={() => setCustomerActiveIndex(index)}
+                                className={`px-3 py-2 cursor-pointer text-gray-900
       ${customerActiveIndex === index ? "bg-blue-100" : "hover:bg-gray-100"}
     `}
-    onClick={() => {
-      onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
-      onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
-      onShowCustomerDropdownChange(false);
-    }}
-  >
-    {customer.addressBookID} - {customer.customerName}
-  </div>
-))}
+                                onClick={() => {
+                                  onFormDataChange({ ...formData, addressBookId: customer.id, siteId: null });
+                                  onCustomerSearchChange(`${customer.addressBookID} - ${customer.customerName}`);
+                                  onShowCustomerDropdownChange(false);
+                                }}
+                              >
+                                {customer.addressBookID} - {customer.customerName}
+                              </div>
+                            ))}
 
                             {filteredCustomers.length === 0 && (
                               <div className="px-3 py-2 text-gray-500">No customers found</div>
@@ -863,13 +867,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           {isBillingDepartment ? "Branch" : "Site"} *
                         </label>
                         <select
-                          value={formData.siteId || 0}
-                          onChange={(e) => onFormDataChange({ ...formData, siteId: parseInt(e.target.value) })}
+                          value={formData.siteId ?? ""}
+                          onChange={(e) =>
+                            onFormDataChange({
+                              ...formData,
+                              siteId: e.target.value ? Number(e.target.value) : null,
+                            })
+                          }
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                           required={isTechnicalDepartment || isBillingDepartment}
-                          disabled={formData.addressBookId === 0}
+                          disabled={!formData.addressBookId}
                         >
-                          <option value={0}>Select {isBillingDepartment ? "Branch" : "Site"}</option>
+                          <option value="" disabled>
+                            Select {isBillingDepartment ? "Branch" : "Site"}
+                          </option>
                           {filteredSites.map((site) => (
                             <option key={site.id} value={site.id}>
                               {site.siteID} - {site.siteName}
@@ -887,58 +898,58 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Sales Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Customer Name */}
-                    <div>
-  <label className="block text-sm font-medium text-gray-900 mb-1">
-    Customer Name *
-  </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Customer Name *
+                        </label>
 
-  <input
-    type="text"
-    value={formData.purchase?.customerName || ""}
-    onChange={(e) =>
-      onFormDataChange({
-        ...formData,
-        purchase: {
-          ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
-          purchaseType: "INQUIRY",
-          customerName: e.target.value, // ✅ correct field
-          address: formData.purchase?.address || "",
-          products: formData.purchase?.products || [],
-        },
-      })
-    }
-    placeholder="Enter customer name"
-    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-    required
-  />
-</div>
+                        <input
+                          type="text"
+                          value={formData.purchase?.customerName || ""}
+                          onChange={(e) =>
+                            onFormDataChange({
+                              ...formData,
+                              purchase: {
+                                ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+                                purchaseType: "INQUIRY",
+                                customerName: e.target.value, // ✅ correct field
+                                address: formData.purchase?.address || "",
+                                products: formData.purchase?.products || [],
+                              },
+                            })
+                          }
+                          placeholder="Enter customer name"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
 
                       {/* Address */}
-                 <div>
-  <label className="block text-sm font-medium text-gray-900 mb-1">
-    Address *
-  </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
+                          Address *
+                        </label>
 
-  <input
-    type="text"
-    value={formData.purchase?.address || ""}
-    onChange={(e) =>
-      onFormDataChange({
-        ...formData,
-        purchase: {
-          ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
-          purchaseType: "INQUIRY",
-          customerName: formData.purchase?.customerName || "",
-          address: e.target.value, // ✅ correct field
-          products: formData.purchase?.products || [],
-        },
-      })
-    }
-    placeholder="Enter address"
-    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-    required
-  />
-</div>
+                        <input
+                          type="text"
+                          value={formData.purchase?.address || ""}
+                          onChange={(e) =>
+                            onFormDataChange({
+                              ...formData,
+                              purchase: {
+                                ...(formData.purchase || { purchaseType: "INQUIRY", products: [] }),
+                                purchaseType: "INQUIRY",
+                                customerName: formData.purchase?.customerName || "",
+                                address: e.target.value, // ✅ correct field
+                                products: formData.purchase?.products || [],
+                              },
+                            })
+                          }
+                          placeholder="Enter address"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          required
+                        />
+                      </div>
 
 
                       {/* <div>
@@ -1526,16 +1537,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
               >
                 Cancel
               </button>
-      <button
-  type="submit"
-  disabled={loading}
-  className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
->
-  {loading && (
-    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-  )}
-  {!loading && (editingId ? "Update Task" : "Create Task")}
-</button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                )}
+                {!loading && (editingId ? "Update Task" : "Create Task")}
+              </button>
 
             </div>
           </form>
@@ -1606,41 +1617,28 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
   const currentStatus = getCurrentTaskStatus();
   const allowedStatuses = getAllowedStatuses(currentStatus);
 
-  // always reset dropdown when modal opens OR remarks change
-  useEffect(() => {
-    if (!showModal) return;
-
-    setNewStatus(
-      allowedStatuses.length ? allowedStatuses[0] : currentStatus
-    );
-  }, [showModal, task?.remarks]);
-
-
-
-
-  // Initialize newStatus properly
-  const [newStatus, setNewStatus] = useState(
-    allowedStatuses.length ? allowedStatuses[0] : currentStatus
+  // ✅ Declare state BEFORE any effect uses it
+  const [newStatus, setNewStatus] = useState<string>(
+    allowedStatuses[0] ?? currentStatus
   );
 
-  // Update effect to handle status changes
-  useEffect(() => {
-    if (!task || !showModal) return;
-
-    const current = normalizeStatus(getCurrentTaskStatus());
-    const allowed = getAllowedStatuses(current);
-
-    // Set to first allowed status, or current if no allowed transitions
-    setNewStatus(allowed.length ? allowed[0] : current);
-  }, [task, showModal]);
-
-  // In RemarksModal component, add:
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ✅ Always sync dropdown when modal opens or remarks change
+  useEffect(() => {
+    if (!showModal || !task) return;
+
+    const curr = getCurrentTaskStatus();
+    const allowed = getAllowedStatuses(curr);
+
+    setNewStatus(allowed[0] ?? curr);
+  }, [showModal, task?.id, task?.remarks?.length]);
+
 
   // Update handleSubmit:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
 
     if (isSubmitting) return; // Prevent double submit
 
@@ -1807,7 +1805,7 @@ export default function TasksPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-const [successOpen, setSuccessOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [inventories, setInventories] = useState<any[]>([]);
@@ -2068,10 +2066,10 @@ const [successOpen, setSuccessOpen] = useState(false);
 
   // Form state - Initialize with empty arrays
   const [formData, setFormData] = useState<TaskFormData>({
-    taskID: '',
-    userId: userId || 0,
-    departmentId: departments.length > 0 ? departments[0].id : 0,
-    addressBookId: 0,
+    taskID: "",
+    userId: userId ?? null,
+    departmentId: departments.length > 0 ? departments[0].id : null,
+    addressBookId: null,
     siteId: null,
     status: 'Open',
     createdBy: currentUserName,
@@ -2091,6 +2089,16 @@ const [successOpen, setSuccessOpen] = useState(false);
     },
 
   });
+
+
+  useEffect(() => {
+    if (departments.length === 0) return;
+
+    setFormData(prev => ({
+      ...prev,
+      departmentId: prev.departmentId ?? departments[0].id,
+    }));
+  }, [departments]);
 
 
   // Calculate isPurchaseDepartment BEFORE TaskModal component
@@ -2154,45 +2162,40 @@ const [successOpen, setSuccessOpen] = useState(false);
     site.addressBookId === formData.addressBookId
   );
 
- // ✅ Auto-fill Task Contacts when a site is selected
-useEffect(() => {
-  if (!showModal) return;
-  if (!formData.siteId || formData.siteId === 0) return;
+  // ✅ Auto-fill Task Contacts when a site is selected
+  useEffect(() => {
+    if (!showModal) return;
+    if (!formData.siteId || formData.siteId === 0) return;
 
-  const fetchSiteContacts = async () => {
-    try {
-      const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
-      const data = await res.json();
+    // 🚨 DO NOT override if user already saved contacts
+    if (savedContacts.length > 0) return;
 
-      const converted =
-        (data?.contacts || []).map((c: any) => ({
-          taskId: 0,
-          contactName: c.contactPerson || "",
-          contactNumber: c.contactNumber || "",
-          contactEmail: c.emailAddress || "",
-        })) || [];
+    const fetchSiteContacts = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/sites/${formData.siteId}`);
+        const data = await res.json();
 
-      // ✅ Put into editable Task Contacts form inputs
-      setFormData((prev) => ({
-        ...prev,
-        contacts:
-          converted.length > 0
-            ? converted
-            : [{ taskId: 0, contactName: "", contactNumber: "", contactEmail: "" }],
-      }));
-    } catch (err) {
-      console.error("Auto-fill site contacts failed:", err);
+        const converted =
+          (data?.contacts || []).map((c: any) => ({
+            taskId: 0,
+            contactName: c.contactPerson || "",
+            contactNumber: c.contactNumber || "",
+            contactEmail: c.emailAddress || "",
+          }));
 
-      // ✅ keep at least one empty row
-      setFormData((prev) => ({
-        ...prev,
-        contacts: [{ taskId: 0, contactName: "", contactNumber: "", contactEmail: "" }],
-      }));
-    }
-  };
+        if (converted.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            contacts: converted
+          }));
+        }
+      } catch (err) {
+        console.error("Auto-fill site contacts failed:", err);
+      }
+    };
 
-  fetchSiteContacts();
-}, [showModal, formData.siteId]);
+    fetchSiteContacts();
+  }, [showModal, formData.siteId, savedContacts.length]);
 
   const fetchUserPermissions = async (uid: number) => {
     try {
@@ -2432,13 +2435,19 @@ useEffect(() => {
     setSavedWorkscopeDetails([]);
     setSavedSchedule([]);
     setSavedRemarks([]);
+
     setInventories([]);
     setEditingId(null);
     setShowModal(true);
     setPurchaseFile(null);
     setSavedPurchaseAttachments([]);
+    setCustomerSearch("");
+    setShowCustomerDropdown(false);
+
 
   };
+
+
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -2473,12 +2482,13 @@ useEffect(() => {
       },
 
     });
-    setSavedContacts([]);
-    setSavedWorkscopeDetails([]);
-    setSavedSchedule([]);
+
     setSavedRemarks([]);
     setInventories([]);
     setPurchaseFile(null);
+    setCustomerSearch("");
+    setShowCustomerDropdown(false);
+
   };
 
   const handleOpenRemarksModal = (task: Task) => {
@@ -2500,203 +2510,288 @@ useEffect(() => {
     setSavedRemarks([]);
   };
 
+
+  // 🔥 FORCE SYNC formData → saved arrays (CREATE FIX)
+  const finalContacts =
+    savedContacts.length > 0
+      ? savedContacts
+      : formData.contacts.filter(c => c.contactName && c.contactNumber);
+
+  const finalWorkscope =
+    savedWorkscopeDetails.length > 0
+      ? savedWorkscopeDetails
+      : formData.workscopeDetails.filter(w => w.workscopeDetails && w.workscopeCategoryId);
+
+  const finalSchedule =
+    savedSchedule.length > 0
+      ? savedSchedule
+      : formData.schedule.filter(s => s.proposedDateTime);
+
+
   // Form submission - FIXED TO INCLUDE REMARKS
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const cleanArray = (arr: any[], mapper: any) =>
-    arr.length ? arr.map(mapper) : undefined;
-
-  try {
-    // Get the actual user name from localStorage or state
-    const actualUserName = localStorage.getItem("username") || currentUserName || "User";
-
-    // Determine task status from saved remarks
-    let taskStatus = 'Open';
-    let remarksToSave: any[] = [];
-
-    // First check saved remarks
-    if (savedRemarks.length > 0) {
-      const sortedRemarks = [...savedRemarks].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      taskStatus = sortedRemarks[0]?.status || 'Open';
-      remarksToSave = sortedRemarks.map(r => ({
-        remark: r.remark,
-        status: r.status,
-        createdBy: r.createdBy || actualUserName, // Use actual user name
-        createdAt: r.createdAt || new Date().toISOString(),
-        description: r.description || "",
-      }));
+    // 🔥 AUTO-SAVE SCHEDULE IF FILLED
+    if (
+      formData.schedule?.[0]?.proposedDateTime &&
+      formData.schedule?.[0]?.priority &&
+      savedSchedule.length === 0
+    ) {
+      setSavedSchedule([{
+        ...formData.schedule[0],
+        id: Date.now()
+      }]);
     }
-    // Then check if there's a new remark in the form (for Add Task)
-    else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
-      const newRemark = {
-        remark: formData.remarks[0].remark,
-        status: 'Open', // Always "Open" for new tasks
-        createdBy: actualUserName, // Use actual user name
-        createdAt: new Date().toISOString(),
-        description: ""
+
+
+    try {
+      // Get the actual user name from localStorage or state
+      const actualUserName = localStorage.getItem("username") || currentUserName || "User";
+
+      // Determine task status from saved remarks
+      let taskStatus = 'Open';
+      let remarksToSave: any[] = [];
+
+      // First check saved remarks
+      if (savedRemarks.length > 0) {
+        const sortedRemarks = [...savedRemarks].sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        taskStatus = sortedRemarks[0]?.status || 'Open';
+        remarksToSave = sortedRemarks.map(r => ({
+          remark: r.remark,
+          status: r.status,
+          createdBy: r.createdBy || actualUserName, // Use actual user name
+          createdAt: r.createdAt || new Date().toISOString(),
+          description: r.description || "",
+        }));
+      }
+      // Then check if there's a new remark in the form (for Add Task)
+      else if (formData.remarks && formData.remarks.length > 0 && formData.remarks[0].remark) {
+        const newRemark = {
+          remark: formData.remarks[0].remark,
+          status: 'Open', // Always "Open" for new tasks
+          createdBy: actualUserName, // Use actual user name
+          createdAt: new Date().toISOString(),
+          description: ""
+        };
+        remarksToSave = [newRemark];
+        taskStatus = 'Open';
+      }
+
+      const taskData: any = {
+        id: editingId || undefined,
+        userId,
+        taskID: formData.taskID,
+        departmentId: formData.departmentId,
+        status: taskStatus,
+        createdBy: actualUserName,
+        createdAt: formData.createdAt,
+        description: formData.description,
+        title: formData.title,
+        // ✅ FIX: send BOTH saved items + whatever user typed but didn’t click “Save”
+        contacts: (() => {
+          const fromSaved = (savedContacts || []).map((c: any) => ({
+            contactName: (c.contactName || "").trim(),
+            contactNumber: (c.contactNumber || "").trim(),
+            contactEmail: (c.contactEmail || "").trim(),
+          }));
+
+          const fromForm = (formData.contacts || [])
+            .map((c: any) => ({
+              contactName: (c.contactName || "").trim(),
+              contactNumber: (c.contactNumber || "").trim(),
+              contactEmail: (c.contactEmail || "").trim(),
+            }))
+            .filter(c => c.contactName || c.contactNumber || c.contactEmail);
+
+          // keep only valid ones (at least name + number)
+          const combined = [...fromSaved, ...fromForm].filter(c => c.contactName && c.contactNumber);
+
+          // de-dupe by name+number
+          const uniq = Array.from(
+            new Map(combined.map(c => [`${c.contactName}|${c.contactNumber}`, c])).values()
+          );
+
+          return uniq.length ? uniq : undefined;
+        })(),
+
+        workscopeDetails: (() => {
+          const fromSaved = (savedWorkscopeDetails || []).map((w: any) => ({
+            workscopeCategoryId: Number(w.workscopeCategoryId),
+            workscopeDetails: (w.workscopeDetails || "").trim(),
+            extraNote: (w.extraNote || "").trim(),
+          }));
+
+          const fromForm = (formData.workscopeDetails || []).map((w: any) => ({
+            workscopeCategoryId: Number(w.workscopeCategoryId),
+            workscopeDetails: (w.workscopeDetails || "").trim(),
+            extraNote: (w.extraNote || "").trim(),
+          }));
+
+          const combined = [...fromSaved, ...fromForm].filter(
+            w => w.workscopeCategoryId > 0 && w.workscopeDetails
+          );
+
+          // de-dupe by category+details
+          const uniq = Array.from(
+            new Map(combined.map(w => [`${w.workscopeCategoryId}|${w.workscopeDetails}`, w])).values()
+          );
+
+          return uniq.length ? uniq : undefined;
+        })(),
+
+        schedule: (() => {
+          const fromSaved = (savedSchedule || []).map((s: any) => ({
+            proposedDateTime: s.proposedDateTime,
+            priority: s.priority,
+          }));
+
+          const fromForm = (formData.schedule || []).map((s: any) => ({
+            proposedDateTime: s.proposedDateTime,
+            priority: s.priority || "Medium",
+          }));
+
+          const combined = [...fromSaved, ...fromForm].filter(s => s.proposedDateTime);
+
+          // de-dupe by datetime+priority
+          const uniq = Array.from(
+            new Map(combined.map(s => [`${s.proposedDateTime}|${s.priority}`, s])).values()
+          );
+
+          return uniq.length ? uniq : undefined;
+        })(),
+
+        remarks: remarksToSave.length > 0 ? remarksToSave : undefined,
+        taskType: isPurchaseDepartment
+          ? ((formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY"
+            ? "PRODUCT_INQUIRY"
+            : "PURCHASE_ORDER")
+          : "SERVICE",
+        taskInventories: inventories.length
+          ? inventories.map(inv => ({
+            serviceContractId: 0,
+            productTypeId: Number(inv.productTypeId),
+            makeModel: inv.makeModel,
+            snMac: inv.snMac,
+            description: inv.description,
+            purchaseDate: inv.purchaseDate,
+            warrantyPeriod: inv.warrantyPeriod,
+            thirdPartyPurchase: inv.thirdPartyPurchase,
+            warrantyStatus: inv.warrantyStatus
+              ? String(inv.warrantyStatus).trim()
+              : "Active",
+          }))
+          : undefined,
       };
-      remarksToSave = [newRemark];
-      taskStatus = 'Open';
+
+      const addressBookIdNum = Number(formData.addressBookId);
+      if (Number.isInteger(addressBookIdNum) && addressBookIdNum > 0) {
+        taskData.addressBookId = addressBookIdNum;
+      }
+
+      const siteIdNum = Number(formData.siteId);
+      if (Number.isInteger(siteIdNum) && siteIdNum > 0) {
+        taskData.siteId = siteIdNum;
+      }
+
+      /* ---------------------------------------------------
+         🔥 PURCHASE PAYLOAD — ADD CONDITIONALLY (CRITICAL)
+      --------------------------------------------------- */
+      const hasProducts =
+        Array.isArray(formData.purchase?.products) &&
+        formData.purchase.products.length > 0;
+
+      const hasPurchaseMetaChanges =
+        !!formData.purchase?.customerName ||
+        !!formData.purchase?.address ||
+        !!formData.purchase?.purchaseType;
+
+      // ✅ PURCHASE dept (keep as-is)
+      if (isPurchaseDepartment && formData.purchase?.purchaseType) {
+        const purchaseType = formData.purchase.purchaseType as "INQUIRY" | "ORDER";
+
+        taskData.purchase = {
+          purchaseType,
+          customerName: formData.purchase.customerName || "",
+          address: formData.purchase.address || "",
+          products: formData.purchase.products || [],
+        };
+      }
+
+      // ✅ SALES dept (NO UI for products/task type, but still save into purchase{})
+      if (isSalesDepartment) {
+        taskData.taskType = "PRODUCT_INQUIRY";
+        taskData.purchase = {
+          purchaseType: "INQUIRY",
+          customerName: formData.purchase?.customerName || "",
+          address: formData.purchase?.address || "",
+        };
+      }
+
+      const url = editingId
+        ? `http://localhost:8000/task/${editingId}`
+        : `http://localhost:8000/task`;
+
+      const method = editingId ? "PATCH" : "POST";
+      const token = getAuthToken();
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save task: ${errorText}`);
+      }
+
+      const savedTask = await response.json();
+
+      // 🔥 Upload attachment if present
+      if (purchaseFile && savedTask?.id) {
+        const attachmentFormData = new FormData();
+        attachmentFormData.append("file", purchaseFile);
+
+        await fetch(
+          `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: attachmentFormData,
+          }
+        );
+      }
+
+      // ✅ Auto-close modal after successful save
+      handleCloseModal();
+
+      // ✅ Show success message
+      setSuccessMessage(editingId ? "Task updated successfully!" : "Task created successfully!");
+      setSuccessOpen(true);
+
+      // ✅ Reset file and refresh tasks
+      setPurchaseFile(null);
+      await fetchTasks();
+
+      // ✅ Reset loading state
+      setLoading(false);
+
+    } catch (err) {
+      console.error("Save error:", err);
+      setError(err instanceof Error ? err.message : "Failed to save task");
+      setLoading(false);
     }
-
-    const taskData: any = {
-      id: editingId || undefined,
-      userId,
-      taskID: formData.taskID,
-      departmentId: formData.departmentId,
-      status: taskStatus,
-      createdBy: actualUserName,
-      createdAt: formData.createdAt,
-      description: formData.description,
-      title: formData.title,
-      contacts: cleanArray(savedContacts, (c: any) => ({
-        contactName: c.contactName,
-        contactNumber: c.contactNumber,
-        contactEmail: c.contactEmail,
-      })),
-      workscopeDetails: savedWorkscopeDetails.length > 0
-        ? savedWorkscopeDetails.map(w => ({
-          workscopeCategoryId: Number(w.workscopeCategoryId),
-          workscopeDetails: w.workscopeDetails,
-          extraNote: w.extraNote || "",
-        }))
-        : undefined,
-      schedule: cleanArray(savedSchedule, (s: any) => ({
-        proposedDateTime: s.proposedDateTime,
-        priority: s.priority,
-      })),
-      remarks: remarksToSave.length > 0 ? remarksToSave : undefined,
-      taskType: isPurchaseDepartment
-        ? ((formData.purchase?.purchaseType || "INQUIRY") === "INQUIRY"
-          ? "PRODUCT_INQUIRY"
-          : "PURCHASE_ORDER")
-        : "SERVICE",
-      taskInventories: inventories.length
-        ? inventories.map(inv => ({
-          serviceContractId: 0,
-          productTypeId: Number(inv.productTypeId),
-          makeModel: inv.makeModel,
-          snMac: inv.snMac,
-          description: inv.description,
-          purchaseDate: inv.purchaseDate,
-          warrantyPeriod: inv.warrantyPeriod,
-          thirdPartyPurchase: inv.thirdPartyPurchase,
-          warrantyStatus: inv.warrantyStatus
-            ? String(inv.warrantyStatus).trim()
-            : "Active",
-        }))
-        : undefined,
-    };
-
-    const addressBookIdNum = Number(formData.addressBookId);
-    if (Number.isInteger(addressBookIdNum) && addressBookIdNum > 0) {
-      taskData.addressBookId = addressBookIdNum;
-    }
-
-    const siteIdNum = Number(formData.siteId);
-    if (Number.isInteger(siteIdNum) && siteIdNum > 0) {
-      taskData.siteId = siteIdNum;
-    }
-
-    /* ---------------------------------------------------
-       🔥 PURCHASE PAYLOAD — ADD CONDITIONALLY (CRITICAL)
-    --------------------------------------------------- */
-    const hasProducts =
-      Array.isArray(formData.purchase?.products) &&
-      formData.purchase.products.length > 0;
-
-    const hasPurchaseMetaChanges =
-      !!formData.purchase?.customerName ||
-      !!formData.purchase?.address ||
-      !!formData.purchase?.purchaseType;
-
-    // ✅ PURCHASE dept (keep as-is)
-if (isPurchaseDepartment && formData.purchase?.purchaseType) {
-  const purchaseType = formData.purchase.purchaseType as "INQUIRY" | "ORDER";
-
-  taskData.purchase = {
-    purchaseType,
-    customerName: formData.purchase.customerName || "",
-    address: formData.purchase.address || "",
-    products: formData.purchase.products || [],
   };
-}
-
-// ✅ SALES dept (NO UI for products/task type, but still save into purchase{})
-if (isSalesDepartment) {
-  taskData.taskType = "PRODUCT_INQUIRY";
-  taskData.purchase = {
-    purchaseType: "INQUIRY",
-    customerName: formData.purchase?.customerName || "",
-    address: formData.purchase?.address || "",
-  };
-}
-
-    const url = editingId
-      ? `http://localhost:8000/task/${editingId}`
-      : `http://localhost:8000/task`;
-
-    const method = editingId ? "PATCH" : "POST";
-    const token = getAuthToken();
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(taskData),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to save task: ${errorText}`);
-    }
-
-    const savedTask = await response.json();
-
-    // 🔥 Upload attachment if present
-    if (purchaseFile && savedTask?.id) {
-      const attachmentFormData = new FormData();
-      attachmentFormData.append("file", purchaseFile);
-
-      await fetch(
-        `http://localhost:8000/task/${savedTask.id}/purchase-attachment`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: attachmentFormData,
-        }
-      );
-    }
-
-    // ✅ Auto-close modal after successful save
-    handleCloseModal();
-    
-    // ✅ Show success message
-    setSuccessMessage(editingId ? "Task updated successfully!" : "Task created successfully!");
-    setSuccessOpen(true);
-    
-    // ✅ Reset file and refresh tasks
-    setPurchaseFile(null);
-    await fetchTasks();
-    
-    // ✅ Reset loading state
-    setLoading(false);
-    
-  } catch (err) {
-    console.error("Save error:", err);
-    setError(err instanceof Error ? err.message : "Failed to save task");
-    setLoading(false);
-  }
-};
 
   const handleAddRemarkInModal = async (remark: string, status: string) => {
     if (!selectedTask) return;
@@ -3605,7 +3700,7 @@ if (isSalesDepartment) {
   };
 
   return (
-<div className="w-full -ml-13 sm:ml-0 px-4 py-4  sm:px-6 text-black">
+    <div className="w-full -ml-13 sm:ml-0 px-4 py-4  sm:px-6 text-black">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -3650,30 +3745,30 @@ if (isSalesDepartment) {
 
 
         {/* ✅ Success Modal */}
-{/* ✅ Success Modal */}
-{successOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-2">Success</h2>
-      <p className="text-gray-700 mb-6">
-        {successMessage}
-      </p>
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => {
-            setSuccessOpen(false);
-            setSuccessMessage(null);
-            // Only refresh tasks, modal is already closed
-            fetchTasks();
-          }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          OK
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        {/* ✅ Success Modal */}
+        {successOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Success</h2>
+              <p className="text-gray-700 mb-6">
+                {successMessage}
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setSuccessOpen(false);
+                    setSuccessMessage(null);
+                    // Only refresh tasks, modal is already closed
+                    fetchTasks();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tasks Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -3701,9 +3796,7 @@ if (isSalesDepartment) {
                     <th className="px-6 py-4 text-left text-blue-800 font-semibold">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-blue-800 font-semibold">
-                      Remarks
-                    </th>
+
                     <th className="px-6 py-4 text-left text-blue-800 font-semibold">
                       Actions
                     </th>
@@ -3740,10 +3833,10 @@ if (isSalesDepartment) {
                           {departments.find(d => d.id === task.departmentId)?.departmentName || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-{addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || task.purchase?.customerName || task.customerName || 'N/A'}
+                          {addressBooks.find(ab => ab.id === task.addressBookId)?.customerName || task.purchase?.customerName || task.customerName || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-{sites.find(s => s.id === task.siteId)?.siteName || task.purchase?.address || task.address || 'N/A'}
+                          {sites.find(s => s.id === task.siteId)?.siteName || task.purchase?.address || task.address || 'N/A'}
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -3788,26 +3881,7 @@ if (isSalesDepartment) {
                           })()}
                         </td>
 
-                        <td className="px-6 py-4 text-sm text-gray-900 align-top w-64">
-                          {task.remarks && task.remarks.length > 0 ? (
-                            <div className="flex flex-col space-y-1">
-                              <div className="font-medium break-words leading-snug">
-                                {(() => {
-                                  const sortedRemarks = [...task.remarks].sort((a, b) => (b.id || 0) - (a.id || 0));
-                                  const latestRemark = sortedRemarks[0];
 
-                                  return (
-                                    <span className="block text-gray-800">
-                                      {latestRemark.remark}
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">No remarks</span>
-                          )}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex gap-2">
                             <a
@@ -3919,7 +3993,7 @@ if (isSalesDepartment) {
 
         {/* Task Modal */}
         <TaskModal
-         loading={loading}
+          loading={loading}
           purchaseFile={purchaseFile}
           setPurchaseFile={setPurchaseFile}
           savedPurchaseAttachments={savedPurchaseAttachments}

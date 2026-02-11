@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
@@ -16,7 +16,13 @@ export class SitesService {
     
     return this.prisma.site.create({ 
       data: {
-        ...data,
+        siteName: data.siteName,
+        siteAddress: data.siteAddress,
+        city: data.city,
+        state: data.state,
+        pinCode: data.pinCode,
+        gstNo: data.gstNo,
+        addressBookId: data.addressBookId,
         siteID,
       }
     });
@@ -29,7 +35,7 @@ export class SitesService {
     });
     
     if (!addressBook) {
-      throw new Error('Address book not found');
+      throw new NotFoundException('Address book not found');
     }
     
     // Count existing sites for this customer
@@ -42,42 +48,60 @@ export class SitesService {
   }
 
   findAll(): Promise<Site[]> {
-    return this.prisma.site.findMany({ include: { contacts: true } });
+    return this.prisma.site.findMany({ 
+      include: { 
+        contacts: true,
+        addressBook: true 
+      } 
+    });
   }
 
- findOne(id: number): Promise<Site | null> {
-  if (!id || Number.isNaN(id)) {
-    throw new BadRequestException("Site id is required");
+  async findOne(id: number): Promise<Site> {
+    if (!id || Number.isNaN(id)) {
+      throw new BadRequestException('Site id is required');
+    }
+
+    const site = await this.prisma.site.findUnique({
+      where: { id },
+      include: {
+        contacts: true,
+        addressBook: true,
+        tasks: true,
+      },
+    });
+
+    if (!site) {
+      throw new NotFoundException(`Site with ID ${id} not found`);
+    }
+
+    return site;
   }
 
-  return this.prisma.site.findUnique({
-    where: { id },
-    include: {
-      contacts: true,
-      addressBook: true,
-      tasks: true,
-    },
-  });
-}
-
-
-findAllBasedOnCust(addressBookId?: string) {
-  return this.prisma.site.findMany({
-    where: addressBookId
-      ? { addressBookId: Number(addressBookId) }
-      : undefined,
-    orderBy: { siteName: 'asc' },
-  });
-}
-
+  findAllBasedOnCust(addressBookId?: number) {
+    return this.prisma.site.findMany({
+      where: addressBookId
+        ? { addressBookId }
+        : undefined,
+      orderBy: { siteName: 'asc' },
+      include: {
+        contacts: true,
+        addressBook: true,
+      },
+    });
+  }
 
   async update(id: number, data: UpdateSiteDto) {
-    // Remove any nested relations from the data
-    const { contacts, ...siteData } = data as any;
-    
+    const site = await this.prisma.site.findUnique({
+      where: { id }
+    });
+
+    if (!site) {
+      throw new NotFoundException(`Site with ID ${id} not found`);
+    }
+
     return this.prisma.site.update({
       where: { id },
-      data: siteData,
+      data,
       include: {
         addressBook: true,
         contacts: true,
@@ -85,23 +109,50 @@ findAllBasedOnCust(addressBookId?: string) {
     });
   }
 
-   // Contact management methods
+  // Contact management methods
   async getSiteContacts(siteId: number) {
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId }
+    });
+
+    if (!site) {
+      throw new NotFoundException(`Site with ID ${siteId} not found`);
+    }
+
     return this.prisma.siteContact.findMany({
       where: { siteId },
     });
   }
 
   async createSiteContact(siteId: number, data: CreateSiteContactDto) {
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId }
+    });
+
+    if (!site) {
+      throw new NotFoundException(`Site with ID ${siteId} not found`);
+    }
+
     return this.prisma.siteContact.create({
       data: {
-        ...data,
+        contactPerson: data.contactPerson,
+        designation: data.designation,
+        contactNumber: data.contactNumber,
+        emailAddress: data.emailAddress,
         siteId,
       },
     });
   }
 
   async updateSiteContact(contactId: number, data: UpdateSiteContactDto) {
+    const contact = await this.prisma.siteContact.findUnique({
+      where: { id: contactId }
+    });
+
+    if (!contact) {
+      throw new NotFoundException(`Contact with ID ${contactId} not found`);
+    }
+
     return this.prisma.siteContact.update({
       where: { id: contactId },
       data,
@@ -109,44 +160,40 @@ findAllBasedOnCust(addressBookId?: string) {
   }
 
   async deleteSiteContact(contactId: number) {
+    const contact = await this.prisma.siteContact.findUnique({
+      where: { id: contactId }
+    });
+
+    if (!contact) {
+      throw new NotFoundException(`Contact with ID ${contactId} not found`);
+    }
+
     return this.prisma.siteContact.delete({
       where: { id: contactId },
     });
   }
 
-  remove(id: number): Promise<Site> {
-    return this.prisma.site.delete({ where: { id } });
-  }
+  async remove(id: number): Promise<Site> {
+    const site = await this.prisma.site.findUnique({
+      where: { id }
+    });
 
-  // SiteContact management methods
-  async addContact(siteId: number, data: { contactPerson: string; designation: string; contactNumber: string; emailAddress: string }): Promise<any> {
-    return this.prisma.siteContact.create({
-      data: { ...data, siteId },
+    if (!site) {
+      throw new NotFoundException(`Site with ID ${id} not found`);
+    }
+
+    // Delete all contacts first (if using Prisma without cascading deletes)
+    await this.removeSiteContactsBySiteId(id);
+    
+    return this.prisma.site.delete({ 
+      where: { id } 
     });
   }
 
-  async updateContact(contactId: number, data: Partial<{ contactPerson: string; designation: string; contactNumber: string; emailAddress: string }>): Promise<any> {
-    return this.prisma.siteContact.update({
-      where: { id: contactId },
-      data,
-    });
-  }
-
-  async removeContact(contactId: number): Promise<any> {
-    return this.prisma.siteContact.delete({
-      where: { id: contactId },
-    });
-  }
-
-  async findContacts(siteId: number): Promise<any[]> {
-    return this.prisma.siteContact.findMany({
+  // Utility methods
+  async removeSiteContactsBySiteId(siteId: number): Promise<any> {
+    return this.prisma.siteContact.deleteMany({
       where: { siteId },
-    });
-  }
-
-  async findOneContact(contactId: number): Promise<any | null> {
-    return this.prisma.siteContact.findUnique({
-      where: { id: contactId },
     });
   }
 }

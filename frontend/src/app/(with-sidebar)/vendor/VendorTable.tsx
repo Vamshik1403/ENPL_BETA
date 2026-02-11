@@ -491,12 +491,12 @@ const VendorTable: React.FC = () => {
   };
 
   return (
-<div className="w-full -ml-13 sm:ml-0 px-4 text-black py-4 sm:px-6">
+    <div className="w-full -ml-13 sm:ml-0 px-4 text-black py-4 -mt-8 sm:px-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 mb-2">Vendors</h1>
       </div>
 
-<div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center -mx-4 sm:mx-0">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center -mx-4 sm:mx-0">
         <button
           onClick={() => {
             setFormData(initialFormState);
@@ -530,8 +530,8 @@ const VendorTable: React.FC = () => {
         </div>
       ) : (
         <>
-<div className="w-full overflow-x-auto -mx-4 sm:mx-0">
-<table className="min-w-[1024px] w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
+            <table className="min-w-[1024px] w-full text-sm text-gray-700 bg-white rounded-xl shadow-md overflow-hidden">
               <thead className="bg-gradient-to-r from-blue-100 to-purple-100">
                 <tr>
                   <th className="p-4 border">Vendor ID</th>

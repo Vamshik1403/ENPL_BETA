@@ -18,16 +18,14 @@ model AddressBook {
   pinCode       String?
   gstNo         String?
 
-  contacts AddressBookContact[]
-  supportTickets SupportTicket[]
-  supportTicketMappings SupportTicketMapping[]
-  sites    Site[]
-  tasks    Task[]
-  customerContactSites CustomerContactSite[]
+  contacts               AddressBookContact[]
+  supportTickets         SupportTicket[]
+  supportTicketMappings  SupportTicketMapping[]
+  sites                  Site[]
+  tasks                  Task[]
+  customerContactSites   CustomerContactSite[]
   complaintRegistrations ComplaintRegistration[]
-    materialDelivery MaterialDelivery[]
-
-
+  materialDelivery       MaterialDelivery[]
 }
 
 model AddressBookContact {
@@ -42,24 +40,23 @@ model AddressBookContact {
 }
 
 model Site {
-  id            Int     @id @default(autoincrement())
-  addressBookId Int
-  siteID        String  @default(uuid())
-  siteName      String
-  siteAddress   String
-  city          String?
-  state         String?
-  pinCode       String?
-  gstNo         String?
-  supportTicketMappings SupportTicketMapping[]
-  addressBook AddressBook   @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
-  contacts    SiteContact[]
-  supportTickets SupportTicket[]
-  tasks       Task[]
-  customerContactSites CustomerContactSite[]
+  id                     Int                     @id @default(autoincrement())
+  addressBookId          Int
+  siteID                 String                  @default(uuid())
+  siteName               String
+  siteAddress            String
+  city                   String?
+  state                  String?
+  pinCode                String?
+  gstNo                  String?
+  supportTicketMappings  SupportTicketMapping[]
+  addressBook            AddressBook             @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+  contacts               SiteContact[]
+  supportTickets         SupportTicket[]
+  tasks                  Task[]
+  customerContactSites   CustomerContactSite[]
   complaintRegistrations ComplaintRegistration[]
-    materialDelivery MaterialDelivery[]
-
+  materialDelivery       MaterialDelivery[]
 }
 
 model SiteContact {
@@ -98,49 +95,47 @@ model WorkscopeCategory {
 }
 
 model ServiceContract {
-  id                Int                        @id @default(autoincrement())
-  serviceContractID String                    
+  id                Int     @id @default(autoincrement())
+  serviceContractID String
   customerId        Int
   branchId          Int
   salesManagerName  String
   amcType           String?
 
-    attachmentUrl       String?     // file location
-  attachmentName      String?     // original file name
-  attachmentMimeType  String?     // "application/pdf", "image/png"
-  attachmentSize      Int?        // bytes
+  attachmentUrl      String? // file location
+  attachmentName     String? // original file name
+  attachmentMimeType String? // "application/pdf", "image/png"
+  attachmentSize     Int? // bytes
 
   serviceContractType ServiceContractType[]
-  periods           ServiceContractPeriod[]
-  terms             ServiceContractTerms[]
-  services          ServiceContractServices[]
-  inventories       ServiceContractInventory[]
-  histories         ServiceContractHistory[]
+  periods             ServiceContractPeriod[]
+  terms               ServiceContractTerms[]
+  services            ServiceContractServices[]
+  inventories         ServiceContractInventory[]
+  histories           ServiceContractHistory[]
 }
 
 model ServiceContractType {
-  id                   Int              @id @default(autoincrement())
-  serviceContractType  String
-  serviceContractId    Int
-  billingType          String?
-  billingCycle         String?
-  billingDueDate       String?
-  paymentStatus        String?
+  id                      Int                      @id @default(autoincrement())
+  serviceContractType     String
+  serviceContractId       Int
+  billingType             String?
+  billingCycle            String?
+  billingDueDate          String?
+  paymentStatus           String?
   serviceContractBillings ServiceContractBilling[]
-  serviceContract      ServiceContract  @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
+  serviceContract         ServiceContract          @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
 }
 
 model ServiceContractBilling {
-  id                    Int                 @id @default(autoincrement())
+  id                    Int    @id @default(autoincrement())
   serviceContractTypeId Int
   dueDate               String
   paymentStatus         String
-  overdueDays           Int                 @default(0)
+  overdueDays           Int    @default(0)
 
-  serviceContractType  ServiceContractType @relation(fields: [serviceContractTypeId], references: [id], onDelete: Cascade)
+  serviceContractType ServiceContractType @relation(fields: [serviceContractTypeId], references: [id], onDelete: Cascade)
 }
-
-
 
 model ServiceContractPeriod {
   id                  Int             @id @default(autoincrement())
@@ -166,7 +161,7 @@ model ServiceContractServices {
   id                     Int                  @id @default(autoincrement())
   serviceContractId      Int
   contractWorkCategoryId Int
-    description            String?              // Add this line
+  description            String? // Add this line
   serviceContract        ServiceContract      @relation(fields: [serviceContractId], references: [id], onDelete: Cascade)
   contractWorkCategory   ContractWorkCategory @relation(fields: [contractWorkCategoryId], references: [id], onDelete: Cascade)
 }
@@ -202,21 +197,20 @@ model Department {
   id             Int    @id @default(autoincrement())
   departmentName String
 
-  emails         DepartmentEmail[]   // 👈 multiple emails
-  tasks          Task[]
+  emails                 DepartmentEmail[] // 👈 multiple emails
+  tasks                  Task[]
   complaintRegistrations ComplaintRegistration[]
 }
 
 model DepartmentEmail {
-  id           Int        @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   email        String
   departmentId Int
 
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   @@unique([email, departmentId]) // prevents duplicate email in same department
 }
-
 
 enum TaskType {
   SERVICE
@@ -229,27 +223,26 @@ enum PurchaseType {
   ORDER
 }
 
-
 model Task {
-  id               Int                      @id @default(autoincrement())
-  taskID           String                   @unique 
-  departmentId     Int
-  addressBookId    Int?
-  siteId           Int?
-  status           String                   @default("Open")
-  title            String?
-  description      String?
-  attachment       String? 
-  priority         String?
-  userId           Int?
-  createdBy        String
-  createdAt        DateTime                 @default(now())
-   taskType         TaskType @default(SERVICE) // 🔥 NEW
-  purchase         TaskPurchase?   // 🔥 NEW (1–1)
+  id            Int           @id @default(autoincrement())
+  taskID        String        @unique
+  departmentId  Int
+  addressBookId Int?
+  siteId        Int?
+  status        String        @default("Open")
+  title         String?
+  description   String?
+  attachment    String?
+  priority      String?
+  userId        Int?
+  createdBy     String
+  createdAt     DateTime      @default(now())
+  taskType      TaskType      @default(SERVICE) // 🔥 NEW
+  purchase      TaskPurchase? // 🔥 NEW (1–1)
 
-  department       Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  addressBook      AddressBook?              @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
-  site             Site?                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  department  Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  addressBook AddressBook? @relation(fields: [addressBookId], references: [id], onDelete: Cascade)
+  site        Site?        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   user        User?        @relation(fields: [userId], references: [id])
 
   contacts         TasksContacts[]
@@ -261,59 +254,56 @@ model Task {
   taskInventories  TaskInventory[]
 }
 
-
 model TaskPurchase {
-  id            Int          @id @default(autoincrement())
-  taskId        Int          @unique
+  id     Int @id @default(autoincrement())
+  taskId Int @unique
 
-  customerName  String?     
-  address       String?
+  customerName String?
+  address      String?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  task          Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
-  products      TaskPurchaseProduct[]
+  products                TaskPurchaseProduct[]
   taskPurchaseAttachments TaskPurchaseAttachment[]
-   purchaseType  PurchaseType
+  purchaseType            PurchaseType
 }
 
 model TaskPurchaseProduct {
-  id             Int      @id @default(autoincrement())
+  id             Int @id @default(autoincrement())
   taskPurchaseId Int
 
-  make           String?
-  model          String?
-  description    String?
+  make        String?
+  model       String?
+  description String?
 
-  warranty       String?
-  rate           Decimal? @db.Decimal(10,2)
-  vendor         String?
+  warranty String?
+  rate     Decimal? @db.Decimal(10, 2)
+  vendor   String?
 
-  validity       DateTime?   // 🔥 Inquiry only
-  availability   String?     // 🔥 Inquiry only
+  validity     DateTime? // 🔥 Inquiry only
+  availability String? // 🔥 Inquiry only
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  taskPurchase   TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
+  taskPurchase TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
 }
 
 model TaskPurchaseAttachment {
-  id            Int      @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   taskPurchaseId Int
-  filename      String
-  filepath      String
-  mimeType      String
-  fileSize      Int
-  uploadedAt    DateTime @default(now())
-  taskPurchase  TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
+  filename       String
+  filepath       String
+  mimeType       String
+  fileSize       Int
+  uploadedAt     DateTime     @default(now())
+  taskPurchase   TaskPurchase @relation(fields: [taskPurchaseId], references: [id], onDelete: Cascade)
 }
 
-
-
 model TaskInventory {
-  id                 Int             @id @default(autoincrement())
-  taskId            Int
+  id                 Int         @id @default(autoincrement())
+  taskId             Int
   serviceContractId  Int
   productTypeId      Int
   makeModel          String?
@@ -323,20 +313,20 @@ model TaskInventory {
   warrantyPeriod     String?
   warrantyStatus     String? // Active / Expired (computed in app)
   thirdPartyPurchase Boolean?
-  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  productType        ProductType     @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+  task               Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  productType        ProductType @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
 }
 
 model TaskImage {
-  id        Int    @id @default(autoincrement())
-  taskId    Int
-  filename  String
-  filepath  String
-  mimeType  String
-  fileSize  Int
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  filename   String
+  filepath   String
+  mimeType   String
+  fileSize   Int
   uploadedAt DateTime @default(now())
-  
-  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model TasksContacts {
@@ -357,13 +347,13 @@ model TasksWorkscopeCategory {
 }
 
 model TasksWorkscopeDetails {
-  id                  Int                @id @default(autoincrement())
+  id                  Int               @id @default(autoincrement())
   taskId              Int
   workscopeCategoryId Int
   workscopeDetails    String
   extraNote           String?
-  task                Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  workscopeCategory   WorkscopeCategory  @relation(fields: [workscopeCategoryId], references: [id], onDelete: Cascade)
+  task                Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workscopeCategory   WorkscopeCategory @relation(fields: [workscopeCategoryId], references: [id], onDelete: Cascade)
 }
 
 model TasksSchedule {
@@ -384,59 +374,58 @@ model TasksRemarks {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
-model SupportTicketUser{
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  designation String?
-  contactNumber String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model SupportTicketUser {
+  id                    Int                    @id @default(autoincrement())
+  name                  String
+  email                 String
+  designation           String?
+  contactNumber         String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   supportTicketMappings SupportTicketMapping[]
-  }
+}
 
-  model SupportTicketMapping{
-    id Int @id @default(autoincrement())
-    customerId Int
-    siteId Int
-    supportTicketUserId Int
-    addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-    site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    supportTicketUser SupportTicketUser @relation(fields: [supportTicketUserId], references: [id], onDelete: Cascade)
-  }
+model SupportTicketMapping {
+  id                  Int               @id @default(autoincrement())
+  customerId          Int
+  siteId              Int
+  supportTicketUserId Int
+  addressBook         AddressBook       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  site                Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  supportTicketUser   SupportTicketUser @relation(fields: [supportTicketUserId], references: [id], onDelete: Cascade)
+}
 
-
-model SupportTicket{
-  id  Int @id @default(autoincrement())
-  ticketID String  @unique
-  name String
-  email String
-  designation String?
-  customerId Int
-  siteId Int
-  description String?
-  supportType String
-  prority String?
+model SupportTicket {
+  id            Int         @id @default(autoincrement())
+  ticketID      String      @unique
+  name          String
+  email         String
+  designation   String?
+  customerId    Int
+  siteId        Int
+  description   String?
+  supportType   String
+  prority       String?
   contactPerson String?
   contactNumber String?
-  status String @default("Open")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status        String      @default("Open")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  site          Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  addressBook   AddressBook @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  username   String   @unique
-  password   String
-  email      String?   @unique
-  fullName   String?  
-  userType   String?
-  department String?
-  createdAt  DateTime @default(now())
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  password       String
+  email          String?         @unique
+  fullName       String?
+  userType       String?
+  department     String?
+  createdAt      DateTime        @default(now())
   userPermission UserPermission?
-  tasks      Task[]
+  tasks          Task[]
 }
 
 model CustomerContact {
@@ -444,7 +433,7 @@ model CustomerContact {
   custFirstName String
   custLastName  String
   phoneNumber   String
-  emailAddress  String @unique
+  emailAddress  String   @unique
   createdAt     DateTime @default(now())
 
   sites CustomerContactSite[]
@@ -464,26 +453,26 @@ model CustomerContactSite {
 }
 
 model ComplaintRegistration {
-  id              Int      @id @default(autoincrement())
-  complaintID     String   @unique
-  customerId     Int   
-  siteId         Int
-  departmentId      Int
-  title          String
-  description     String
-  status          String   @default("Open")
-  createdAt       DateTime @default(now())
- site          Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  addressBook   AddressBook   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  id           Int         @id @default(autoincrement())
+  complaintID  String      @unique
+  customerId   Int
+  siteId       Int
+  departmentId Int
+  title        String
+  description  String
+  status       String      @default("Open")
+  createdAt    DateTime    @default(now())
+  site         Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  addressBook  AddressBook @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  department   Department  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 }
 
 model UserPermission {
-  id        Int     @id @default(autoincrement())
-  userId    Int     @unique
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
   permissions Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -518,8 +507,8 @@ model Product {
 
   category             Category               @relation(fields: [categoryId], references: [id])
   subCategory          SubCategory            @relation(fields: [subCategoryId], references: [id])
-  productInventories   ProductInventory[] 
-  materialDeliveryItem MaterialDeliveryItem[] 
+  productInventories   ProductInventory[]
+  materialDeliveryItem MaterialDeliveryItem[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
@@ -547,7 +536,7 @@ model Inventory {
 }
 
 model ProductInventory {
-  id             Int    @id @default(autoincrement())
+  id             Int     @id @default(autoincrement())
   inventoryId    Int
   productId      Int
   make           String
@@ -576,8 +565,8 @@ model MaterialDelivery {
   customerId        Int?
   vendorId          Int?
 
-  addressBook   AddressBook?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  vendor   Vendor?   @relation(fields: [vendorId], references: [id])
+  addressBook AddressBook? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor      Vendor?      @relation(fields: [vendorId], references: [id])
 
   site Site? @relation(fields: [siteId], references: [id])
 
@@ -605,10 +594,10 @@ model MaterialDeliveryItem {
 }
 
 model VendorPayment {
-  id                 Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  vendorId           Int
-  inventoryId        Int?
+  vendorId    Int
+  inventoryId Int?
 
   purchaseInvoiceNo  String
   invoiceGrossAmount String
@@ -620,15 +609,12 @@ model VendorPayment {
   referenceNo        String
   remark             String?
 
-  vendor             Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  inventory          Inventory? @relation(fields: [inventoryId], references: [id])
+  vendor    Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  inventory Inventory? @relation(fields: [inventoryId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
-
-
 
 // Define the Vendor model
 model Vendor {
@@ -659,6 +645,7 @@ model Vendor {
   materialDelivery MaterialDelivery[]
   vendorPayment    VendorPayment[]
 }
+
 model BankDetail {
   id            Int    @id @default(autoincrement())
   bankName      String
@@ -666,7 +653,7 @@ model BankDetail {
   ifscCode      String
   branchName    String
   vendorId      Int
-  vendor          Vendor @relation("VendorBankDetails", fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor        Vendor @relation("VendorBankDetails", fields: [vendorId], references: [id], onDelete: Cascade)
 }
 
 model VendorContact {
@@ -681,4 +668,17 @@ model VendorContact {
   landlineNumber     String?
   vendorId           Int
   vendor             Vendor  @relation("VendorContacts", fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model BackupConfig {
+  id         Int      @id @default(1)
+  enabled    Boolean  @default(false)
+  type       String // HOUR, DAY, WEEK, MONTH, YEAR
+  hour       Int?
+  minute     Int?
+  dayOfWeek  Int? // 0-6
+  dayOfMonth Int?
+  month      Int?
+  maxFiles   Int      @default(5)
+  updatedAt  DateTime @updatedAt
 }

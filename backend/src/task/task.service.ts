@@ -95,6 +95,62 @@ export class TaskService {
         },
       });
 
+      // 🔹 CONTACTS
+if (contacts?.length) {
+  await tx.tasksContacts.createMany({
+    data: contacts.map(c => ({
+      taskId: task.id,
+      contactName: c.contactName,
+      contactNumber: c.contactNumber,
+      contactEmail: c.contactEmail || null,
+    })),
+  });
+}
+
+// 🔹 WORKSCOPE DETAILS
+if (workscopeDetails?.length) {
+  await tx.tasksWorkscopeDetails.createMany({
+    data: workscopeDetails.map(w => ({
+      taskId: task.id,
+      workscopeCategoryId: Number(w.workscopeCategoryId),
+      workscopeDetails: w.workscopeDetails,
+      extraNote: w.extraNote || null,
+    })),
+  });
+}
+
+// 🔹 SCHEDULE
+if (schedule?.length) {
+  await tx.tasksSchedule.createMany({
+    data: schedule.map(s => ({
+      taskId: task.id,
+      proposedDateTime: new Date(s.proposedDateTime),
+      priority: s.priority || 'Normal',
+    })),
+  });
+}
+
+// 🔹 TASK INVENTORIES (you forgot this too)
+if (taskInventories?.length) {
+  await tx.taskInventory.createMany({
+    data: taskInventories.map(inv => ({
+      taskId: task.id,
+      serviceContractId: inv.serviceContractId,
+      productTypeId: inv.productTypeId,
+      makeModel: inv.makeModel,
+      snMac: inv.snMac,
+      description: inv.description,
+      purchaseDate: inv.purchaseDate
+        ? new Date(inv.purchaseDate)
+        : null,
+      warrantyPeriod: inv.warrantyPeriod,
+      warrantyStatus: inv.warrantyStatus,
+      thirdPartyPurchase: inv.thirdPartyPurchase,
+    })),
+  });
+}
+
+
       // 🔹 First remark
       if (remarks?.length === 1) {
         await tx.tasksRemarks.create({
@@ -162,25 +218,34 @@ export class TaskService {
       }
 
       // 🔹 Reload full task
-      const fullTask = await tx.task.findUnique({
-        where: { id: task.id },
-        include: {
-          department: { include: { emails: true } },
-          addressBook: true,
-          site: true,
-          user: true,
-          remarks: {
-            orderBy: { createdAt: 'asc' },
-            take: 1,
-          },
-          purchase: {
-            include: {
-              products: true,
-              taskPurchaseAttachments: true, // 🔥 NEW
-            },
-          },
-        },
-      });
+     const fullTask = await tx.task.findUnique({
+  where: { id: task.id },
+  include: {
+    department: { include: { emails: true } },
+    addressBook: true,
+    site: true,
+    user: true,
+
+    // ✅ ADD THESE (THIS IS THE MISSING PART)
+    contacts: true,
+    workscopeDetails: true,
+    schedule: true,
+    taskInventories: true,
+
+    remarks: {
+      orderBy: { createdAt: 'asc' },
+      take: 1,
+    },
+
+    purchase: {
+      include: {
+        products: true,
+        taskPurchaseAttachments: true,
+      },
+    },
+  },
+});
+
 
       await this.sendTaskCreatedEmail(fullTask);
 
@@ -247,33 +312,77 @@ Internal Notification
 `;
 }
 
-private buildCustomerEmail(task: any): string {
-  const description =
-    task.description || task.remarks?.[0]?.remark || 'N/A';
+private buildServiceRequestDetails(task: any, isInternal: boolean): string {
+  const contact = task.contacts?.[0];
+
+  const workscope =
+    task.workscopeDetails?.length
+      ? task.workscopeDetails
+          .map((w, i) => `${i + 1}. ${w.workscopeDetails}`)
+          .join('\n')
+      : 'NA';
+
+  const proposedDate =
+    task.schedule?.[0]?.proposedDateTime
+      ? new Date(task.schedule[0].proposedDateTime).toLocaleString()
+      : 'NA';
 
   return `
-Your request has been registered successfully.
+Service Request Details
+--------------------------------------------------
 
 Task ID:
 ${task.taskID}
 
-Department:
-${task.department?.departmentName}
+Task Created By:
+${isInternal ? `${task.user?.fullName} (${task.user?.username})` : task.createdBy}
 
-Description:
-${description}
+Task Creation Date & Time:
+${new Date(task.createdAt).toLocaleString()}
 
-We will contact you shortly.
+Customer Name:
+${task.addressBook?.customerName || task.purchase?.customerName || 'NA'}
 
----
-Support Team
+Customer Address:
+${task.addressBook?.regdAddress || task.purchase?.address || 'NA'}
+
+Contact Person:
+${contact?.contactName || 'NA'}
+
+Contact Number:
+${contact?.contactNumber || 'NA'}
+
+Service Type:
+${task.taskType || 'SERVICE'}
+
+Service Category:
+${task.department?.departmentName || 'NA'}
+
+Bill of Material:
+NA
+
+Work Scope:
+${workscope}
+
+Note:
+${task.description || 'NA'}
+
+Proposed Date:
+${proposedDate}
+
+Priority:
+${task.priority || 'Normal'}
+
+--------------------------------------------------
+${isInternal ? 'Internal Notification' : 'Support Team'}
 `;
 }
+
 
   /* --------------------------------------------------
      EMAIL SENDER (FIXED LOGIC)
   -------------------------------------------------- */
- private async sendTaskCreatedEmail(task: any) {
+private async sendTaskCreatedEmail(task: any) {
   // 1️⃣ Department emails (ALWAYS)
   const departmentEmails =
     task.department?.emails?.map(e => e.email) || [];
@@ -284,18 +393,18 @@ Support Team
 
   // 3️⃣ Customer emails - check both sources
   let customerEmails: string[] = [];
-  
+
   if (task.addressBookId) {
     // Use DB contacts if addressBookId exists
-    customerEmails = await this.getCustomerEmailsByAddressBook(task.addressBookId);
+    customerEmails = await this.getCustomerEmailsByAddressBook(
+      task.addressBookId,
+    );
   } else if (task.purchase?.customerName) {
-    // If no addressBookId but purchase has customer, check if we have customer email in purchase
-    // You might need to adjust this based on your purchase data structure
-    // For now, we'll use the internal creator email for notification
+    // Fallback: notify internal creator
     customerEmails = internalCreatorEmail;
   }
 
-  // 4️⃣ Merge recipients
+  // 4️⃣ Merge recipients (DO NOT CHANGE LOGIC)
   const recipients = Array.from(
     new Set([
       ...departmentEmails,
@@ -308,70 +417,23 @@ Support Team
     return;
   }
 
-  // 5️⃣ Description fallback (remark → description)
-  const description =
-    task.description ||
-    task.remarks?.[0]?.remark ||
-    'N/A';
-
-  // 6️⃣ Customer and Site info fallback
-  const customerName = task.addressBook?.customerName || task.purchase?.customerName || 'N/A';
-  const siteName = task.site?.siteName || task.purchase?.address || 'N/A';
-
-  // 7️⃣ Email body
+  // 5️⃣ Subject (UNCHANGED)
   const title = task.title ? task.title.trim() : 'No Title';
 
   const subject = `ENPL | SUPPORT TICKET | - ${task.taskID} | ${title}`;
 
-  const body = task.userId
-    ? `
-New Task Created (Internal)
+  // 6️⃣ Body (CLEAN, EXPANDED, USER-FRIENDLY)
+  // 🔥 INTERNAL vs CUSTOMER logic preserved
+  const body = this.buildServiceRequestDetails(task, !!task.userId);
 
-Task ID:
-${task.taskID}
-
-Created By:
-${task.user?.fullName} (${task.user?.username})
-
-Department:
-${task.department?.departmentName}
-
-Customer:
-${customerName}
-
-Site:
-${siteName}
-
-Description:
-${description}
-
----
-System Notification
-`
-    : `
-Your request has been registered successfully.
-
-Task ID:
-${task.taskID}
-
-Department:
-${task.department?.departmentName}
-
-Description:
-${description}
-
-We will contact you shortly.
-
----
-Support Team
-`;
-
+  // 7️⃣ Send email
   await this.mailerService.sendMail({
     to: recipients,
     subject,
     text: body,
   });
 }
+
 
 
 
@@ -455,7 +517,6 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
         addressBook: true,
         site: true,
         contacts: true,
-        workscopeCat: true,
         workscopeDetails: true,
         schedule: true,
         remarks: true,
@@ -473,7 +534,6 @@ if (dto.status && allowedCustomerStatuses.includes(dto.status)) {
       addressBook: true,
       site: true,
       contacts: true,
-      workscopeCat: true,
       workscopeDetails: true,
       schedule: true,
       remarks: true,

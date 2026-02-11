@@ -1,11 +1,31 @@
-import { IsString, IsOptional, IsNotEmpty, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsInt, Min } from 'class-validator';
 
 export class CreateSiteDto {
-  @IsInt() addressBookId: number;
-  @IsString() @IsNotEmpty() siteName: string;
-  @IsString() @IsNotEmpty() siteAddress: string;
-  @IsString() @IsOptional() city?: string;
-  @IsString() @IsOptional() state?: string;
-  @IsString() @IsOptional() pinCode?: string;
-  @IsString() @IsOptional() gstNo?: string;
+  @IsInt()
+  @Min(1)
+  addressBookId: number;
+
+  @IsString()
+  @IsNotEmpty()
+  siteName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  siteAddress: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  pinCode?: string;
+
+  @IsString()
+  @IsOptional()
+  gstNo?: string;
 }

@@ -32,7 +32,6 @@ import { AuthModule } from './auth/auth.module';
 import { CustomerContactModule } from './customer-contact/customer-contact.module';
 import { UserPermissionModule } from './user-permission/user-permission.module';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { CategoryModule } from './category/category.module';
 import { SubcategoryModule } from './subcategory/subcategory.module';
 import { ProductsModule } from './products/products.module';
@@ -40,22 +39,29 @@ import { InventoryModule } from './inventory/inventory.module';
 import { MaterialDeliveryModule } from './material-delivery/material-delivery.module';
 import { VendorModule } from './vendor/vendor.module';
 import { VendorPaymentModule } from './vendor-payment/vendor-payment.module';
+import { BackupModule } from './backup/backup.module';
+import { ScheduleModule } from '@nestjs/schedule';
+
 
 @Module({
-  imports:
-   [ MailerModule.forRoot({
-  transport: {
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+  imports: [
+    // ✅ Schedule module
+    ScheduleModule.forRoot(),
+
+    // ✅ Mailer module
+    MailerModule.forRoot({
+      transport: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
   },
 }),
 
-    AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule,  ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule, CustomerContactModule, UserPermissionModule, CategoryModule, SubcategoryModule, ProductsModule, InventoryModule, MaterialDeliveryModule, VendorModule, VendorPaymentModule],
+    AddressBookModule, SitesModule, AddressBookContactModule, ProductTypeModule, ServiceWorkCategoryModule, ContractWorkCategoryModule, WorkscopeCategoryModule, ServiceContractModule, ServiceContractPeriodModule, ServiceContractTermsModule, ServiceContractServicesModule, ServiceContractInventoryModule, ServiceContractHistoryModule, DepartmentModule, TaskModule, TasksContactsModule, TasksWorkscopeCategoryModule, TasksWorkscopeDetailsModule, TasksScheduleModule, TasksRemarksModule, SupportTicketsModule,  ServiceContractTypeModule, ServiceContractBillingModule, TaskImagesModule, AuthModule, CustomerContactModule, UserPermissionModule, CategoryModule, SubcategoryModule, ProductsModule, InventoryModule, MaterialDeliveryModule, VendorModule, VendorPaymentModule, BackupModule],
   controllers: [
     AppController,
     AddressBookController,

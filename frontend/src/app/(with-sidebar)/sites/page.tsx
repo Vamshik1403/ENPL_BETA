@@ -387,113 +387,110 @@ useEffect(() => {
     setFormContacts(updatedContacts);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Check if user has create/edit permission - USING SITES PERMISSIONS
-    if ((!editingId && !sitesPerm.create) || (editingId && !sitesPerm.edit)) {
-      alert('You do not have permission to perform this action');
-      return;
-    }
-    
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Check if user has create/edit permission - USING SITES PERMISSIONS
+  if ((!editingId && !sitesPerm.create) || (editingId && !sitesPerm.edit)) {
+    alert('You do not have permission to perform this action');
+    return;
+  }
+  
+  setLoading(true);
 
-    try {
-      // Prepare site data without contacts
-      const siteData = {
-        addressBookId: formData.addressBookId,
-        siteName: formData.siteName,
-        siteAddress: formData.siteAddress,
-        city: formData.city,
-        state: formData.state,
-        pinCode: formData.pinCode,
-        gstNo: formData.gstNo,
-      };
+  try {
+    // Prepare site data without contacts
+    const siteData = {
+      addressBookId: formData.addressBookId,
+      siteName: formData.siteName,
+      siteAddress: formData.siteAddress,
+      city: formData.city,
+      state: formData.state,
+      pinCode: formData.pinCode,
+      gstNo: formData.gstNo,
+    };
 
-      if (editingId) {
-        // Update existing site
-        const response = await fetch(`http://localhost:8000/sites/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(siteData),
-        });
+    let siteId: number;
 
-        if (response.ok) {
-          // Handle contacts separately
-          for (const contact of formContacts) {
-            if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              if (contact.id) {
-                // Update existing contact
-                await fetch(`http://localhost:8000/sites/contacts/${contact.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    contactPerson: contact.contactPerson,
-                    designation: contact.designation,
-                    contactNumber: contact.contactNumber,
-                    emailAddress: contact.emailAddress,
-                  }),
-                });
-              } else {
-                // Create new contact
-                await fetch(`http://localhost:8000/sites/${editingId}/contacts`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    contactPerson: contact.contactPerson,
-                    designation: contact.designation,
-                    contactNumber: contact.contactNumber,
-                    emailAddress: contact.emailAddress,
-                  }),
-                });
-              }
-            }
-          }
+    if (editingId) {
+      // Update existing site
+      const response = await fetch(`http://localhost:8000/sites/${editingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(siteData),
+      });
 
-          await fetchSites();
-          closeModal();
-        }
-      } else {
-        // Create new site
-        const response = await fetch('http://localhost:8000/sites', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(siteData),
-        });
-
-        if (response.ok) {
-          const newSite = await response.json();
-
-          // Create site contacts
-          for (const contact of formContacts) {
-            if (contact.contactPerson.trim() && contact.designation.trim() && contact.contactNumber.trim() && contact.emailAddress.trim()) {
-              await fetch(`http://localhost:8000/sites/${newSite.id}/contacts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contactPerson: contact.contactPerson,
-                  designation: contact.designation,
-                  contactNumber: contact.contactNumber,
-                  emailAddress: contact.emailAddress,
-                }),
-              });
-            }
-          }
-
-          await fetchSites();
-          closeModal();
-        }
+      if (response.ok) {
+        siteId = editingId;
+        // Handle contacts for existing site
+        await handleSiteContacts(siteId);
+        await fetchSites();
+        closeModal();
       }
-    } catch (error) {
-      console.error('Error submitting site:', error);
-    } finally {
-      setLoading(false);
+    } else {
+      // Create new site
+      const response = await fetch('http://localhost:8000/sites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(siteData),
+      });
+
+      if (response.ok) {
+        const newSite = await response.json();
+        siteId = newSite.id;
+        // Handle contacts for new site
+        await handleSiteContacts(siteId);
+        await fetchSites();
+        closeModal();
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error submitting site:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Separate function to handle site contacts
+const handleSiteContacts = async (siteId: number) => {
+  // Filter out empty contacts
+  const validContacts = formContacts.filter(contact => 
+    contact.contactPerson?.trim() && 
+    contact.designation?.trim() && 
+    contact.contactNumber?.trim() && 
+    contact.emailAddress?.trim()
+  );
+
+  for (const contact of validContacts) {
+    // Prepare contact data without siteId (backend will handle it)
+    const contactData = {
+      contactPerson: contact.contactPerson,
+      designation: contact.designation,
+      contactNumber: contact.contactNumber,
+      emailAddress: contact.emailAddress,
+    };
+
+    if (contact.id) {
+      // Update existing contact
+      await fetch(`http://localhost:8000/sites/contacts/${contact.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactData),
+      });
+    } else {
+      // Create new contact - use the actual siteId, not 0
+      await fetch(`http://localhost:8000/sites/${siteId}/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactData),
+      });
+    }
+  }
+};
 
   const handleEdit = async (id: number) => {
     // Check edit permission - USING SITES PERMISSION
@@ -559,38 +556,40 @@ useEffect(() => {
   };
 
   const fetchCustomerFullData = async (id: number) => {
-    try {
-      const res = await fetch(`http://localhost:8000/address-book/${id}`);
-      const data = await res.json();
+  try {
+    const res = await fetch(`http://localhost:8000/address-book/${id}`);
+    const data = await res.json();
 
-      if (!data) return;
+    if (!data) return;
 
-      const bestSite = data.sites?.length ? data.sites[0] : null;
+    const bestSite = data.sites?.length ? data.sites[0] : null;
 
-      setFormData(prev => ({
-        ...prev,
-        siteAddress: bestSite?.siteAddress || data.regdAddress || '',
-        city: bestSite?.city || data.city || '',
-        state: bestSite?.state || data.state || '',
-        pinCode: bestSite?.pinCode || data.pinCode || '',
-        gstNo: bestSite?.gstNo || data.gstNo || '',
+    setFormData(prev => ({
+      ...prev,
+      siteAddress: bestSite?.siteAddress || data.regdAddress || '',
+      city: bestSite?.city || data.city || '',
+      state: bestSite?.state || data.state || '',
+      pinCode: bestSite?.pinCode || data.pinCode || '',
+      gstNo: bestSite?.gstNo || data.gstNo || '',
+    }));
+
+    if (data.contacts?.length > 0) {
+      const converted = data.contacts.map((c: any) => ({
+        // Don't set siteId to 0 for new contacts - leave it undefined
+        // Only include id if it exists from the address book contacts
+        ...(c.id && { id: undefined }), // Don't copy the id from address book
+        contactPerson: c.contactPerson,
+        designation: c.designation,
+        contactNumber: c.contactNumber,
+        emailAddress: c.emailAddress,
       }));
-
-      if (data.contacts?.length > 0) {
-        const converted = data.contacts.map((c: any) => ({
-          siteId: 0,
-          contactPerson: c.contactPerson,
-          designation: c.designation,
-          contactNumber: c.contactNumber,
-          emailAddress: c.emailAddress,
-        }));
-        setFormContacts(converted);
-      }
-
-    } catch (err) {
-      console.error("Auto-fill error:", err);
+      setFormContacts(converted);
     }
-  };
+
+  } catch (err) {
+    console.error("Auto-fill error:", err);
+  }
+};
 
   const closeModal = () => {
     setShowForm(false);
