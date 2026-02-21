@@ -1557,15 +1557,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
 };
 
 // Remarks Only Modal Component
+// Remarks Only Modal Component
 interface RemarksModalProps {
   showModal: boolean;
   task: Task | null;
   savedRemarks: TasksRemarks[];
   onClose: () => void;
-  onAddRemark: (remark: string, status: string) => void;
+  onAddRemark: (remark: string, status: string) => Promise<void>;
   onRemoveRemark: (id: number) => void;
   onEditLatestRemark: (remark: TasksRemarks) => void;
   getAllowedStatuses: (currentStatus: string) => string[];
+  isTechnicalDepartment?: boolean;
 }
 
 // Update RemarksModal component
@@ -1578,11 +1580,11 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
   onRemoveRemark,
   onEditLatestRemark,
   getAllowedStatuses,
+  isTechnicalDepartment,
 }) => {
   const [newRemark, setNewRemark] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-
-  // Also update the normalizeStatus function to handle "Work in Progress" properly:
   const normalizeStatus = (status: string) => {
     if (!status) return 'Open';
 
@@ -1600,8 +1602,6 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
     return normalized;
   };
 
-
-  // In RemarksModal component, replace getCurrentTaskStatus function with:
   const getCurrentTaskStatus = () => {
     if (!task?.remarks || task.remarks.length === 0) {
       return "Open";
@@ -1617,14 +1617,11 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
   const currentStatus = getCurrentTaskStatus();
   const allowedStatuses = getAllowedStatuses(currentStatus);
 
-  // ✅ Declare state BEFORE any effect uses it
   const [newStatus, setNewStatus] = useState<string>(
     allowedStatuses[0] ?? currentStatus
   );
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ✅ Always sync dropdown when modal opens or remarks change
+  // Reset form when modal opens or when savedRemarks change
   useEffect(() => {
     if (!showModal || !task) return;
 
@@ -1632,33 +1629,36 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
     const allowed = getAllowedStatuses(curr);
 
     setNewStatus(allowed[0] ?? curr);
-  }, [showModal, task?.id, task?.remarks?.length]);
+    setNewRemark(''); // Clear the remark input
+    setIsSubmitting(false);
+  }, [showModal, task?.id, savedRemarks.length]); // Re-run when savedRemarks changes
 
-
-  // Update handleSubmit:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-
-    if (isSubmitting) return; // Prevent double submit
+    if (isSubmitting) return;
 
     if (newRemark.trim()) {
       setIsSubmitting(true);
 
       try {
         await onAddRemark(newRemark.trim(), newStatus);
+
+        // Clear form for next remark
         setNewRemark('');
 
+        // Update status for next remark based on new current status
         const updatedCurrentStatus = newStatus;
         const updatedAllowedStatuses = getAllowedStatuses(updatedCurrentStatus);
         setNewStatus(updatedAllowedStatuses[0] || 'Scheduled');
+
       } catch (error) {
         console.error("Failed to add remark:", error);
       } finally {
+        setIsSubmitting(false);
       }
     }
   };
-
 
   if (!showModal || !task) return null;
 
@@ -1674,11 +1674,11 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
               <div className="mt-1">
                 <span className="text-sm font-medium text-gray-700">Current Status: </span>
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${currentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                  currentStatus === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                    currentStatus === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
-                      currentStatus === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
-                        currentStatus === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
+                    currentStatus === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                      currentStatus === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
+                        currentStatus === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
+                          currentStatus === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
                   }`}>
                   {currentStatus}
                 </span>
@@ -1692,7 +1692,7 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
             </button>
           </div>
 
-          {/* Add Remark Form */}
+          {/* Add Remark Form - Always visible */}
           <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -1730,23 +1730,24 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
             </div>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={isSubmitting}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
-              Add Remark & Update Status
+              {isSubmitting ? "Adding..." : "Add Remark & Update Status"}
             </button>
           </form>
 
+          {/* Remarks List */}
           {/* Remarks List */}
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {savedRemarks.length === 0 ? (
               <p className="text-gray-500 text-center py-4">No remarks yet</p>
             ) : (
+              // Sort remarks by createdAt date (newest first) before mapping
               [...savedRemarks]
-                .sort((a, b) => (b.id || 0) - (a.id || 0))
-                .map((remark) => {
-                  const sortedById = [...savedRemarks].sort((a, b) => (b.id || 0) - (a.id || 0));
-                  const latestRemarkId = sortedById[0]?.id;
-                  const isLatestRemark = remark.id === latestRemarkId;
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .map((remark, index, sortedArray) => {
+                  const isLatestRemark = index === 0; // First item in sorted array is the latest
 
                   return (
                     <div
@@ -1755,12 +1756,12 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${remark.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                          remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            remark.status === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
-                              remark.status === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
-                                remark.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                                  remark.status === 'Reopen' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
+                            remark.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                              remark.status === 'On-Hold' ? 'bg-orange-100 text-orange-800' :
+                                remark.status === 'Rescheduled' ? 'bg-purple-100 text-purple-800' :
+                                  remark.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                    remark.status === 'Reopen' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
                           }`}>
                           {remark.status}
                         </span>
@@ -1789,6 +1790,7 @@ const RemarksModal: React.FC<RemarksModalProps> = ({
     </div>
   );
 };
+
 
 // Main TasksPage Component
 export default function TasksPage() {
@@ -2101,8 +2103,7 @@ export default function TasksPage() {
   }, [departments]);
 
 
-  // Calculate isPurchaseDepartment BEFORE TaskModal component
-  // Calculate isPurchaseDepartment BEFORE TaskModal component
+  // Calculate department flags BEFORE all components that use them
   const selectedDepartmentName =
     departments.find(d => d.id === formData.departmentId)?.departmentName
       ?.trim()
@@ -2796,16 +2797,11 @@ export default function TasksPage() {
   const handleAddRemarkInModal = async (remark: string, status: string) => {
     if (!selectedTask) return;
 
-    // Show immediate feedback
-    const submitButton = document.activeElement as HTMLButtonElement;
-    const originalText = submitButton?.textContent;
-
-
     try {
       const token = getAuthToken();
       const actualUserName = localStorage.getItem("username") || currentUserName || "User";
 
-      // OPTIMIZATION: Optimistic update
+      // Create temporary remark for optimistic update
       const tempRemark = {
         id: Date.now(), // Temporary ID
         taskId: selectedTask.id!,
@@ -2816,11 +2812,13 @@ export default function TasksPage() {
         description: ""
       };
 
-      // Update UI immediately (optimistic update)
-      const updatedRemarks = [tempRemark, ...savedRemarks];
+      // Update UI immediately - add to beginning and sort properly
+      const updatedRemarks = [tempRemark, ...savedRemarks].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
       setSavedRemarks(updatedRemarks);
 
-      // Update the task in local state immediately
+      // Update the task in local state
       if (selectedTask) {
         const updatedTask = {
           ...selectedTask,
@@ -2837,7 +2835,7 @@ export default function TasksPage() {
           : task
       ));
 
-      // Then make API call
+      // Make API call
       const response = await fetch(`http://localhost:8000/tasks-remarks`, {
         method: "POST",
         headers: {
@@ -2858,8 +2856,10 @@ export default function TasksPage() {
 
       const newRemark = await response.json();
 
-      // Replace temporary remark with actual one from server
-      const finalUpdatedRemarks = [newRemark, ...savedRemarks];
+      // Replace temporary remark with actual one and sort properly
+      const finalUpdatedRemarks = [newRemark, ...savedRemarks.filter(r => r.id !== tempRemark.id)]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
       setSavedRemarks(finalUpdatedRemarks);
 
       // Update with real data
@@ -2873,8 +2873,8 @@ export default function TasksPage() {
           : task
       ));
 
-      // Only fetch if you need to sync with other users
-      // await fetchTasks(); // REMOVE or keep if needed for real-time sync
+      // Clear the input fields for next remark
+      // This will be handled in the RemarksModal component
 
     } catch (err) {
       console.error(err);
@@ -2887,14 +2887,9 @@ export default function TasksPage() {
           ? { ...task, status: selectedTask.status, remarks: savedRemarks }
           : task
       ));
-    } finally {
-      // Restore button state
-      if (submitButton) {
-        submitButton.textContent = originalText;
-        submitButton.disabled = false;
-      }
     }
   };
+
 
   const handleRemoveRemarkInModal = async (id: number) => {
     try {
@@ -4082,6 +4077,7 @@ export default function TasksPage() {
           onRemoveRemark={handleRemoveRemarkInModal}
           onEditLatestRemark={handleOpenEditRemarkModal}
           getAllowedStatuses={getAllowedStatuses}
+          isTechnicalDepartment={isTechnicalDepartment}
         />
 
         {/* Edit Remark Modal */}

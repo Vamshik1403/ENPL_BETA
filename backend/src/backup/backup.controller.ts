@@ -47,50 +47,46 @@ export class BackupController {
     });
   }
 
-  @Post("config")
-  async saveConfig(@Body() dto: SaveBackupConfigDto) {
-    // minimal server-side sanity per type
-    if (dto.type !== "HOUR" && (dto.hour === undefined || dto.minute === undefined)) {
-      throw new BadRequestException("hour/minute required");
-    }
-    if (dto.type === "HOUR" && dto.minute === undefined) {
-      throw new BadRequestException("minute required");
-    }
-    if (dto.type === "WEEK" && dto.dayOfWeek === undefined) {
-      throw new BadRequestException("dayOfWeek required");
-    }
-    if ((dto.type === "MONTH" || dto.type === "YEAR") && dto.dayOfMonth === undefined) {
-      throw new BadRequestException("dayOfMonth required");
-    }
-    if (dto.type === "YEAR" && dto.month === undefined) {
-      throw new BadRequestException("month required");
-    }
+ @Post("config")
+async saveConfig(@Body() dto: SaveBackupConfigDto) {
 
-    return this.prisma.backupConfig.upsert({
-      where: { id: 1 },
-      update: {
-        enabled: dto.enabled,
-        type: dto.type,
-        hour: dto.hour ?? null,
-        minute: dto.minute ?? null,
-        dayOfWeek: dto.dayOfWeek ?? null,
-        dayOfMonth: dto.dayOfMonth ?? null,
-        month: dto.month ?? null,
-        maxFiles: dto.maxFiles
-      },
-      create: {
-        id: 1,
-        enabled: dto.enabled,
-        type: dto.type,
-        hour: dto.hour ?? null,
-        minute: dto.minute ?? null,
-        dayOfWeek: dto.dayOfWeek ?? null,
-        dayOfMonth: dto.dayOfMonth ?? null,
-        month: dto.month ?? null,
-        maxFiles: dto.maxFiles
-      }
-    });
+  const updated = await this.prisma.backupConfig.upsert({
+    where: { id: 1 },
+    update: {
+      enabled: dto.enabled,
+      type: dto.type,
+      hour: dto.hour ?? null,
+      minute: dto.minute ?? null,
+      dayOfWeek: dto.dayOfWeek ?? null,
+      dayOfMonth: dto.dayOfMonth ?? null,
+      month: dto.month ?? null,
+      maxFiles: dto.maxFiles
+    },
+    create: {
+      id: 1,
+      enabled: dto.enabled,
+      type: dto.type,
+      hour: dto.hour ?? null,
+      minute: dto.minute ?? null,
+      dayOfWeek: dto.dayOfWeek ?? null,
+      dayOfMonth: dto.dayOfMonth ?? null,
+      month: dto.month ?? null,
+      maxFiles: dto.maxFiles
+    }
+  });
+
+  // 🔥 THIS LINE IS MISSING IN YOUR SYSTEM
+  if (updated.enabled) {
+    await this.runner.registerJob(updated);
+  } else {
+    try {
+      this.runner['schedulerRegistry'].deleteCronJob('auto-backup');
+    } catch {}
   }
+
+  return updated;
+}
+
 
   // ---------- MANUAL CREATE ----------
   @Post("create")

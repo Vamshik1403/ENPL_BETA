@@ -67,7 +67,7 @@ interface Product {
 const initialFormState: Inventory = {
     vendorId: 0,
     purchaseDate: "",
-    dueAmount: "0",
+    dueAmount: 0,
     purchaseInvoice: "",
     status: "In Stock",
     dueDate: "",
@@ -420,9 +420,9 @@ const InventoryTable: React.FC = () => {
             const payload = {
                 ...normalizedFormData,
                 purchaseDate: normalizedFormData.purchaseDate, // already YYYY-MM-DD
-                dueAmount: normalizedFormData.dueAmount
-                    ? String(normalizedFormData.dueAmount)
-                    : "0",
+               dueAmount: normalizedFormData.dueAmount 
+    ? Number(normalizedFormData.dueAmount)
+    : 0,
 
                 products: normalizedFormData.products.map((product) => ({
                     productId: product.productId,

@@ -108,11 +108,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl transition-all duration-500 ease-in-out">
         {/* Logo + Company Name */}
         <div className="flex items-center justify-center mb-6 space-x-3">
-          <img
-            src="https://media.licdn.com/dms/image/v2/C4E0BAQFx4JPxv8Cpjw/company-logo_200_200/company-logo_200_200/0/1673094179431/enplindia_logo?e=2147483647&v=beta&t=V1Ld3Ja-zCXFg7y1VlqEliyXmh1qVQoUTkAIo-7O4YM"
-            alt="ENPL Logo"
-            className="w-10 h-10 rounded-full shadow-md"
-          />
+        <img
+  src="/logo.jpeg"
+  alt="ENPL Logo"
+  className="w-10 h-10 rounded-full shadow-md"
+/>
           <h1 className="text-2xl font-bold text-indigo-700">ENPL India</h1>
         </div>
 

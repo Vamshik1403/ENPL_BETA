@@ -24,6 +24,8 @@ export class BackupRunnerService implements OnModuleInit {
   }
 
   async registerJob(config: any) {
+
+    
     try {
       this.schedulerRegistry.deleteCronJob('auto-backup');
     } catch {}
